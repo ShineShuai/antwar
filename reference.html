@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tinyminds — design and reference</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --surface-0:#f1efe8;--surface-1:#f7f6f2;--surface-2:#ffffff;
+  --text-primary:#1a1a18;--text-secondary:#5f5e5a;--text-muted:#888780;
+  --border:rgba(0,0,0,0.10);--border-strong:rgba(0,0,0,0.20);
+  --bg-accent:#e6f1fb;--text-accent:#185fa5;--border-accent:#85b7eb;
+  --bg-success:#eaf3de;--text-success:#3b6d11;
+  --bg-danger:#fcebeb;--text-danger:#a32d2d;
+  --bg-warning:#faeeda;--text-warning:#854f0b;
+  --bg-pro:#eeedfe;--text-pro:#534ab7;
+  --fill-accent:#378add;
+  --radius:8px;
+  --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-mono:'SFMono-Regular',Consolas,'Liberation Mono',monospace;
+}
+[data-mode="dark"]{
+  --surface-0:#141412;--surface-1:#1e1e1b;--surface-2:#272724;
+  --text-primary:#e8e6df;--text-secondary:#a8a69f;--text-muted:#686760;
+  --border:rgba(255,255,255,0.09);--border-strong:rgba(255,255,255,0.16);
+  --bg-accent:#042c53;--text-accent:#85b7eb;--border-accent:#185fa5;
+  --bg-success:#173404;--text-success:#c0dd97;
+  --bg-danger:#501313;--text-danger:#f09595;
+  --bg-warning:#412402;--text-warning:#fac775;
+  --bg-pro:#26215c;--text-pro:#afa9ec;
+  --fill-accent:#185fa5;
+}
+body{font-family:var(--font-sans);background:var(--surface-0);color:var(--text-primary);padding:1.5rem 1rem;max-width:780px;margin:0 auto;transition:background .2s,color .2s}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:12px}
+.topbar-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lang-btn,.mode-btn{padding:5px 13px;border-radius:var(--radius);border:0.5px solid var(--border-strong);background:var(--surface-2);color:var(--text-secondary);cursor:pointer;font-size:12px;font-weight:500;transition:all .15s}
+.lang-btn.active{background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent)}
+.mode-btn{display:flex;align-items:center;gap:5px}
+.mode-btn:hover{background:var(--surface-1)}
+.tabs{display:flex;flex-wrap:wrap;margin-bottom:1.25rem;border-bottom:0.5px solid var(--border-strong)}
+.tab{padding:8px 14px;font-size:13px;font-weight:500;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;background:none;border-top:none;border-left:none;border-right:none;transition:all .15s;white-space:nowrap}
+.tab.active{color:var(--text-accent);border-bottom-color:var(--fill-accent)}
+.tab:hover:not(.active){color:var(--text-primary)}
+.section{display:none}.section.active{display:block}
+.card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.25rem;margin-bottom:.75rem}
+.card-title{font-size:15px;font-weight:500;color:var(--text-primary);margin-bottom:.5rem;display:flex;align-items:center;gap:8px}
+.card-body{font-size:13px;color:var(--text-secondary);line-height:1.7}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.badge-blue{background:var(--bg-accent);color:var(--text-accent)}
+.badge-green{background:var(--bg-success);color:var(--text-success)}
+.badge-red{background:var(--bg-danger);color:var(--text-danger)}
+.badge-warn{background:var(--bg-warning);color:var(--text-warning)}
+.badge-pro{background:var(--bg-pro);color:var(--text-pro)}
+.instr-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.instr-table th{text-align:left;padding:7px 10px;color:var(--text-muted);font-weight:500;border-bottom:0.5px solid var(--border-strong);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.instr-table th:nth-child(1){width:38%}.instr-table th:nth-child(2){width:20%}.instr-table th:nth-child(3){width:42%}
+.instr-table td{padding:7px 10px;border-bottom:0.5px solid var(--border);color:var(--text-secondary);vertical-align:top;line-height:1.5;word-break:break-word}
+.instr-table td:first-child{font-family:var(--font-mono);font-size:11px;color:var(--text-accent)}
+.instr-table td:nth-child(2){font-family:var(--font-mono);font-size:11px;color:var(--text-pro)}
+.instr-table tr:last-child td{border-bottom:none}
+.instr-table tr:hover td{background:var(--surface-1)}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px;gap:8px}
+.stat-row:last-child{border-bottom:none}
+.stat-label{color:var(--text-secondary);flex-shrink:0}
+.stat-val{font-weight:500;color:var(--text-primary);font-family:var(--font-mono);font-size:12px;text-align:right}
+.chip{display:inline-block;font-family:var(--font-mono);font-size:11px;background:var(--surface-1);border:0.5px solid var(--border-strong);border-radius:4px;padding:1px 5px;color:var(--text-primary)}
+.sim-step{display:flex;gap:12px;margin-bottom:.75rem;align-items:flex-start}
+.step-num{min-width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;margin-top:1px}
+.step-text{font-size:13px;color:var(--text-secondary);line-height:1.6;padding-top:3px}
+.codebox{background:var(--surface-1);border-radius:8px;padding:.85rem 1rem;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);line-height:2;border:0.5px solid var(--border)}
+.comment{color:var(--text-muted)}
+.snote{font-size:11px;color:var(--text-muted);margin-top:.4rem;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <h1 style="font-size:20px;font-weight:500;color:var(--text-primary)" id="main-title">Tinyminds — design and reference</h1>
+    <p style="font-size:13px;color:var(--text-muted);margin-top:3px" id="main-sub">Working title · static-first web game</p>
+  </div>
+  <div class="topbar-right">
+    <button class="mode-btn" onclick="toggleMode()" id="mode-btn">
+      <i class="ti ti-moon" id="mode-icon" style="font-size:14px"></i>
+      <span id="mode-label">Dark</span>
+    </button>
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('zh')">中文</button>
+  </div>
+</div>
+<div class="tabs">
+  <button class="tab active" onclick="showTab('overview')" id="tab-overview">Overview</button>
+  <button class="tab" onclick="showTab('design')" id="tab-design">Design and why</button>
+  <button class="tab" onclick="showTab('prior')" id="tab-prior">Prior art</button>
+  <button class="tab" onclick="showTab('easy')" id="tab-easy">Easy authoring</button>
+  <button class="tab" onclick="showTab('build')" id="tab-build">Build and UI</button>
+  <button class="tab" onclick="showTab('names')" id="tab-names">Names</button>
+  <button class="tab" onclick="showTab('world')" id="tab-world">World</button>
+  <button class="tab" onclick="showTab('ant')" id="tab-ant">Ant</button>
+  <button class="tab" onclick="showTab('instrs')" id="tab-instrs">Instructions</button>
+  <button class="tab" onclick="showTab('combat')" id="tab-combat">Combat</button>
+  <button class="tab" onclick="showTab('rng')" id="tab-rng">RNG</button>
+  <button class="tab" onclick="showTab('syntax')" id="tab-syntax">File Format</button>
+  <button class="tab" onclick="showTab('compiler')" id="tab-compiler">Compiler</button>
+  <button class="tab" onclick="showTab('semantics')" id="tab-semantics">Semantics</button>
+  <button class="tab" onclick="showTab('tournament')" id="tab-tournament">Matches</button>
+  <button class="tab" onclick="showTab('sim')" id="tab-sim">Simulator</button>
+</div>
+
+<!-- OVERVIEW -->
+<div class="section active" id="sec-overview">
+  <div class="grid2" style="margin-bottom:.75rem">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-target" style="color:var(--text-accent);font-size:18px"></i> <span id="ov-goal-title">Goal</span></div>
+      <div class="card-body" id="ov-goal-body">Design the best ant colony. Ants compete to collect food and bring it to their nest. Colony with the most food after <strong style="color:var(--text-primary)">100,000 cycles</strong> wins.</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-brain" style="color:var(--text-pro);font-size:18px"></i> <span id="ov-brain-title">Brain</span></div>
+      <div class="card-body" id="ov-brain-body">All ants of a colony share <em>one</em> program (&le;2000 instructions). No individual memory. Coordination only via pheromone markers on cells.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><i class="ti ti-list-check" style="color:var(--text-success);font-size:18px"></i> <span id="ov-rules-title">Key constants</span></div>
+    <div class="grid3" style="margin-top:.75rem">
+      <div style="padding:6px 0"><span class="badge badge-blue" id="ov-r1b">Max program</span><br><span style="font-size:14px;color:var(--text-primary);font-weight:500;display:block;margin-top:4px">2,000 (Classic: 10,000)</span></div>
+      <div style="padding:6px 0"><span class="badge badge-green" id="ov-r2b">Food capacity</span><br><span style="font-size:14px;color:var(--text-primary);font-weight:500;display:block;margin-top:4px">2 packets (Classic: 1)</span></div>
+      <div style="padding:6px 0"><span class="badge badge-warn" id="ov-r3b">Rest after move</span><br><span style="font-size:14px;color:var(--text-primary);font-weight:500;display:block;margin-top:4px">14 cycles</span></div>
+      <div style="padding:6px 0"><span class="badge badge-warn" id="ov-r7b">Scared threshold</span><br><span style="font-size:14px;color:var(--text-primary);font-weight:500;display:block;margin-top:4px">4 enemies (Classic: none)</span></div>
+      <div style="padding:6px 0"><span class="badge badge-red" id="ov-r4b">Kill threshold</span><br><span style="font-size:14px;color:var(--text-primary);font-weight:500;display:block;margin-top:4px">&ge;5 enemy neighbours</span></div>
+      <div style="padding:6px 0"><span class="badge badge-pro" id="ov-r5b">Dead ant value</span><br><span style="font-size:14px;color:var(--text-primary);font-weight:500;display:block;margin-top:4px">3 food + carried</span></div>
+      <div style="padding:6px 0"><span class="badge badge-blue" id="ov-r6b">Markers/colony</span><br><span style="font-size:14px;color:var(--text-primary);font-weight:500;display:block;margin-top:4px">6 (numbered 0&ndash;5)</span></div>
+      <div style="padding:6px 0"><span class="badge badge-blue" id="ov-r8b">Max colonies</span><br><span style="font-size:14px;color:var(--text-primary);font-weight:500;display:block;margin-top:4px">2 (Classic); up to 26 via flag</span></div>
+      <div style="padding:6px 0"><span class="badge badge-green" id="ov-r9b">Max world size</span><br><span style="font-size:14px;color:var(--text-primary);font-weight:500;display:block;margin-top:4px">200 x 200 cells</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="ov-ex-title">Starter ant (simplest useful brain)</div>
+    <div class="card-body" id="ov-ex-desc" style="margin-bottom:.75rem">Wanders randomly until it finds food, picks it up, wanders home, drops it, repeats.</div>
+    <div class="codebox" style="font-size:11px;line-height:1.85">
+sense ahead food else 4   <span class="comment">; 0  try to find food</span><br>
+move else 4               <span class="comment">; 1</span><br>
+pickup else 4             <span class="comment">; 2  pick it up</span><br>
+goto 12                   <span class="comment">; 3  go home</span><br>
+flipzero 3 else 7         <span class="comment">; 4  turn left or right</span><br>
+turn left                 <span class="comment">; 5</span><br>
+goto 0                    <span class="comment">; 6</span><br>
+flipzero 2 else 10        <span class="comment">; 7</span><br>
+turn right                <span class="comment">; 8</span><br>
+goto 0                    <span class="comment">; 9</span><br>
+move else 0               <span class="comment">; 10</span><br>
+goto 0                    <span class="comment">; 11</span><br>
+sense ahead home else 16  <span class="comment">; 12 if home ahead</span><br>
+move else 16              <span class="comment">; 13 go there and drop</span><br>
+drop                      <span class="comment">; 14</span><br>
+goto 0                    <span class="comment">; 15 find food again</span><br>
+flipzero 3 else 19        <span class="comment">; 16 turn left or right</span><br>
+turn left                 <span class="comment">; 17</span><br>
+goto 12                   <span class="comment">; 18</span><br>
+flipzero 2 else 22        <span class="comment">; 19</span><br>
+turn right                <span class="comment">; 20</span><br>
+goto 12                   <span class="comment">; 21</span><br>
+move else 12              <span class="comment">; 22 move toward home</span><br>
+goto 12                   <span class="comment">; 23</span>
+    </div>
+  </div>
+<div class="card"><div class="card-title">Rulesets: Classic and Tinyminds</div><div class="card-body"><b>Classic</b> = the ICFP 2004 task (version 4, checked line by line): one food per ant (has_food is a boolean), death only at &ge;5 enemy neighbours (a dead ant becomes 3 food, +1 if it carried), no scare rule, no drop on a blocked move, no direction/payload instructions, up to 10,000 states, 91 ants per colony on judging worlds.<br><b>Tinyminds</b> = Classic + flags: <span class="chip">cap2</span> (carry two), <span class="chip">scare4</span>, <span class="chip">dropfail</span>, <span class="chip">ext-sense</span> (direction, payload) and a 2,000-instruction cap. Earlier drafts of this page called the Tinyminds extras &ldquo;Classic&rdquo;; that was wrong. The demo below has a ruleset switch.</div></div>
+</div>
+
+<!-- WORLD -->
+<div class="section" id="sec-world">
+  <div class="card">
+    <div class="card-title"><i class="ti ti-hexagons" style="color:var(--text-accent);font-size:18px"></i> <span id="wd-hex-title">Hex grid geometry</span></div>
+    <div class="card-body" id="wd-hex-body" style="margin-bottom:1rem">Toroidal (wrap-around edges) pointy-top hex grid. Origin (0,0) top-left; x grows right, y grows down. Height must be even. Directions 0&ndash;5 clockwise from East.</div>
+    <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:.5rem" id="wd-dir-label">Direction encoding &mdash; hover a hex</p>
+    <div style="display:flex;justify-content:center">
+      <svg id="dir-svg" width="280" height="240" viewBox="0 0 280 240" style="overflow:visible"></svg>
+    </div>
+    <p class="snote" style="text-align:center;margin-top:.4rem" id="wd-dir-note">Neighbour offset depends on parity of row y (even/odd)</p>
+  </div>
+  <div class="card">
+    <div class="card-title" id="wd-adj-title">Adjacent cell formula</div>
+    <div class="codebox" style="font-size:11px;line-height:1.9">
+dir 0 &rarr; (x+1, y  )<br>
+dir 1 &rarr; even y: (x,   y+1)  odd y: (x+1, y+1)<br>
+dir 2 &rarr; even y: (x&minus;1, y+1)  odd y: (x,   y+1)<br>
+dir 3 &rarr; (x&minus;1, y  )<br>
+dir 4 &rarr; even y: (x&minus;1, y&minus;1)  odd y: (x,   y&minus;1)<br>
+dir 5 &rarr; even y: (x,   y&minus;1)  odd y: (x+1, y&minus;1)<br>
+<span class="comment">// wrap: x&prime; = (x&prime;+max_x) mod max_x, y&prime; = (y&prime;+max_y) mod max_y</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="wd-eg-title">Example world (5&times;4) &mdash; hover a cell</div>
+    <div style="width:100%;overflow:visible">
+      <svg id="world-svg" viewBox="0 0 480 260" style="display:block;width:100%;max-width:480px;margin:0 auto;overflow:visible"></svg>
+    </div>
+    <p id="hex-info" style="font-size:12px;color:var(--text-accent);text-align:center;min-height:18px;margin-top:.4rem">&nbsp;</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:.5rem;font-size:11px;color:var(--text-secondary)">
+      <span><svg width="12" height="12"><rect width="12" height="12" rx="2" fill="#d3d1c7"/></svg> <span id="leg-rock">obstacle (#)</span></span>
+      <span><svg width="12" height="12"><rect width="12" height="12" rx="2" fill="#b5d4f4"/></svg> <span id="leg-nest-a">colony A (a)</span></span>
+      <span><svg width="12" height="12"><rect width="12" height="12" rx="2" fill="#97c459"/></svg> <span id="leg-nest-b">colony B (b)</span></span>
+      <span><svg width="12" height="12"><rect width="12" height="12" rx="2" fill="#fac775"/></svg> <span id="leg-food">food (2)</span></span>
+      <span><svg width="12" height="12"><rect width="12" height="12" rx="2" fill="#f7f6f2" stroke="#b4b2a9" stroke-width="1"/></svg> <span id="leg-empty">empty (.)</span></span>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title" id="wd-cell-title">Cell contents</div>
+      <div class="stat-row"><span class="stat-label" id="wd-c1">Max 1 ant</span><span class="stat-val">occupied(pos)</span></div>
+      <div class="stat-row"><span class="stat-label" id="wd-c2">Food &ge;0 packets</span><span class="stat-val">food_at(pos)</span></div>
+      <div class="stat-row"><span class="stat-label" id="wd-c3">6 markers/colony</span><span class="stat-val">marker 0&ndash;5</span></div>
+      <div class="stat-row"><span class="stat-label" id="wd-c4">Obstacle</span><span class="stat-val">obstructed(pos)</span></div>
+      <div class="stat-row"><span class="stat-label" id="wd-c5">Colony nest</span><span class="stat-val">base_at(pos,col)</span></div>
+      <div class="stat-row"><span class="stat-label" id="wd-c6">Enemy nest</span><span class="stat-val">other_base_at()</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title" id="wd-map-title">Map file (.map)</div>
+      <div class="codebox" style="font-size:11px;line-height:2">
+<span class="comment">line 1:</span> max_x (width)<br>
+<span class="comment">line 2:</span> max_y (height, must be even)<br>
+<span class="comment">line 3+:</span> x&times;y printable chars<br>
+<span style="color:var(--text-accent)">#</span>  obstacle &nbsp;
+<span style="color:var(--text-accent)">.</span>  empty<br>
+<span style="color:var(--text-accent)">a&ndash;z</span> <span id="wd-m1">colony nest</span><br>
+<span style="color:var(--text-accent)">1&ndash;9</span> <span id="wd-m2">food packets</span>
+      </div>
+      <p class="snote" id="wd-map-note" style="margin-top:.5rem">Whitespace optional in cell data. Up to 26 colonies; use a,b,c&hellip; in order. Nests need not be contiguous (but must be in tournament). Map wraps at edges.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><i class="ti ti-droplet" style="color:var(--text-success);font-size:18px"></i> <span id="wd-ph-title">Pheromones (markers)</span></div>
+    <div class="card-body" id="wd-ph-body" style="margin-bottom:.75rem">Each colony has 6 independent boolean markers (0&ndash;5) per cell. Own ants read them individually via <span class="chip">marker m</span>. Enemy markers detectable only as "any present" via <span class="chip">foemarker</span>. All cells start unmarked.</div>
+    <div class="stat-row"><span class="stat-label" id="ph-set">Set marker i of colony c</span><span class="stat-val">set_marker_at(w,pos,c,i)</span></div>
+    <div class="stat-row"><span class="stat-label" id="ph-clear">Clear marker i</span><span class="stat-val">clear_marker_at(w,pos,c,i)</span></div>
+    <div class="stat-row"><span class="stat-label" id="ph-check">Own marker i present?</span><span class="stat-val">check_marker_at(w,pos,c,i)</span></div>
+    <div class="stat-row"><span class="stat-label" id="ph-other">Any enemy marker?</span><span class="stat-val">check_other_marker_at(w,pos,c)</span></div>
+  </div>
+</div>
+
+<!-- ANT -->
+<div class="section" id="sec-ant">
+  <div class="card">
+    <div class="card-title"><i class="ti ti-cpu" style="color:var(--text-pro);font-size:18px"></i> <span id="ant-state-title">Ant state</span></div>
+    <div class="card-body" id="ant-state-sub" style="margin-bottom:.75rem">Each ant is an independent instance of the shared colony program. Colony is immutable.</div>
+    <div class="stat-row"><span class="stat-label"><code>id</code></span><span class="stat-val" id="ant-d1">unique int, 0-based row-major &middot; execution order</span></div>
+    <div class="stat-row"><span class="stat-label"><code>colony</code></span><span class="stat-val" id="ant-d6">immutable &middot; friend/foe</span></div>
+    <div class="stat-row"><span class="stat-label"><code>pc</code></span><span class="stat-val" id="ant-d2">0&ndash;1999 &middot; instruction address</span></div>
+    <div class="stat-row"><span class="stat-label"><code>resting</code></span><span class="stat-val" id="ant-d3">countdown; 14 after successful move</span></div>
+    <div class="stat-row"><span class="stat-label"><code>direction</code></span><span class="stat-val" id="ant-d4">0&ndash;5 &middot; absolute heading</span></div>
+    <div class="stat-row"><span class="stat-label"><code>has_food</code></span><span class="stat-val" id="ant-d5">0, 1 or 2 packets</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title" id="ant-turn-title">Turning</div>
+      <div class="codebox" style="line-height:2">
+turn left  &rarr; (dir+5) mod 6<br>turn right &rarr; (dir+1) mod 6
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" id="ant-sense-title">Sensing range</div>
+      <div class="codebox" style="line-height:1.85;font-size:11px">
+here       &rarr; current cell<br>
+ahead      &rarr; adjacent(pos, dir)<br>
+leftahead  &rarr; adjacent(pos, turn_left(dir))<br>
+rightahead &rarr; adjacent(pos, turn_right(dir))
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="ant-cond-title">Sense conditions (cell_matches)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:.4rem 0 .75rem">
+      <span class="chip">friend</span><span class="chip">foe</span><span class="chip">friendwithfood</span><span class="chip">foewithfood</span><span class="chip">food</span><span class="chip">rock</span><span class="chip">marker m</span><span class="chip">foemarker</span><span class="chip">home</span><span class="chip">foehome</span>
+    </div>
+    <div class="codebox" style="font-size:11px;line-height:1.85">
+<span class="comment">// if obstructed: only rock matches; all others false</span><br>
+rock        &rarr; obstructed(pos)<br>
+friend      &rarr; occupied &amp;&amp; same colony<br>
+foe         &rarr; occupied &amp;&amp; different colony<br>
+friendwithfood &rarr; friend &amp;&amp; has_food &gt; 0<br>
+foewithfood    &rarr; foe &amp;&amp; has_food &gt; 0<br>
+food        &rarr; food_at(pos) &gt; 0<br>
+marker(i)   &rarr; check_marker_at(pos, colony, i)<br>
+foemarker   &rarr; check_other_marker_at(pos, colony)<br>
+home        &rarr; base_at(pos, colony)<br>
+foehome     &rarr; other_base_at(pos, colony)
+    </div>
+    <p class="snote" id="ant-cond-note" style="margin-top:.5rem">senseall with empty cond list &rarr; always true. senseany with empty list &rarr; always false.</p>
+  </div>
+  <div class="card">
+    <div class="card-title" id="ant-init-title">Initialisation</div>
+    <div class="card-body" id="ant-init-body">Every nest cell gets one ant: pc=0, direction=0, has_food=0, resting=0. Ant ids assigned left-to-right, top-to-bottom across entire map. All markers cleared.</div>
+  </div>
+</div>
+
+<!-- INSTRUCTIONS -->
+<div class="section" id="sec-instrs">
+  <div class="card" style="padding:.5rem 0;overflow:hidden">
+    <table class="instr-table">
+      <thead><tr><th id="th-instr">Instruction</th><th id="th-args">Args</th><th id="th-effect">Effect / on failure</th></tr></thead>
+      <tbody id="instr-tbody"></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title" id="inst-cont-title">Continuation forms (high-level grammar)</div>
+    <div class="card-body" id="inst-cont-body" style="margin-bottom:.5rem">sense, pickup, move, flip, direction, payload take a <em>cont</em> instead of a bare else-address:</div>
+    <div class="codebox" style="font-size:11px;line-height:2">
+then instr            <span class="comment">&rarr; Then(instr)     &mdash; success path only, nothing on fail</span><br>
+else instr            <span class="comment">&rarr; Else(instr)     &mdash; failure path only</span><br>
+then instr else instr <span class="comment">&rarr; ThenElse(s,f)  &mdash; explicit both paths</span><br>
+;                     <span class="comment">&rarr; Nothing         &mdash; fall through (bare semicolon)</span>
+    </div>
+  </div>
+</div>
+
+<!-- COMBAT -->
+<div class="section" id="sec-combat">
+  <div class="card">
+    <div class="card-title"><i class="ti ti-shield-half" style="color:var(--text-danger);font-size:18px"></i> <span id="cb-title">Surrounding &amp; combat</span></div>
+    <div class="card-body">
+      <div class="sim-step">
+        <div class="step-num" style="background:var(--bg-warning);color:var(--text-warning)">4</div>
+        <div class="step-text" id="cb-step4">Exactly 4 enemy neighbours (scared_threshold=4) &rarr; ant drops <strong style="color:var(--text-primary)">all</strong> carried food. Ant survives.</div>
+      </div>
+      <div class="sim-step">
+        <div class="step-num" style="background:var(--bg-danger);color:var(--text-danger)">&ge;5</div>
+        <div class="step-text" id="cb-step5">5+ enemy neighbours (kill_threshold=5) &rarr; ant killed. Cell gets <strong style="color:var(--text-primary)">3 food</strong> (dead_ants_value) + carried food. Dead ant removed.</div>
+      </div>
+      <div class="sim-step" style="margin-bottom:0">
+        <div class="step-num" style="background:var(--surface-1);color:var(--text-muted);border:0.5px solid var(--border-strong)">!</div>
+        <div class="step-text" id="cb-col">move failure with has_food=2 &rarr; drops 1 packet on current cell, continues. has_food=1: keeps it.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="cb-check-title">Surrounded-check sequence</div>
+    <div class="codebox" style="font-size:11px;line-height:1.9">
+check_for_surrounded_ants(world, new_pos):<br>
+&nbsp;&nbsp;act_if_surrounded(world, new_pos)  <span class="comment">// destination cell</span><br>
+&nbsp;&nbsp;for dir in 0..5:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;act_if_surrounded(world, adjacent(new_pos, dir))
+    </div>
+    <p class="snote" id="cb-check-note" style="margin-top:.4rem">Called after every successful move. A single move can trigger kills in up to 7 cells.</p>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title" id="cb-cycle-title">Cycle order</div>
+      <div class="card-body" id="cb-cycle-body">All ants execute one instruction per cycle in ascending id order. resting&gt;0: decrement, skip instruction. sleep_cycles=14 set after successful move.</div>
+    </div>
+    <div class="card">
+      <div class="card-title" id="cb-food-title">Move failure food drop</div>
+      <div class="codebox" style="font-size:11px;line-height:1.85">
+if has_food == 2:<br>
+&nbsp;&nbsp;food_at[pos] += 1<br>
+&nbsp;&nbsp;has_food = 1<br>
+goto otherwise  <span class="comment">// always</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RNG -->
+<div class="section" id="sec-rng">
+  <div class="card">
+    <div class="card-title"><i class="ti ti-dice" style="color:var(--text-accent);font-size:18px"></i> <span id="rng-title">Deterministic PRNG</span></div>
+    <div class="card-body" id="rng-sub" style="margin-bottom:.75rem">All implementations must use this exact generator &mdash; produces bit-identical simulation logs across implementations.</div>
+    <div class="codebox">
+s&nbsp;= 99999  &nbsp;<span class="comment">(seed s&sub;0)</span><br>
+s&prime; = (s &times; 22695477 + 1) mod 2&sup3;&sup0;<br>
+x&nbsp;= floor(s&sub;i+4 / 2&sup1;&sup6;) mod 2&sup1;&sup4;<br>
+randomint(n) = x&sub;i mod n &nbsp;<span class="comment">// i increments each call</span>
+    </div>
+    <p class="snote" id="rng-ok" style="color:var(--text-success)"></p>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:.75rem" id="rng-seq-label">All 100 reference values x&sub;0&hellip;x&sub;99:</p>
+    <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:.3rem;line-height:1.8;word-break:break-all">
+12783, 16042, 13711, 817, 884, 5886, 13339, 9029, 13024, 11180, 144, 4081, 6311, 10793, 2741, 14213, 5548, 12967, 11519, 13797, 6098, 12562, 8381, 2467, 8385, 11594, 8836, 1628, 15094, 11937, 4829, 88, 2318, 3736, 7982, 11613, 6995, 5846, 16102, 14036, 14215, 1642, 4333, 14623, 16113, 6722, 9547, 11321, 7846, 13547, 16151, 12688, 13850, 395, 6818, 800, 8166, 11804, 997, 16336, 2268, 6379, 2344, 4369, 329, 3408, 5621, 9653, 13449, 11183, 572, 15885, 13009, 6319, 8647, 1351, 14649, 4026, 8161, 13318, 9224, 13493, 13123, 14402, 14149, 257, 13887, 7779, 10619, 10162, 12080, 14233, 7371, 3343, 5408, 14719, 12856, 11594, 7356, 4848
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="rng-flip-title">flipzero p semantics</div>
+    <div class="codebox" style="font-size:11px;line-height:1.9">
+flipzero p else i:<br>
+&nbsp;&nbsp;r = randomint(p)   <span class="comment">// r in {0, ..., p-1}</span><br>
+&nbsp;&nbsp;if r == 0 &rarr; pc = pc+1  <span class="comment">// prob 1/p ("zero" branch: fall through)</span><br>
+&nbsp;&nbsp;else      &rarr; pc = i     <span class="comment">// prob (p-1)/p</span>
+    </div>
+    <p class="snote" id="rng-note" style="margin-top:.5rem">1 &le; p &le; 16384 (x is 14-bit; a larger p would give 1/16384, not 1/p). Common usage: <span class="chip">flipzero 2 else i</span> = 50/50; <span class="chip">flipzero 3 else i</span> = 1-in-3 chance of fall-through.</p>
+  </div>
+<div class="card"><div class="card-title">Official conformance vector (ICFP 2004 task, s0 = 12345)</div><div class="card-body">The task prints x&#8320;&hellip;x&#8329;&#8329; for s&#8320; = 12345 and ships traces for that seed (tiny.world, sample.ant, rounds 0-10,000). The generator on this page reproduces the vector. The 99999 list above is this page&rsquo;s own; Classic conformance tests use 12345.<p class="snote" id="rng-ok2" style="color:var(--text-success)"></p><div id="rng-ref2" style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);line-height:1.8;word-break:break-all">7193, 2932, 10386, 5575, 100, 15976, 430, 9740, 9449, 1636, 11030, 9848, 13965, 16051, 14483, 6708, 5184, 15931, 7014, 461, 11371, 5856, 2136, 9139, 1684, 15900, 10236, 13297, 1364, 6876, 15687, 14127, 11387, 13469, 11860, 15589, 14209, 16327, 7024, 3297, 3120, 842, 12397, 9212, 5520, 4983, 7205, 7193, 4883, 7712, 6732, 7006, 10241, 1012, 15227, 9910, 14119, 15124, 6010, 13191, 5820, 14074, 5582, 5297, 10387, 4492, 14468, 7879, 8839, 12668, 5436, 8081, 4900, 10723, 10360, 1218, 11923, 3870, 12071, 3574, 12232, 15592, 12909, 9711, 6638, 2488, 12725, 16145, 9746, 9053, 5881, 3867, 10512, 4312, 8529, 1576, 15803, 5498, 12730, 7397</div></div></div>
+</div>
+
+<!-- FILE FORMAT -->
+<div class="section" id="sec-syntax">
+  <div class="card">
+    <div class="card-title" id="syn-ant-title">Brain file (.ant) &mdash; flat format</div>
+    <div class="card-body" id="syn-ant-body" style="margin-bottom:.75rem">One instruction per line, numbered from 0. Max 2,000 lines. Tokens separated by whitespace. Comment: <span class="chip">;</span> to end of line. Case-insensitive. No blank lines.</div>
+    <div class="codebox" style="font-size:11px;line-height:1.9">
+<span class="comment">; instruction grammar:</span><br>
+sensedir ::= here | ahead | leftahead | rightahead<br>
+cond     ::= friend|foe|friendwithfood|foewithfood<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | food|rock|marker m|foemarker|home|foehome<br>
+conds    ::= cond conds | &epsilon;   <span class="comment">// for senseall/senseany</span><br>
+lr       ::= left | right<br>
+addr     ::= 0..1999 &nbsp; m ::= 0..5 &nbsp; k ::= 0|1|2 &nbsp; p ::= 1..<br>
+<br>
+instruction ::=<br>
+&nbsp;&nbsp;sense sensedir cond else addr<br>
+&nbsp;&nbsp;| senseall sensedir conds else addr<br>
+&nbsp;&nbsp;| senseany sensedir conds else addr<br>
+&nbsp;&nbsp;| turn lr<br>
+&nbsp;&nbsp;| mark m | unmark m<br>
+&nbsp;&nbsp;| move else addr | pickup else addr | drop<br>
+&nbsp;&nbsp;| flipzero p else addr | goto addr<br>
+&nbsp;&nbsp;| direction d else addr | payload k else addr
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="syn-eg-title">Annotated example</div>
+    <div class="codebox" style="font-size:11px;line-height:1.85">
+sense ahead food else 4   <span class="comment">; 0</span><br>
+move else 4               <span class="comment">; 1</span><br>
+pickup else 4             <span class="comment">; 2</span><br>
+goto 12                   <span class="comment">; 3</span><br>
+flipzero 3 else 7         <span class="comment">; 4  &mdash; 1/3 &rarr; next, 2/3 &rarr; 7</span><br>
+turn left                 <span class="comment">; 5</span><br>
+goto 0                    <span class="comment">; 6</span>
+    </div>
+  </div>
+<div class="card"><div class="card-title">Assembly (.asm): flat format with labels</div><div class="card-body">The assembler turns .asm into strict .ant. <span class="chip">name:</span> at the start of a line (alone or before an instruction) defines a label; <span class="chip">else name</span> and <span class="chip">goto name</span> take a label or a number; blank and comment lines are allowed; addresses count instructions, not lines.<div class="codebox" style="font-size:11px;line-height:1.7;margin-top:.5rem">search: sense ahead food else wander<br>&nbsp;&nbsp;move else search<br>&nbsp;&nbsp;pickup else search<br>&nbsp;&nbsp;goto home<br>wander: flipzero 3 else step<br>&nbsp;&nbsp;turn left<br>&nbsp;&nbsp;goto search<br>step: move else search<br>&nbsp;&nbsp;goto search<br><span class="comment">; excerpt: home is the return-home part of the starter ant</span></div><p class="snote">Errors (with line numbers): unknown op, direction or condition; wrong arity; argument out of range; duplicate label; target &ge; length; more than 2,000 instructions after expansion; last instruction not a goto.</p></div></div>
+</div>
+
+<!-- COMPILER -->
+<div class="section" id="sec-compiler">
+  <div class="card">
+    <div class="card-title" id="comp-title">High-level compiler grammar (OCaml/yacc)</div>
+    <div class="card-body" id="comp-body" style="margin-bottom:.75rem">Structured syntax that compiles to flat .ant. Grammar originally written as an ocamlyacc parser.</div>
+    <div class="codebox" style="font-size:11px;line-height:1.85">
+toplevel ::=<br>
+&nbsp;&nbsp;define ID ids = instr   <span class="comment">// macro with params</span><br>
+&nbsp;&nbsp;| define ID instr        <span class="comment">// macro no params</span><br>
+ids  ::= ID ids | &epsilon;<br>
+<br>
+instr ::=<br>
+&nbsp;&nbsp;sense dir cond cont<br>
+&nbsp;&nbsp;| mark INT ; | unmark INT ;<br>
+&nbsp;&nbsp;| pickup cont | drop ;<br>
+&nbsp;&nbsp;| turn leftright ;<br>
+&nbsp;&nbsp;| move cont<br>
+&nbsp;&nbsp;| flip INT cont          <span class="comment">// = flipzero</span><br>
+&nbsp;&nbsp;| direction INT cont<br>
+&nbsp;&nbsp;| payload INT cont<br>
+&nbsp;&nbsp;| loop instr             <span class="comment">// infinite loop (A.Loop)</span><br>
+&nbsp;&nbsp;| exit ;                 <span class="comment">// A.Exit</span><br>
+&nbsp;&nbsp;| choose { cases }       <span class="comment">// A.Flipn &mdash; random choice</span><br>
+&nbsp;&nbsp;| repeat INT instr       <span class="comment">// A.Repeat(n, instr)</span><br>
+&nbsp;&nbsp;| ;                      <span class="comment">// nop (A.Nop)</span><br>
+&nbsp;&nbsp;| goto ID ;              <span class="comment">// labelled jump</span><br>
+&nbsp;&nbsp;| { instrs }             <span class="comment">// block (A.Block)</span><br>
+&nbsp;&nbsp;| ID blocks              <span class="comment">// macro apply (A.Apply)</span><br>
+&nbsp;&nbsp;| ID                     <span class="comment">// variable ref (A.Var)</span><br>
+<br>
+cont ::= then instr | else instr | then instr else instr | ;<br>
+cases ::= case : instr cases | case : instr<br>
+blocks ::= block blocks | block<br>
+block ::= { instrs }<br>
+instrs ::= instr instrs | instr
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="comp-val-title">Compile-time range checks</div>
+    <div class="stat-row"><span class="stat-label" id="comp-v1">direction d</span><span class="stat-val">inrange 0 5</span></div>
+    <div class="stat-row"><span class="stat-label" id="comp-v2">payload k</span><span class="stat-val">inrange 0 2</span></div>
+    <div class="stat-row"><span class="stat-label" id="comp-v3">marker m</span><span class="stat-val">inrange 0 5</span></div>
+    <div class="stat-row"><span class="stat-label" id="comp-v4">flipzero p</span><span class="stat-val">inrange 1 16384</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="comp-ex-title">High-level example</div>
+    <div class="codebox" style="font-size:11px;line-height:1.85">
+define wander {<br>
+&nbsp;&nbsp;choose {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;case: turn left ;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;case: turn right ;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;case: ;  <span class="comment">// straight</span><br>
+&nbsp;&nbsp;}<br>
+}<br>
+define scout {<br>
+&nbsp;&nbsp;loop sense ahead food<br>
+&nbsp;&nbsp;&nbsp;&nbsp;then { move ; pickup ; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;else { wander move ; }<br>
+}<br>
+<span class="comment">// parses per grammar; &lsquo;goto home&rsquo; would not (home = keyword token, not ID)</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Grammar caveats (review notes)</div>
+    <div class="card-body">
+&bull; <strong style="color:var(--text-primary)">Syntax only.</strong> The original grammar is an ocamlyacc parser (<span class="chip">Ast.program</span> = list of toplevels, each instr wrapped in <span class="chip">A.Pos</span>). Lowering to flat .ant (then/else/loop/exit/repeat/choose/goto/macros) is NOT specified; readings in this page are inferred.<br>
+&bull; <strong style="color:var(--text-primary)">Multi-token forms:</strong> <span class="chip">left ahead</span>, <span class="chip">right ahead</span>, <span class="chip">friend with food</span>, <span class="chip">foe with food</span>, <span class="chip">foe marker</span>, <span class="chip">foe home</span> (flat .ant: one token each, e.g. <span class="chip">leftahead</span>).<br>
+&bull; <strong style="color:var(--text-primary)">Terminators:</strong> high-level <span class="chip">;</span> ends mark/unmark/drop/turn/exit/goto and is the empty <em>cont</em>/nop; in flat .ant <span class="chip">;</span> starts a comment.<br>
+&bull; <strong style="color:var(--text-primary)">Dangling else:</strong> <span class="chip">%nonassoc THEN &lt; ELSE</span> &rarr; <em>else</em> binds to the nearest <em>then</em>. <span class="chip">else instr</span> alone = failure branch only.<br>
+&bull; <strong style="color:var(--text-primary)">Unused tokens:</strong> LABEL, NOP, LPAR, RPAR, COMMA. <span class="chip">goto ID ;</span> has no label-defining production &rarr; target semantics undefined.<br>
+&bull; <strong style="color:var(--text-primary)">Likely S/R conflict:</strong> after <span class="chip">define ID</span>, lookahead ID = reduce empty <em>ids</em> vs shift ID as <em>instr</em>; yacc shifts &rarr; <span class="chip">define f x = ...</span> may not parse. Check with <span class="chip">ocamlyacc -v</span>.<br>
+&bull; <strong style="color:var(--text-primary)">Range checks</strong> only on marker/unmark/marker-cond (0..5), direction (0..5), payload (0..2), flip (&ge;1). <span class="chip">repeat INT</span> unchecked; INT unsigned; lexer not provided.
+    </div>
+  </div>
+<div class="card"><div class="card-title">Lowering rules (v2)</div><div class="card-body">&bull; <strong style="color:var(--text-primary)">then A else B</strong> sense &hellip; else L1; A; goto L2; L1: B; L2:. A missing branch falls through; <span class="chip">;</span> is the empty cont.<br>&bull; <strong style="color:var(--text-primary)">loop X</strong> L: X; goto L. <b>exit</b> = L: goto L.<br>&bull; <strong style="color:var(--text-primary)">repeat n X</strong> X unrolled n times (no counters exist), n &le; 1000, counted against the size cap.<br>&bull; <strong style="color:var(--text-primary)">choose { n cases }</strong> uniform: flipzero n else c2; case1; goto end; c2: flipzero n&minus;1 else c3; &hellip; the last case is unconditional.<br>&bull; <strong style="color:var(--text-primary)">Macros</strong> expanded at the call site, no recursion, depth &le; 8, parameters substituted as blocks; the size cap is checked after expansion and the error names the macro.<br>&bull; <strong style="color:var(--text-primary)">Labels</strong> add the production <span class="chip">ID :</span> so <span class="chip">goto ID ;</span> has a target; labels are per toplevel scope.<br>&bull; <strong style="color:var(--text-primary)">S/R conflict</strong> the no-parameter form requires a block, <span class="chip">define ID { &hellip; }</span>; parameters use <span class="chip">define ID ids = instr</span>. The lookahead then decides, and the example above already conforms.<br><br></div></div>
+</div>
+
+<!-- SEMANTICS -->
+<div class="section" id="sec-semantics">
+  <div class="card">
+    <div class="card-title" id="sem-title">Full step() semantics</div>
+    <div class="card-body" id="sem-sub" style="margin-bottom:.75rem">Per ant per cycle. resting&gt;0: decrement, done. Else dispatch on instruction type (pc&prime; = pc+1):</div>
+    <div class="codebox" style="font-size:11px;line-height:1.85">
+Sense(sensing,cond,else):<br>
+&nbsp;&nbsp;pos&prime; = sensed_cell(pos,sensing,dir)<br>
+&nbsp;&nbsp;next = cell_matches(pos&prime;,cond) ? pc&prime; : else<br>
+SenseAny / SenseAll: similarly with cell_matches_any/all<br>
+<br>
+Mark(i):  set_marker_at(pos,colony,i);  next=pc&prime;<br>
+Unmark(i): clear_marker_at(pos,colony,i); next=pc&prime;<br>
+<br>
+PickUp(else):<br>
+&nbsp;&nbsp;if has_food&gt;1 || food_at(pos)==0 &rarr; next=else<br>
+&nbsp;&nbsp;else: food_at[pos]&minus;=1; has_food+=1; next=pc&prime;<br>
+<br>
+Drop: food_at[pos]+=has_food; has_food=0; next=pc&prime;<br>
+<br>
+Turn(lr): direction=turn(lr,dir); next=pc&prime;<br>
+<br>
+Move(else):<br>
+&nbsp;&nbsp;pos&prime;=adjacent(pos,dir)<br>
+&nbsp;&nbsp;if obstructed(pos&prime;)||occupied(pos&prime;):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if has_food==2: food_at[pos]+=1; has_food=1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;next=else<br>
+&nbsp;&nbsp;else:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;free(pos); place_at(pos&prime;,ant)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;resting=14; check_for_surrounded_ants(pos&prime;)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;next=pc&prime;<br>
+<br>
+FlipZero(n,else): next = randomint(n)==0 ? pc&prime; : else<br>
+Direction(n,else): next = dir==n ? pc&prime; : else<br>
+Goto(i):  next=i<br>
+Payload(k,else): next = has_food==k ? pc&prime; : else<br>
+<br>
+<span class="comment">// set_pc(ant, next)</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Pitfalls &amp; unspecified points (review notes)</div>
+    <div class="card-body">
+&bull; <strong style="color:var(--text-primary)">ids:</strong> &sect;3.2 says "positive", &sect;4 numbers from 0 &rarr; use 0-based, row-major; act in ascending id. Ant killed earlier in the same cycle: skip it (ICFP 2004 does the same).<br>
+&bull; <strong style="color:var(--text-primary)">Pace:</strong> successful move sets resting=14 &rarr; next action 15 cycles later; resting ants only decrement.<br>
+&bull; <strong style="color:var(--text-primary)">RNG:</strong> one global stream; only <span class="chip">flipzero</span> consumes it (also p=1); x&sub;0 uses s&sub;4 (4 warm-up steps).<br>
+&bull; <strong style="color:var(--text-primary)">Self-sensing:</strong> <span class="chip">sense here friend</span> is always true (ant sees itself), <span class="chip">here foe</span> always false, <span class="chip">here friendwithfood</span> = carrying food.<br>
+&bull; <strong style="color:var(--text-primary)">Obstructed cell:</strong> only <span class="chip">rock</span> matches; home/food/marker... are false.<br>
+&bull; <strong style="color:var(--text-primary)">Surround check:</strong> only after a successful move; destination, then dirs 0..5, applied sequentially &mdash; a kill lowers later counts, so order must match. Obstacles are not enemies. ==4: drop all food on own cell (survives); &ge;5: dies, cell += 3 + carried.<br>
+&bull; <strong style="color:var(--text-primary)">Food:</strong> food_at excludes carried food. Score = sum of food_at over a colony's nest cells (whoever dropped it &mdash; inferred).<br>
+&bull; <strong style="color:var(--text-primary)">State:</strong> per ant only pc, direction, has_food, resting persist; pc is the only "memory" (use it as a state machine).<br>
+&bull; <strong style="color:var(--text-primary)">Wrap:</strong> use ((v % m) + m) % m (C++ % can be negative); max_y even keeps row parity consistent.<br>
+&bull; <strong style="color:var(--text-primary)">Decided in v2:</strong> see "Spec decisions (v2)" below and the Matches tab.
+    </div>
+  </div>
+<div class="card"><div class="card-title">Spec decisions (v2): review fixes</div><div class="card-body">&bull; <strong style="color:var(--text-primary)">flipzero range.</strong> x is 14-bit, so for p &gt; 16384 the zero branch has chance 1/16384, not 1/p. The original accepts any p &ge; 1 (imported Classic ants keep that behaviour); the authoring levels reject p &gt; 16384.<br>&bull; <strong style="color:var(--text-primary)">End of program.</strong> The loader rejects a program whose last instruction can fall through and any target &ge; length. No runtime case remains.<br>&bull; <strong style="color:var(--text-primary)">Seed.</strong> One match seed: the map generator uses it, s&sub;0 = seed mod 2&sup3;&sup0; (default 99999) feeds the RNG with the 4 warm-up steps. Stored in the replay descriptor.<br>&bull; <strong style="color:var(--text-primary)">Food in nests.</strong> pickup works on any cell with food, including both nests, so ants can steal. Score = food on nest cells at the end, whoever dropped it.<br>&bull; <strong style="color:var(--text-primary)">Colonies.</strong> Classic = 2. With the multi-colony flag: foe = any other colony, foemarker/foehome = any other colony&rsquo;s marker/nest, ids stay row-major.<br>&bull; <strong style="color:var(--text-primary)">Scare rule (==4 drops food).</strong> Verified against the ICFP 2004 task: the original has no scare rule (death at &ge;5 only). It is the Tinyminds flag <span class="chip">scare4</span>, off in Classic.<br>&bull; <strong style="color:var(--text-primary)">Order bias.</strong> Id 0 acts first, so the upper colony moves first each cycle. Matches run both colour assignments; flag <span class="chip">altorder</span> alternates the order and is tested for side bias.<br>&bull; <strong style="color:var(--text-primary)">Stale markers.</strong> Markers never decay: trails go stale unless ants <span class="chip">unmark</span> (an Academy lesson) or the decay flag is on.<br><br></div></div>
+</div>
+
+<!-- TOURNAMENT -->
+<div class="section" id="sec-tournament"></div>
+
+<div class="section" id="sec-design"></div>
+<div class="section" id="sec-prior"></div>
+<div class="section" id="sec-easy"></div>
+<div class="section" id="sec-build"></div>
+<div class="section" id="sec-names"></div>
+
+<!-- SIMULATOR -->
+<div class="section" id="sec-sim">
+  <div class="card">
+    <div class="card-title">Executable reference (10×10 demo map, 2 colonies)</div>
+    <div class="card-body" style="margin-bottom:.5rem">step() as specified; both colonies run the program below (flat .ant). Blue = a, green = b, amber ring = carrying food, line = heading.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:.5rem">
+      <button class="mode-btn" id="sim-step">Step</button>
+      <button class="mode-btn" id="sim-run">Run</button>
+      <button class="mode-btn" id="sim-reset">Reset</button>
+      <select class="mode-btn" id="sim-spd"><option value="1">1 cycle/tick</option><option value="15" selected>15 cycles/tick</option><option value="300">300 cycles/tick</option></select>
+      <select class="mode-btn" id="sim-rules"><option value="classic">Classic (ICFP 2004)</option><option value="tiny">Tinyminds rules</option></select>
+      <span class="chip" id="sim-info"></span>
+    </div>
+    <svg id="sim-svg" viewBox="0 0 320 270" style="width:100%;max-width:480px;display:block;margin:0 auto"></svg>
+    <p class="snote" id="sim-err" style="color:var(--text-danger)"></p>
+    <textarea id="sim-prog" spellcheck="false" style="width:100%;height:220px;margin-top:.5rem;font-family:var(--font-mono);font-size:11px;background:var(--surface-1);color:var(--text-primary);border:.5px solid var(--border);border-radius:8px;padding:.6rem"></textarea>
+    <p class="snote">Edit, then Reset to reload. Markers are simulated. The loader validates ops, directions, conditions, argument ranges, jump targets, the 2,000-instruction cap and a final goto; labels (name:), blank and comment lines are accepted.</p>
+  </div>
+</div>
+
+<script>
+let darkMode=false;
+function toggleMode(){
+  darkMode=!darkMode;
+  document.documentElement.setAttribute('data-mode',darkMode?'dark':'');
+  document.getElementById('mode-icon').className=darkMode?'ti ti-sun':'ti ti-moon';
+  const l=lang;
+  document.getElementById('mode-label').textContent=darkMode?(l==='zh'?'浅色':'Light'):(l==='zh'?'深色':'Dark');
+  buildDirSVG();buildWorldSVG();
+}
+function showTab(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+const T={
+en:{
+'main-title':'Tinyminds — design and reference','main-sub':'Working title · static-first web game',
+'tab-overview':'Overview','tab-world':'World','tab-ant':'Ant','tab-instrs':'Instructions','tab-combat':'Combat','tab-rng':'RNG','tab-syntax':'File Format','tab-compiler':'Compiler','tab-semantics':'Semantics','tab-tournament':'Matches','tab-design':'Design and why','tab-prior':'Prior art','tab-easy':'Easy authoring','tab-build':'Build and UI','tab-names':'Names','tab-sim':'Simulator',
+'ov-goal-title':'Goal','ov-goal-body':'Design the best ant colony. Ants compete to collect food and bring it to their nest. Colony with the most food after <strong style="color:var(--text-primary)">100,000 cycles</strong> wins.',
+'ov-brain-title':'Brain','ov-brain-body':'All ants of a colony share <em>one</em> program (&le;2000 instructions). No individual memory. Coordination only via pheromone markers on cells.',
+'ov-rules-title':'Key constants',
+'ov-r1b':'Max program','ov-r2b':'Food capacity','ov-r3b':'Rest after move','ov-r7b':'Scared threshold','ov-r4b':'Kill threshold','ov-r5b':'Dead ant value','ov-r6b':'Markers/colony','ov-r8b':'Max colonies','ov-r9b':'Max world size',
+'ov-ex-title':'Starter ant (simplest useful brain)','ov-ex-desc':'Wanders randomly until it finds food, picks it up, wanders home, drops it, repeats.',
+'wd-hex-title':'Hex grid geometry','wd-hex-body':'Toroidal (wrap-around edges) pointy-top hex grid. Origin (0,0) top-left; x grows right, y grows down. Height must be even. Directions 0–5 clockwise from East.',
+'wd-dir-label':'Direction encoding — hover a hex','wd-dir-note':'Neighbour offset depends on parity of row y (even/odd)',
+'wd-adj-title':'Adjacent cell formula','wd-eg-title':'Example world (5&times;4) — hover a cell',
+'wd-cell-title':'Cell contents','wd-c1':'Max 1 ant','wd-c2':'Food &ge;0 packets','wd-c3':'6 markers/colony','wd-c4':'Obstacle','wd-c5':'Colony nest','wd-c6':'Enemy nest',
+'wd-map-title':'Map file (.map)','wd-m1':'colony nest','wd-m2':'food packets',
+'wd-map-note':'Whitespace optional in cell data. Up to 26 colonies; use a,b,c… in order. Nests need not be contiguous (but must be in tournament). Map wraps at edges.',
+'wd-ph-title':'Pheromones (markers)','wd-ph-body':'Each colony has 6 independent boolean markers (0–5) per cell. Own ants read them via <span class="chip">marker m</span>. Enemy markers detectable only as "any present" via <span class="chip">foemarker</span>. All cells start unmarked.',
+'ph-set':'Set marker i of colony c','ph-clear':'Clear marker i','ph-check':'Own marker i present?','ph-other':'Any enemy marker?',
+'leg-rock':'obstacle (#)','leg-nest-a':'colony A (a)','leg-nest-b':'colony B (b)','leg-food':'food (2)','leg-empty':'empty (.)',
+'ant-state-title':'Ant state','ant-state-sub':'Each ant is an independent instance of the shared colony program. Colony is immutable.',
+'ant-d1':'unique int, 0-based row-major · execution order','ant-d6':'immutable · friend/foe','ant-d2':'0–1999 · instruction address','ant-d3':'countdown; 14 after successful move','ant-d4':'0–5 · absolute heading','ant-d5':'0, 1 or 2 packets',
+'ant-turn-title':'Turning','ant-sense-title':'Sensing range',
+'ant-cond-title':'Sense conditions (cell_matches)','ant-cond-note':'senseall with empty cond list → always true. senseany with empty list → always false.',
+'ant-init-title':'Initialisation','ant-init-body':'Every nest cell gets one ant: pc=0, direction=0, has_food=0, resting=0. Ant ids assigned left-to-right, top-to-bottom. All markers cleared.',
+'th-instr':'Instruction','th-args':'Args','th-effect':'Effect / on failure',
+'inst-cont-title':'Continuation forms (high-level grammar)','inst-cont-body':'sense, pickup, move, flip, direction, payload take a <em>cont</em> instead of a bare else-address:',
+'cb-title':'Surrounding & combat',
+'cb-step4':'Exactly 4 enemy neighbours (scared_threshold=4) → ant drops <strong style="color:var(--text-primary)">all</strong> carried food. Ant survives.',
+'cb-step5':'5+ enemy neighbours (kill_threshold=5) → ant killed. Cell gets <strong style="color:var(--text-primary)">3 food</strong> (dead_ants_value) + carried food.',
+'cb-col':'move failure with has_food=2 → drops 1 packet. has_food=1: keeps it.',
+'cb-check-title':'Surrounded-check sequence','cb-check-note':'Called after every successful move. A single move can trigger kills in up to 7 cells.',
+'cb-cycle-title':'Cycle order','cb-cycle-body':'All ants execute one instruction per cycle in ascending id order. resting>0: decrement, skip. sleep_cycles=14 after successful move.',
+'cb-food-title':'Move failure food drop',
+'rng-title':'Deterministic PRNG','rng-sub':'All implementations must use this exact generator — produces bit-identical simulation logs.',
+'rng-seq-label':'All 100 reference values x₀…x₉₉:',
+'rng-flip-title':'flipzero p semantics','rng-note':'1 ≤ p ≤ 16384. flipzero 2 else i = 50/50; flipzero 3 else i = 1-in-3 chance of fall-through.',
+'syn-ant-title':'Brain file (.ant) — flat format','syn-ant-body':'One instruction per line, numbered from 0. Max 2,000 lines. Comment: <span class="chip">;</span> to end of line. Case-insensitive. No blank lines.',
+'syn-eg-title':'Annotated example',
+'comp-title':'High-level compiler grammar (OCaml/yacc)','comp-body':'Structured syntax that compiles to flat .ant. ',
+'comp-val-title':'Compile-time range checks','comp-v1':'direction d','comp-v2':'payload k','comp-v3':'marker m','comp-v4':'flipzero p',
+'comp-ex-title':'High-level example',
+'sem-title':'Full step() semantics','sem-sub':'Per ant per cycle. resting>0: decrement, done. Else dispatch on instruction (pc′=pc+1):',
+
+
+
+
+
+
+
+
+},
+zh:{
+'main-title':'群体编程 — 设计与参考手册','main-sub':'暂定名 · 纯静态网页游戏',
+'tab-overview':'概览','tab-world':'世界','tab-ant':'蚂蚁','tab-instrs':'指令集','tab-combat':'战斗','tab-rng':'随机数','tab-syntax':'文件格式','tab-compiler':'编译器','tab-semantics':'语义','tab-tournament':'对局','tab-design':'设计与理由','tab-prior':'前人作品','tab-easy':'易用创作','tab-build':'构建与界面','tab-names':'命名','tab-sim':'模拟器',
+'ov-goal-title':'目标','ov-goal-body':'设计最强蚁群。蚂蚁竞争收集食物并运回巢穴。经过 <strong style="color:var(--text-primary)">100,000 轮</strong> 后，巢穴中食物最多的蚁群获胜。',
+'ov-brain-title':'大脑','ov-brain-body':'同一蚁群所有蚂蚁共享<em>一个</em>程序（≤2000条指令）。无个体记忆，仅通过信息素标记协调。',
+'ov-rules-title':'核心常量',
+'ov-r1b':'最大程序','ov-r2b':'携食上限','ov-r3b':'移动后休息','ov-r7b':'恐吓阈值','ov-r4b':'击杀阈值','ov-r5b':'死亡价值','ov-r6b':'标记/蚁群','ov-r8b':'最多蚁群','ov-r9b':'最大地图',
+'ov-ex-title':'入门蚂蚁示例（最简单可用的程序）','ov-ex-desc':'随机游走直到找到食物，拾起，游走回巢，放下，循环。',
+'wd-hex-title':'六边形网格几何','wd-hex-body':'环形（边缘环绕）尖顶六边形网格。原点(0,0)在左上角，x向右，y向下。高度必须为偶数。方向0–5从东顺时针。',
+'wd-dir-label':'方向编码 — 悬停查看','wd-dir-note':'相邻列偏移取决于行y的奇偶性',
+'wd-adj-title':'相邻格子计算公式','wd-eg-title':'示例世界（5×4）— 悬停查看',
+'wd-cell-title':'格子内容','wd-c1':'最多1只蚂蚁','wd-c2':'食物≥0包','wd-c3':'每蚁群6个标记','wd-c4':'障碍物','wd-c5':'蚁群巢穴','wd-c6':'敌方巢穴',
+'wd-map-title':'地图文件（.map）','wd-m1':'蚁群巢穴','wd-m2':'食物包数',
+'wd-map-note':'格子数据中空白可选。最多26个蚁群，按a,b,c…顺序使用。竞赛中巢穴必须连通。地图边缘环绕。',
+'wd-ph-title':'信息素（标记）','wd-ph-body':'每蚁群每格有6个独立布尔标记（0–5）。己方蚂蚁通过 <span class="chip">marker m</span> 读取各自标记。敌方标记只能通过 <span class="chip">foemarker</span> 检测"是否存在"。模拟开始时所有格子无标记。',
+'ph-set':'设置蚁群c的标记i','ph-clear':'清除标记i','ph-check':'己方标记i存在？','ph-other':'存在任意敌方标记？',
+'leg-rock':'障碍物(#)','leg-nest-a':'A族巢穴(a)','leg-nest-b':'B族巢穴(b)','leg-food':'食物(2包)','leg-empty':'空格(.)',
+'ant-state-title':'蚂蚁状态','ant-state-sub':'每只蚂蚁是共享程序的独立实例。蚁群不可更改。',
+'ant-d1':'唯一整数（从0起，行优先）·决定执行顺序','ant-d6':'不可变·友方/敌方判断','ant-d2':'0–1999·当前指令地址','ant-d3':'倒计时；成功移动后设为14','ant-d4':'0–5·绝对朝向','ant-d5':'携带0、1或2包食物',
+'ant-turn-title':'转向','ant-sense-title':'感知范围',
+'ant-cond-title':'感知条件（cell_matches）','ant-cond-note':'senseall 空条件列表→始终为真。senseany 空列表→始终为假。',
+'ant-init-title':'初始化','ant-init-body':'每个巢穴格子放置一只蚂蚁：pc=0，direction=0，has_food=0，resting=0。蚂蚁id从左到右、从上到下分配。所有标记清除。',
+'th-instr':'指令','th-args':'参数','th-effect':'效果/失败时',
+'inst-cont-title':'续体形式（高级文法）','inst-cont-body':'sense、pickup、move、flip、direction、payload 均接受 <em>cont</em>（续体）而非裸地址：',
+'cb-title':'包围&战斗',
+'cb-step4':'恰好4只敌方邻居（scared_threshold=4）→蚂蚁丢弃<strong style="color:var(--text-primary)">所有</strong>携带食物。存活。',
+'cb-step5':'≥5只敌方邻居（kill_threshold=5）→蚂蚁被杀死。格子获得<strong style="color:var(--text-primary)">3包食物</strong>（dead_ants_value）+携带食物。',
+'cb-col':'移动失败且has_food=2→在当前格子丢弃1包。has_food=1时保留。',
+'cb-check-title':'包围检查序列','cb-check-note':'每次成功移动后调用。单次移动最多触发7个格子的击杀检查。',
+'cb-cycle-title':'轮次执行顺序','cb-cycle-body':'所有蚂蚁按id升序每轮各执行一条指令。resting>0：递减并跳过。成功移动后resting=14（sleep_cycles）。',
+'cb-food-title':'移动失败食物处理',
+'rng-title':'确定性伪随机数生成器','rng-sub':'所有实现必须使用完全相同的生成器，以产生逐位相同的模拟日志。',
+'rng-seq-label':'全部100个参考值 x₀…x₉₉：',
+'rng-flip-title':'flipzero p 语义','rng-note':'1≤p≤16384。flipzero 2 else i = 50/50；flipzero 3 else i = 1/3概率走"零"路径。',
+'syn-ant-title':'大脑文件（.ant）—平坦格式','syn-ant-body':'每行一条指令，从0编号。最多2000行。注释以 <span class="chip">;</span> 开头到行尾。不区分大小写。不允许空行。',
+'syn-eg-title':'带注释示例',
+'comp-title':'高级编译器文法（OCaml/yacc）','comp-body':'将结构化程序编译为平坦.ant格式。',
+'comp-val-title':'编译时范围检查','comp-v1':'direction d','comp-v2':'payload k','comp-v3':'marker m','comp-v4':'flipzero p',
+'comp-ex-title':'高级语法示例',
+'sem-title':'完整 step() 语义','sem-sub':'每轮对每只蚂蚁执行。resting>0：递减并结束。否则按指令分发（pc′=pc+1）：',
+
+
+
+
+
+
+
+
+}
+};
+
+const INSTRS={
+en:[
+['sense dir cond else addr','dir,cond,addr','Check cell in dir for cond. Match→next; else→jump addr'],
+['senseany dir conds else addr','dir,cond[],addr','At least one cond matches→next; else→jump addr'],
+['senseall dir conds else addr','dir,cond[],addr','All conds match→next; else→jump addr'],
+['mark m','m 0–5','Set own marker m on current cell → next'],
+['unmark m','m 0–5','Clear own marker m on current cell → next'],
+['move else addr','addr','Move forward. Fail(blocked/occupied)→jump addr; has_food=2→drop 1. Success→next, resting=14'],
+['pickup else addr','addr','Pick up 1 food. Fail(has_food>1 or no food on cell)→jump addr'],
+['drop','—','Drop all carried food on current cell → next'],
+['turn left|right','lr','Rotate. left:(dir+5)%6. right:(dir+1)%6 → next'],
+['flipzero p else addr','1≤p≤16384,addr','randomint(p)=0→next (1/p). else→jump addr ((p−1)/p)'],
+['goto addr','addr','Unconditional jump to addr'],
+['direction d else addr','d 0–5,addr','Current dir=d→next; else→jump addr'],
+['payload k else addr','k 0–2,addr','has_food=k→next; else→jump addr'],
+],
+zh:[
+['sense dir cond else addr','dir,cond,addr','检查方向dir的格子。满足cond→下一条；否则→跳转addr'],
+['senseany dir conds else addr','dir,cond[],addr','至少一个条件满足→下一条；否则→跳转addr'],
+['senseall dir conds else addr','dir,cond[],addr','全部条件满足→下一条；否则→跳转addr'],
+['mark m','m 0–5','在当前格子设置己方标记m → 下一条'],
+['unmark m','m 0–5','清除当前格子己方标记m → 下一条'],
+['move else addr','addr','向前移动。失败(阻挡/占用)→跳转addr；has_food=2时丢弃1包。成功→下一条，resting=14'],
+['pickup else addr','addr','拾取1包食物。失败(已携带>1包或格子无食物)→跳转addr'],
+['drop','—','将所有携带食物放到当前格子 → 下一条'],
+['turn left|right','lr','转向。left:(dir+5)%6，right:(dir+1)%6 → 下一条'],
+['flipzero p else addr','1≤p≤16384,addr','randomint(p)=0→下一条(1/p)；否则→跳转addr((p−1)/p)'],
+['goto addr','addr','无条件跳转到addr'],
+['direction d else addr','d 0–5,addr','当前方向=d→下一条；否则→跳转addr'],
+['payload k else addr','k 0–2,addr','has_food=k→下一条；否则→跳转addr'],
+]
+};
+
+let lang='en';
+function setLang(l){
+  lang=l;
+  document.querySelectorAll('.lang-btn').forEach(b=>{
+    b.classList.toggle('active',(l==='en'&&b.textContent==='EN')||(l==='zh'&&b.textContent==='中文'));
+  });
+  const d=T[l];
+  for(const[id,val]of Object.entries(d)){
+    const el=document.getElementById(id);
+    if(el)el.innerHTML=val;
+  }
+  renderInstrs();if(window.applyZh)applyZh(l);
+  document.getElementById('mode-label').textContent=darkMode?(l==='zh'?'浅色':'Light'):(l==='zh'?'深色':'Dark');
+}
+function renderInstrs(){
+  document.getElementById('instr-tbody').innerHTML=
+    INSTRS[lang].map(([i,a,e])=>`<tr><td>${i}</td><td>${a}</td><td>${e}</td></tr>`).join('');
+}
+
+// hex point helper (pointy-top)
+function hpts(cx,cy,r){
+  const p=[];
+  for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-30);p.push(`${(cx+r*Math.cos(a)).toFixed(2)},${(cy+r*Math.sin(a)).toFixed(2)}`);}
+  return p.join(' ');
+}
+function mkEl(tag,attrs={},ns='http://www.w3.org/2000/svg'){
+  const el=document.createElementNS(ns,tag);
+  for(const[k,v]of Object.entries(attrs))el.setAttribute(k,v);
+  return el;
+}
+function mkTxt(svg,x,y,txt,fs,fw,fill,anchor='middle',base='middle'){
+  const t=mkEl('text',{x,y,'text-anchor':anchor,'dominant-baseline':base,'font-size':fs,'font-weight':fw,fill,'font-family':'system-ui,sans-serif'});
+  t.textContent=txt;svg.appendChild(t);return t;
+}
+
+function buildDirSVG(){
+  const svg=document.getElementById('dir-svg');
+  svg.innerHTML='';
+  const D=darkMode;
+  const R=36,W=Math.sqrt(3)*R,H=2*R;
+  const cx=140,cy=120;
+  const dirs=[
+    {d:0,l:'0',a:'→',ox:W,oy:0},
+    {d:1,l:'1',a:'↘',ox:W/2,oy:H*0.75},
+    {d:2,l:'2',a:'↙',ox:-W/2,oy:H*0.75},
+    {d:3,l:'3',a:'←',ox:-W,oy:0},
+    {d:4,l:'4',a:'↖',ox:-W/2,oy:-H*0.75},
+    {d:5,l:'5',a:'↗',ox:W/2,oy:-H*0.75},
+  ];
+  const pal={
+    cFill:D?'#042c53':'#e6f1fb',cStroke:D?'#378add':'#85b7eb',cText:D?'#85b7eb':'#185fa5',
+    dFill:D?'#1e1e1b':'#f7f6f2',dStroke:D?'rgba(255,255,255,.18)':'rgba(0,0,0,.18)',
+    dNum:D?'#e8e6df':'#1a1a18',dArr:D?'#a8a69f':'#5f5e5a',
+    hFill:D?'#173404':'#eaf3de',hStroke:D?'#639922':'#3b6d11',hText:D?'#c0dd97':'#27500a'
+  };
+  // center
+  const cp=mkEl('polygon',{points:hpts(cx,cy,R),fill:pal.cFill,stroke:pal.cStroke,'stroke-width':'1.5'});
+  svg.appendChild(cp);
+  const ct=mkEl('text',{x:cx,y:cy+1,'text-anchor':'middle','dominant-baseline':'middle','font-size':'22',fill:pal.cText});
+  ct.textContent='🐜';svg.appendChild(ct);
+
+  dirs.forEach(({l,a,ox,oy})=>{
+    const hx=cx+ox,hy=cy+oy;
+    const g=mkEl('g');g.style.cursor='pointer';
+    const poly=mkEl('polygon',{points:hpts(hx,hy,R),fill:pal.dFill,stroke:pal.dStroke,'stroke-width':'1.5'});
+    g.appendChild(poly);
+    const num=mkTxt(g,hx,hy-7,l,'17','600',pal.dNum);
+    const arr=mkTxt(g,hx,hy+11,a,'13','400',pal.dArr);
+    g.addEventListener('mouseenter',()=>{
+      poly.setAttribute('fill',pal.hFill);poly.setAttribute('stroke',pal.hStroke);
+      num.setAttribute('fill',pal.hText);arr.setAttribute('fill',pal.hText);
+    });
+    g.addEventListener('mouseleave',()=>{
+      poly.setAttribute('fill',pal.dFill);poly.setAttribute('stroke',pal.dStroke);
+      num.setAttribute('fill',pal.dNum);arr.setAttribute('fill',pal.dArr);
+    });
+    svg.appendChild(g);
+  });
+}
+
+function buildWorldSVG(){
+  const svg=document.getElementById('world-svg');
+  const info=document.getElementById('hex-info');
+  svg.innerHTML='';
+  const D=darkMode;
+  const COLS=5,ROWS=4,R=42;
+  const HW=Math.sqrt(3)*R,HH=2*R;
+  const padX=HW*0.65,padY=HH*0.6;
+  const totalW=COLS*HW+HW*0.5+padX*2;
+  const totalH=ROWS*HH*0.75+HH*0.25+padY*2;
+  svg.setAttribute('viewBox',`0 0 ${totalW.toFixed(1)} ${totalH.toFixed(1)}`);
+
+  const typeMap={
+    '0,0':'obstacle','4,0':'obstacle',
+    '1,1':'nest-a','2,1':'nest-a',
+    '3,2':'nest-b','4,2':'nest-b',
+    '1,2':'food','3,3':'food',
+    '0,3':'obstacle','3,0':'obstacle',
+  };
+  const colors={
+    empty:    {f:D?'#272724':'#f7f6f2',s:D?'rgba(255,255,255,.14)':'#c4c2b9',t:D?'#686760':'#b4b2a9'},
+    obstacle: {f:D?'#444441':'#d3d1c7',s:D?'#5f5e5a':'#888780',t:D?'#a8a69f':'#5f5e5a'},
+    'nest-a': {f:D?'#0c447c':'#b5d4f4',s:D?'#378add':'#85b7eb',t:D?'#85b7eb':'#0c447c'},
+    'nest-b': {f:D?'#27500a':'#639922',s:D?'#639922':'#3b6d11',t:D?'#c0dd97':'#27500a'},
+    food:     {f:D?'#412402':'#faeeda',s:D?'#854f0b':'#ef9f27',t:D?'#fac775':'#854f0b'},
+  };
+  const hov={f:D?'#26215c':'#eeedfe',s:D?'#afa9ec':'#534ab7'};
+  const lbl={'obstacle':'#','nest-a':'a','nest-b':'b','food':'2','empty':'.'};
+  const desc={'obstacle':'rock/obstacle','nest-a':'colony A nest','nest-b':'colony B nest','food':'food (2 packets)','empty':'empty cell'};
+
+  for(let row=0;row<ROWS;row++){
+    for(let col=0;col<COLS;col++){
+      const stagger=(row%2===1)?HW*0.5:0;
+      const cx=padX+col*HW+HW*0.5+stagger;
+      const cy=padY+row*HH*0.75+HH*0.5;
+      const key=`${col},${row}`;
+      const type=typeMap[key]||'empty';
+      const c=colors[type];
+      const g=mkEl('g');g.style.cursor='pointer';
+      const poly=mkEl('polygon',{points:hpts(cx,cy,R-1),fill:c.f,stroke:c.s,'stroke-width':'1.5'});
+      g.appendChild(poly);
+      const tl=mkTxt(g,cx,cy-5,lbl[type],'16','600',c.t);
+      tl.setAttribute('font-family','monospace');
+      const tc=mkTxt(g,cx,cy+11,`${col},${row}`,'9','400',c.t);
+      tc.setAttribute('opacity','0.75');tc.setAttribute('font-family','monospace');
+      g.addEventListener('mouseenter',()=>{
+        poly.setAttribute('fill',hov.f);poly.setAttribute('stroke',hov.s);
+        info.textContent=`(${col},${row}) — ${desc[type]}`;
+      });
+      g.addEventListener('mouseleave',()=>{
+        poly.setAttribute('fill',c.f);poly.setAttribute('stroke',c.s);
+        info.textContent='\u00a0';
+      });
+      svg.appendChild(g);
+    }
+  }
+}
+
+renderInstrs();buildDirSVG();buildWorldSVG();
+</script>
+<script>
+(()=>{
+const W=10,H=10,R=17,SQ=Math.sqrt(3),$=id=>document.getElementById(id);
+const MAP=`# # # # # # # # # #
+# 9 9 . . . . 3 3 #
+# 9 # . b b b b b #
+# . # b b b b b b #
+# . . 5 b b b b b #
+# a a a a a 5 . . #
+# a a a a a a # . #
+# a a a a a . # 9 #
+# 3 3 . . . . 9 9 #
+# # # # # # # # # #`;
+const PROG=`sense ahead food else 4
+move else 4
+pickup else 4
+goto 12
+flipzero 3 else 7
+turn left
+goto 0
+flipzero 2 else 10
+turn right
+goto 0
+move else 0
+goto 0
+sense ahead home else 16
+move else 16
+drop
+goto 0
+flipzero 3 else 19
+turn left
+goto 12
+flipzero 2 else 22
+turn right
+goto 12
+move else 12
+goto 12`;
+const OFF=[[[1,0],[1,0]],[[0,1],[1,1]],[[-1,1],[0,1]],[[-1,0],[-1,0]],[[-1,-1],[0,-1]],[[0,-1],[1,-1]]];
+let CAP=2,DF=true,SC=true,EXT=true,rock,base,food,mk,occ,ants,prog,rnd,cycle,timer=null;
+const adj=(p,d)=>{const x=p%W,y=p/W|0,o=OFF[d][y&1];return((y+o[1]+H)%H)*W+(x+o[0]+W)%W};
+const mkRng=(s0=99999)=>{let s=s0;const nx=()=>s=(Math.imul(s,22695477)+1)&0x3fffffff;for(let i=0;i<4;i++)nx();return()=>{const x=s>>>16;nx();return x}};
+function parse(t){
+  const OPS=/^(sense|senseany|senseall|mark|unmark|move|pickup|drop|turn|flipzero|goto|direction|payload)$/,NEED=/^(sense|senseany|senseall|move|pickup|flipzero|direction|payload)$/,
+    SD=['here','ahead','leftahead','rightahead'],CD=['friend','foe','friendwithfood','foewithfood','food','rock','marker','foemarker','home','foehome'],lab=Object.create(null),raw=[];
+  t.split('\n').forEach((l,i)=>{l=l.split(';')[0].trim().toLowerCase();
+    const m=/^([a-z_][a-z0-9_]*):\s*(.*)$/.exec(l);
+    if(m){if(m[1] in lab)throw Error(`line ${i+1}: duplicate label ${m[1]}`);lab[m[1]]=raw.length;l=m[2]}
+    if(l)raw.push({l,n:i+1})});
+  if(raw.length>(EXT?2000:10000))throw Error('too many instructions');
+  const num=(s,lo,hi,w,n)=>{if(!/^\d+$/.test(s)||+s<lo||+s>hi)throw Error(`line ${n}: ${w} must be ${lo}..${hi}`);return+s};
+  const tgt=(s,n)=>{if(s in lab){if(lab[s]>=raw.length)throw Error(`line ${n}: label ${s} has no instruction`);return lab[s]}return num(s,0,raw.length-1,'jump target',n)};
+  const p=raw.map(({l,n})=>{
+    const k=l.split(/\s+/),o=k[0],e=k.indexOf('else'),I={op:o,el:0,n};
+    if(!OPS.test(o))throw Error(`line ${n}: unknown op "${o}"`);
+    if(!EXT&&(o==='direction'||o==='payload'))throw Error(`line ${n}: ${o} is not in the Classic ruleset`);
+    if(NEED.test(o)){if(e<0||e!==k.length-2)throw Error(`line ${n}: expected "else <target>" at the end`);I.el=tgt(k[e+1],n)}
+    else if(e>=0)throw Error(`line ${n}: ${o} takes no else`);
+    if(/^sense(any|all)?$/.test(o)){
+      I.sd=k[1];if(!SD.includes(I.sd))throw Error(`line ${n}: bad direction "${I.sd}"`);
+      I.conds=[];
+      for(let j=2;j<e;j++){const c=k[j];if(!CD.includes(c))throw Error(`line ${n}: unknown condition "${c}"`);
+        I.conds.push(c==='marker'?['marker',num(k[++j],0,5,'marker',n)]:[c])}
+      if(o==='sense'&&I.conds.length!==1)throw Error(`line ${n}: sense takes exactly one condition`)}
+    else if(o==='turn'){if(k.length!==2||(k[1]!=='left'&&k[1]!=='right'))throw Error(`line ${n}: turn left|right`);I.lr=k[1]}
+    else if(o==='mark'||o==='unmark')I.m=num(k[1],0,5,'marker',n);
+    else if(o==='flipzero')I.p=num(k[1],1,16384,'flipzero p',n);
+    else if(o==='goto')I.a=tgt(k[1],n);
+    else if(o==='direction')I.d=num(k[1],0,5,'direction',n);
+    else if(o==='payload')I.k=num(k[1],0,2,'payload',n);
+    return I});
+  if(!p.length)throw Error('empty program');
+  if(p[p.length-1].op!=='goto')throw Error(`line ${p[p.length-1].n}: last instruction falls off the end; finish with goto`);
+  return p}
+function match(p,c,col){
+  if(rock[p])return c[0]==='rock';
+  const o=occ[p]>=0?ants[occ[p]]:null;
+  switch(c[0]){
+    case'friend':return!!o&&o.col===col;
+    case'foe':return!!o&&o.col!==col;
+    case'friendwithfood':return!!o&&o.col===col&&o.food>0;
+    case'foewithfood':return!!o&&o.col!==col&&o.food>0;
+    case'food':return food[p]>0;
+    case'marker':return!!(mk[p*2+col]>>c[1]&1);
+    case'foemarker':return!!mk[p*2+1-col];
+    case'home':return base[p]===col;
+    case'foehome':return base[p]>=0&&base[p]!==col;
+    default:return false}}
+function act(p){
+  const o=occ[p]>=0&&ants[occ[p]];if(!o)return;
+  let n=0;for(let d=0;d<6;d++){const m=occ[adj(p,d)];if(m>=0&&ants[m].col!==o.col)n++}
+  if(SC&&n===4){food[p]+=o.food;o.food=0}
+  else if(n>=5){food[p]+=3+o.food;occ[p]=-1;o.alive=false}}
+function surr(p){act(p);for(let d=0;d<6;d++)act(adj(p,d))}
+function step(a){
+  if(!a.alive)return;
+  if(a.rest>0){a.rest--;return}
+  const I=prog[a.pc];if(!I)return;
+  let n=a.pc+1;
+  switch(I.op){
+    case'sense':case'senseany':case'senseall':{
+      const p=I.sd==='here'?a.pos:adj(a.pos,I.sd==='ahead'?a.dir:I.sd==='leftahead'?(a.dir+5)%6:(a.dir+1)%6);
+      const f=c=>match(p,c,a.col);
+      if(!(I.op==='senseany'?I.conds.some(f):I.conds.every(f)))n=I.el;break}
+    case'mark':mk[a.pos*2+a.col]|=1<<I.m;break;
+    case'unmark':mk[a.pos*2+a.col]&=~(1<<I.m);break;
+    case'pickup':if(a.food>=CAP||food[a.pos]===0)n=I.el;else{food[a.pos]--;a.food++}break;
+    case'drop':food[a.pos]+=a.food;a.food=0;break;
+    case'turn':a.dir=(a.dir+(I.lr==='left'?5:1))%6;break;
+    case'move':{
+      const q=adj(a.pos,a.dir);
+      if(rock[q]||occ[q]>=0){if(DF&&a.food>1){food[a.pos]++;a.food--}n=I.el}
+      else{occ[a.pos]=-1;occ[q]=a.id;a.pos=q;a.rest=14;surr(q)}
+      break}
+    case'flipzero':if(rnd()%I.p!==0)n=I.el;break;
+    case'goto':n=I.a;break;
+    case'direction':if(a.dir!==I.d)n=I.el;break;
+    case'payload':if(a.food!==I.k)n=I.el;break}
+  a.pc=n}
+const tick=()=>{ants.forEach(step);cycle++};
+const ctr=p=>[R*SQ*(p%W+.5+((p/W|0)&1)/2),R*(1.5*(p/W|0)+1)];
+function draw(){
+  let h='';
+  for(let p=0;p<W*H;p++){
+    const[cx,cy]=ctr(p);
+    const f=rock[p]?'var(--border-strong)':base[p]===0?'var(--bg-accent)':base[p]===1?'var(--bg-success)':food[p]?'var(--bg-warning)':'var(--surface-1)';
+    h+=`<polygon points="${hpts(cx,cy,R-.5)}" style="fill:${f};stroke:var(--border-strong)" stroke-width=".5"/>`;
+    if(food[p])h+=`<text x="${cx.toFixed(1)}" y="${(cy+3).toFixed(1)}" text-anchor="middle" font-size="9" style="fill:var(--text-warning)">${food[p]}</text>`}
+  const nf=[0,0],al=[0,0];
+  base.forEach((b,p)=>{if(b>=0)nf[b]+=food[p]});
+  ants.forEach(a=>{
+    if(!a.alive)return;al[a.col]++;
+    const[cx,cy]=ctr(a.pos),t=a.dir*Math.PI/3;
+    h+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" stroke-width="2" style="fill:var(--${a.col?'text-success':'text-accent'});stroke:${a.food?'var(--text-warning)':'none'}"/><line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${(cx+9*Math.cos(t)).toFixed(1)}" y2="${(cy+9*Math.sin(t)).toFixed(1)}" stroke-width="1.5" style="stroke:var(--text-primary)"/>`});
+  $('sim-svg').innerHTML=h;
+  $('sim-info').textContent=`cycle ${cycle} | a: ${nf[0]} food, ${al[0]} ants | b: ${nf[1]} food, ${al[1]} ants`}
+function reset(){
+  const cl=$('sim-rules').value==='classic';CAP=cl?1:2;DF=SC=EXT=!cl;
+  try{prog=parse($('sim-prog').value);$('sim-err').textContent=''}catch(e){$('sim-err').textContent=e.message;return}
+  rnd=mkRng();cycle=0;rock=[];base=[];food=[];mk=[];occ=[];ants=[];
+  [...MAP.replace(/\s/g,'')].forEach((c,p)=>{
+    rock[p]=c==='#';base[p]=/[a-z]/.test(c)?c.charCodeAt(0)-97:-1;food[p]=/[1-9]/.test(c)?+c:0;mk[p*2]=mk[p*2+1]=0;occ[p]=-1;
+    if(base[p]>=0){const id=ants.length;ants.push({id,col:base[p],pc:0,rest:0,dir:0,food:0,pos:p,alive:true});occ[p]=id}});
+  draw()}
+$('sim-step').onclick=()=>{tick();draw()};
+$('sim-reset').onclick=reset;$('sim-rules').onchange=reset;
+$('sim-run').onclick=()=>{
+  if(timer){clearInterval(timer);timer=null;$('sim-run').textContent='Run';return}
+  $('sim-run').textContent='Pause';
+  timer=setInterval(()=>{for(let i=+$('sim-spd').value;i--;)tick();draw()},50)};
+$('sim-prog').value=PROG;reset();
+const ref=$('rng-seq-label').nextElementSibling.textContent.split(',').map(Number),g=mkRng();
+$('rng-ok').textContent=ref.length===100&&ref.every(v=>g()===v)?'\u2713 generator below reproduces x\u2080\u2026x\u2089\u2089 from the reference list':'\u2717 RNG mismatch';
+const ref2=$('rng-ref2').textContent.split(',').map(Number),g2=mkRng(12345);
+$('rng-ok2').textContent=ref2.length===100&&ref2.every(v=>g2()===v)?'\u2713 reproduces the official x\u2080\u2026x\u2089\u2089 for s\u2080 = 12345':'\u2717 RNG mismatch (s\u2080 = 12345)';
+})();
+</script>
+<script>
+(()=>{
+const card=(t,b)=>`<div class="card"><div class="card-title">${t}</div><div class="card-body">${b}</div></div>`;
+const why=([t,y,i])=>card(t,`<b>Why</b> ${y}`+(i?`<br><b>Instead of</b> ${i}`:''));
+const put=(id,h)=>{document.getElementById('sec-'+id).innerHTML=h};
+const tbl=(h,r)=>`<table style="width:100%;border-collapse:collapse;font-size:12px"><tr>${h.map(x=>`<th style="text-align:left;padding:5px 6px;border-bottom:0.5px solid var(--border-strong);font-weight:500">${x}</th>`).join('')}</tr>${r.map(x=>`<tr>${x.map(c=>`<td style="padding:5px 6px;border-bottom:0.5px solid var(--border);vertical-align:top">${c}</td>`).join('')}</tr>`).join('')}</table>`;
+const code=t=>`<div class="codebox" style="white-space:pre;font-size:11px;line-height:1.6">${t}</div>`;
+put('design',card('The idea in one paragraph','You write one short program. Every unit of your colony runs its own copy, sees only its own cell and the three cells ahead, cannot talk, and can only leave scent marks for others. Two colonies compete for food on a hex map for 100,000 cycles; most food in your nest wins. Strategies (trails, formations, raids) emerge from local rules. Each decision below states why it is worth it and what it replaces.')+[
+['Core hook: a swarm of identical blind reflex programs','Other bot games (Lux AI, Halite, CodinGame) give one smart controller that sees everything. Local rules make strategies emerge, keep the sim cheap (one instruction per unit per cycle) and let non-programmers think in "when I see X, do Y".','a central controller bot: needs a real language and a server judge, and the space is crowded.'],
+['Keep the original rules exactly ("Classic"); everything else is a flag','The rules come from the ICFP 2004 contest (361 entries), so strategies, reference traces and historical ants stay comparable. Variants (carry two, scare at 4, drop on blocked move, direction/payload sensing, food regrowth, marker decay, friend-aware kills, alternating order) are opt-in flags, so balance experiments never break conformance.','redesigning the rules up front: untested balance and nothing to check against.'],
+['Deterministic, integer-only simulation with the specified RNG','A match is map seed + brains + rules + version. A replay needs only inputs, anyone can verify a result by recomputing, and AI evaluation is fair. Measured: the JS port reproduces the 100-value RNG vector and matches the reference simulator hash-for-hash.','floating-point physics or wall-clock limits (Robocode, Halite): runs differ across machines.'],
+['Static-first: no backend for play','Measured in Node/V8 with the starter ant: 100k cycles take 0.9 s with 512 ants and 3.6 s with 2048. Brains are data and share links carry the whole game, so hosting is free, play works offline and there is nothing to attack. A backend is added only for tamper-proof live rankings.','server-side simulation (latency, cost, ops) or realtime netcode (the game has no real-time input).'],
+['Typed JS modules (JSDoc + tsc), shipped as-is','The game is a set of static pages. One sim runs in the browser Worker, the Node CLI/AI harness and CI. Source is ES modules with JSDoc types checked by tsc (strict, checkJs), so the files that run are the files in the repo: no compile step to host or debug, and Node runs the same modules. esbuild is optional: it only minifies and emits the single-file offline build. TypeScript stays possible if preferred.','C++ (needs a WASM toolchain; JS is already fast enough) or untyped JS (cheaper start, costlier bugs).'],
+['Authoring ladder: personality, rules, moods, script, assembly','Casual players never meet loops, jumps or syntax; experts lose nothing because every level compiles to the same instruction list and can be inspected or ejected to the next level (Easy authoring tab).','assembly-only (Core War / ICFP entry barrier) or blocks-only (hits a ceiling).'],
+['Academy: one concept per level, with par scores and boss ants','Each level adds one idea (forage, return, randomise, trails, carry two, defend) and shows a par and a boss ant, like TIS-100 score histograms and CodinGame boss bots. Progress is measurable and every level is a small win.','a manual: reading is not playing.'],
+['Multi-axis scoring: food, program size, cycles','Three axes give replay value and discourage one degenerate optimum (the TIS-100 model). Size is measured per authoring level: assembly counts instructions; rules and moods count rules plus actions, and a skill costs a fixed 1, so expansion never punishes using skills. Percentiles come from a precomputed static table of reference ants, so no server is needed.','a single score.'],
+['Fair matches: symmetric maps, both sides, many seeds','Halite used symmetric maps; the 2011 Ants challenge was criticised for luck-driven results from few random games. A rating is the mean over seeds and both colours with a confidence range. Id 0 acts first, so every match runs both colour assignments and the altorder flag is tested for side bias. My 20-seed test with identical brains gave 11–8–1: no visible side bias, but the sample is small.','one game on one random map.'],
+['Ranking without a server: exams, share links, pull-request Hall of Fame','A league exam is N deterministic matches against fixed boss ants; its result link can be replayed by anyone. The Hall of Fame takes brains by pull request, a GitHub Action re-runs a tournament on hidden seeds and publishes static JSON. Brains are data, so nothing needs sandboxing.','accounts, a database and a live matchmaker (kept as an optional later step).'],
+['Seasons and rule modifiers','A weekly or monthly modifier (food regrowth, marker decay, terrain) keeps the meta from converging, like Battlecode\'s yearly new game and Lux AI season 3\'s changing rules. Modifiers are flags, so old results stay valid.','a frozen ruleset: strategies converge and the ladder goes stale.'],
+['Explain and coach','The sim is deterministic, so any ant\'s past can be explained rule by rule, and aggregate stats can raise hints ("38% of ants end stuck at rocks"). This removes the black-box frustration that makes beginners quit.','leaving users to guess why 100k cycles went badly.'],
+['An AI-evaluation track','Scoring is objective, cheap and deterministic, so LLM-written brains can be ranked offline. Precedents: CodeClash (LLM tournaments in Core War, Halite, Robocode) and Digital Red Queen (LLM-evolved Core War programs). Mutated rules and procedural maps limit memorisation of public ICFP material.','an LLM judge or human grading.']].map(why).join('')+card('What a random walker teaches about difficulty','Starter ant on 20 ICFP-style worlds (100×100, 182 ants, 480 food): median 76 of 480 packages delivered in 100k cycles (range 22–183), no ant died. A rough lower bound for a competent colony is 3–5k cycles for all 480 (estimate: 240 two-package trips over 91 ants, 60–80 moves at ~17 cycles each). That gap of more than 10× is the difficulty curve the Academy climbs.'));
+put('prior',card('Games studied and what we take','Facts come from each game\'s own documentation or contest page, checked while writing.'+tbl(['Game','How it works','Take for us'],[
+['ICFP Contest 2004','Two colonies on hex grid, state-machine brains, 100k rounds, 1 food per ant; 361 entries','Classic rules; world generator (100×100, two 91-cell hills, 480 food)'],
+['Ant Wars (2004)','Online spin-off in Core War style','Ladder idea; looks inactive'],
+['Core War (1984)','Redcode programs share circular memory; no I/O','Hill ladders; safe user programs'],
+['Robocode','Java tanks, real-time battles','Watch-and-tweak loop; avoid float physics'],
+['Google Ants (2011)','Bots, hills spawn ants, food spawns, fog of war','Spawn-from-food; hills; avoid luck-heavy ranking'],
+['Halite I–III','Bots build ships and collect halite; symmetric maps','Symmetric maps; post-mortems'],
+['Lux AI (Kaggle)','A central bot commands robots/factories; S3 = 5-game matches with hidden dynamics, TrueSkill','Hidden-rule episodes for AI eval'],
+['Battlecode (MIT)','Yearly game; compute metered in bytecodes','Seasons; deterministic budgets'],
+['Screeps','Persistent MMO scripted in JavaScript','Progression; persistence needs a server'],
+['CodinGame','Bot arenas with leagues and boss bots','Leagues, local boss ants'],
+['TIS-100','Tiny assembly puzzles scored on nodes, instructions, cycles','Par and histograms; size caps'],
+['Gladiabots','Visual AI editor, campaign, async multiplayer','No-code on-ramp'],
+['CodeClash','Benchmark: LLM agents in code tournaments','AI-track design']]))+'<p style="font-size:12px;color:var(--text-secondary);margin-top:8px">Key gap everywhere else: nobody combines decentralised swarm programming, a no-code ladder and a fully static, replay-verifiable release.</p>');
+put('easy',card('Goal','A non-programmer delivers the first food within 5 minutes and never meets a loop, a jump or a syntax error until they choose to. Ladder: personality → rules → moods → script → assembly. All levels compile to the same instruction list; the lower level is always visible read-only ("see what this compiles to") and can be ejected into.')+[
+['Level 0: pick a personality','Templates (Forager, Trail-layer, Guard, Raider) plus three sliders: Curiosity (share of random wandering), Boldness (move toward foes), Sociability (follow others\' scent). Moving a slider rewrites the rule list below (sliders are one-way generators: after a hand edit they grey out until Reset to template). A Role mix control (for example 70% workers, 20% scouts, 10% guards) compiles to a flip chain at pc 0, because ants have no ids, so roles must be random at birth. First run in 30 seconds, and it shows that behaviour is changeable.','starting from an empty editor, where beginners stall.'],
+['Level 1: ordered rules ("when … do …")',code('1  when carrying food and home is ahead  →  step forward, drop food\n2  when carrying food                    →  return home (skill)\n3  when food is ahead                    →  step forward, pick up\n4  when a rock or foe is ahead           →  turn left or right\n5  otherwise                             →  wander (skill)')+'Evaluated top to bottom every tick; the first match fires. People already think this way (mail filters, IFTTT), and the engine re-runs the program every cycle, so no loops, jumps or variables are needed. Each rule compiles to <span class="chip">sense … else next</span>, the action, then <span class="chip">goto 0</span>. A failed rule costs one cycle, so rule order is the first optimisation lesson and par scores reward it. If a matched rule&rsquo;s action fails (for example move blocked), evaluation continues with the next rule. &ldquo;Carrying food&rdquo; compiles to the one instruction sense here friendwithfood (self-sensing).','Scratch-style loops (extra concepts) or free text (syntax errors).'],
+['Skills: smart actions for hard algorithms','Stand-alone macros: wander (1/3 left, 1/3 right, 1/3 step), turn around, circle food. Trail kit: a paired protocol, not independent macros. A blind ant with 3-cell vision and no memory but pc cannot return home without a trail, so outbound ants write a distance-mod-3 code into 2 markers (pc cycles through 3 states while walking) and returning ants step to the neighbour holding code&minus;1. A kit declares its marker budget (one gradient costs 2 of the 6; two gradients 4; the UI shows what is left), its contract (which moods must contain the writer) and a sim test (at least 95% of carriers return within N cycles on crowded multi-trip maps) before release. Skills stay inspectable.','making players re-derive gradient trails.'],
+['Level 2: moods','Named states, each with its own rule list, plus a "switch mood" action (Searching, Returning). This is real memory without the idea of a program counter, and compiles to labelled blocks.','one flat rule list that cannot remember anything.'],
+['Levels 3–4: script and assembly','The structured script and the flat instruction list stay available for experts, with the generated code shown beside the simpler level for learning by reveal.','hiding the lower levels (no ceiling, no learning path).'],
+['Helpers that remove friction','Zero-error editing in levels 0–2. Instant preview: each edit re-runs a short match on the current map (an estimated ~20 ms for 2,000 cycles from the measured speed). Explain-why: click an ant to see which rule fired each step (re-simulated from the nearest keyframe with tracing on for that ant only). Fire counts: after each preview every rule shows the share of ant-cycles it fired; never-firing rules are flagged. Plain-English lint: shadowed rule, mood with no exit, never grabs or never drops, scent written but never read. Read-back: a deterministic decompiler prints the brain as a short paragraph (no LLM). Coach hints from sim stats (stuck at rocks, carrying but never delivering, idle loops). Remix: fork a Hall-of-Fame ant and see the score diff. Fix-the-bug levels. Undo and local history. Optional natural-language drafting ("describe your strategy"): the AI proposes editable rules; it needs the player\'s own API key, is off in the default static build, is validated by the compiler and sim, and never auto-runs.','an AI that writes the whole program (cost, trust, reproducibility, no learning).'],
+['How we will know it works','Not yet tested; run it on a clickable level 0/1 prototype as soon as one exists (end of phase 3), not at the end. Plan: five non-programmers, target at least four with first food in 5 minutes and three beating the level-3 par within 30 minutes. Fix the biggest stall first, then repeat. Measure locally with a self-test mode, with no telemetry.','guessing.']].map(why).join('')+card('Academy levels (draft)',tbl(['Level','Concept','Fixture','Starter ant: food at 5k / 20k / 100k cycles','Draft goal'],[['1 Forage','wander, grab food','30&times;30 torus, 7-cell nest, 2 food blobs (3&times;4, 5 per cell) 10-12 cells away','1 / 6 / 24','10 by cycle 20,000'],['2 Return','drop at home','same map','1 / 6 / 24','20 by 20,000'],['3 Randomise','turn away from rocks','same, plus 8% scattered rocks','0 / 7 / 20','20 by 20,000'],['4 Trails','Trail kit, scent budget','60&times;60 torus, blobs 20+ cells away','0 / 1 / 4','10 by 20,000'],['5 Carry two','capacity 2, rule order','level 4 map, cap2','not measured','tune with the optimizer'],['6 Defend','enemy sensing, surround rule','2 colonies','not measured','beat the boss ant']])+'<p class="snote">Starter ant, 7 ants, measured with this page sim (Tinyminds rules). Goals are drafts at 2-3 times the baseline; the boss optimizer tunes them.</p>'));
+put('build',card('Repository layout',code('core/    sim.js rng.js rules.js map.js ir.js          no DOM, no I/O\nlang/    rules.js moods.js script.js asm.js skills.js lint.js readback.js   all compile to IR with source maps\nweb/     *.html viewer.js editor/* worker.js i18n/*.json\ncli/     run.js tournament.js eval.js boss-optimizer.js                  Node: golden tests, AI harness\ndata/    maps/ bosses/ levels/ hall-of-fame.json\n.github/ ci.yml (test, build, deploy)  halloffame.yml (hidden-seed tournament)'))+[
+['Core API','<div class="codebox" style="white-space:pre;font-size:11px;line-height:1.6">createMatch(map, brains: IR[], rules, seed?) → Match\nmatch.run(n) · hash() · snapshot() · restore(buf) · view()</div>Structure-of-arrays typed arrays, a Uint16 neighbour table (cell*6+dir), Uint16 food counts (a nest can hold more than 255), conditions pre-decoded to bitmasks, and a per-ant wake cycle instead of a resting countdown (a mover rests 14 of 15 cycles). No timing wheel: it breaks id order unless merged. Pure functions of their inputs.','object-per-ant code (readable, but about 3× slower in my demo-code measurement).'],
+['Worker protocol and replay','Messages: init, run(n), seek(cycle), snapshot. Frames are transferable typed arrays (ants, food, markers). Keyframe every 2,000 cycles (an estimated 0.2–0.3 MB at 200×200 with 2 colonies); seeking restores a keyframe and re-runs under 2,000 cycles. The viewer draws at 60 fps with speed = cycles per frame (1 to 300); the sim runs ahead in chunks.','storing every event (larger, slower to seek).'],
+['Formats and sharing','Map: ASCII or JSON with seed. Brain: IR JSON + source text + authoring level. Share link: <span class="chip">#v1.base64url(deflate-raw(JSON))</span> via CompressionStream, carrying version, flags, seeds and brains. Links carry the authoring-level source (rules are far smaller than the 40 KB of a 2,000-line assembly brain); compressed size still to be measured; above about 8 KB offer file export instead. Replays use the descriptor in Matches.','server-stored games (accounts, storage).'],
+['Storage, privacy, security','IndexedDB for brains and replays, localStorage for settings, JSON export/import. No analytics. Brains are parsed as data, never evaluated; size caps and a strict CSP.','cloud saves.'],
+['Testing and CI','Golden RNG vectors; per-rule micro-tests (15-cycle pace, surround order, wrap parity); differential fuzz of two independent implementations by state hash every 1,000 cycles; skill tests; replay equals sim. CI runs typecheck, tests and build, then deploys; a separate job runs the Hall-of-Fame tournament on hidden seeds.','manual testing of a deterministic system.'],
+['Performance and accessibility','Measured (Node 22/V8, starter ant, 200×200): 512 ants 0.9 s, 2048 ants 3.6 s per 100k cycles; a non-moving worst case about 1.1×10⁸ ant-visits/s. Phones likely 2–5× slower (estimate): stream results and cap drawn ants. Colour-blind-safe (shape plus colour), keyboard control, reduced motion, zh/en string tables.','assuming desktop speed everywhere.']].map(why).join('')+card('Screens','Home (continue, daily), Academy map, Workshop (editor + arena + timeline), Replay (shared link), Leagues, Hall of Fame, Library (remix), Settings (language, speed, accessibility, data export).')+card('Workshop layout',code('┌ Academy 3 · Trails        goal: deliver 120 food by cycle 20,000 ───────────┐\n│ editor (level tabs)  │ arena: hex map, zoom/pan, layers │ inspector         │\n│ rules / moods /      │ ants, food, scent, foes          │ ant #37: rule 2   │\n│ script · status      │                                  │ food chart, score │\n├ ▶ ───────●─────────  cycle 38,000/100,000  speed 15x  layers  [Run to end] ┤'))+card('Interaction details','Space play/pause; ←/→ step 1 cycle (Shift = 100); 1/2/3 speed; L toggles layers. Hover a cell for contents, click an ant to inspect, drag the timeline to seek. "Run to end" opens a result card: score vs par and boss, stars, replay, share link. Mobile: stacked Edit | Watch | Score tabs, 44 px touch targets. First launch reaches level 1 in three clicks; a stall hint appears after 60 s without edits. Unit art is a skin, independent of the rules.')+card('Static delivery (v2)','<b>Pages</b>: index (home, Academy), workshop, replay, hall, each a plain HTML file importing shared ES modules. <b>Routing</b>: hash only (#v1.&hellip;), since static hosts have no rewrite rules; the fragment is never sent to a server. <b>file://</b>: module Workers and imports fail there, so host on any static server or ship dist/offline.html (single file, Worker from a Blob URL). <b>Offline</b>: a service worker precaches pages, modules, i18n JSON, maps and par tables; the cache name carries the rules version. <b>CSP</b>: static hosts often cannot set headers, so use a meta tag (default-src self; worker-src self blob:; connect-src self, plus the AI provider only when drafting is on); frame-ancestors cannot be set that way. <b>Data</b>: maps, bosses, levels and par tables are static JSON built by CI; the Hall-of-Fame JSON is rebuilt by Actions. <b>Assets</b>: self-host fonts and icons (this reference page loads an icon font from a CDN; the game must not). <b>Rendering</b>: Canvas2D for tiles and ants; SVG as in the demo is fine for 10&times;10, not for 40,000 cells. <b>Bench in CI</b>: starter ant, trail ant, a contact-heavy swarm (a surround check is up to 42 neighbour lookups per move) and an RNG-heavy brain; fail on more than 20% slowdown. <b>Licence</b>: the rules come from ICFP 2004; reimplement from the rules and copy no sample brains or text without checking their licence. <b>i18n gap</b>: the pre-v2 body text of the design, prior art, easy, build, names and matches tabs is still English only; v2 cards have zh.')+card('Plan (v2)',tbl(['Phase','Work','Exit'],[['0 (2-3 d)','Freeze spec decisions; port demo sim to JS modules; golden RNG','Spec v1 frozen'],['1 (1-2 w)','core + CLI; micro-tests (15-cycle pace, surround order, wrap parity); differential fuzz vs the demo sim','State hashes equal every 1,000 cycles'],['2 (1-2 w)','Assembler with labels and source maps; validator; rules compiler; lint; read-back; Trail kit with sim tests','Starter ant in rules scores like asm'],['3 (2-3 w)','Static pages, Worker, Canvas viewer, replay/seek, level 0-1 editor, inspector, preview, offline build','5 non-programmers: 4 reach first food in 5 min'],['4 (2 w)','8-10 Academy levels, bosses and par via optimizer, daily seed','All levels beatable'],['5','Share link, local league exams, CI Hall of Fame with hidden seeds','Replay verifies from a link'],['6','Moods, script/asm, zh, optional AI drafting','-']]))+card('MVP cut','Phases 0-3 plus 5 Academy levels and share links.'));
+put('names',card('Criteria','Says "swarm of small programmed minds", not "one smart controller"; short and easy to pronounce in English and Chinese; searchable and free of existing brands (domains and trademarks not yet checked); works for casual players, not only programmers; independent of a unit skin.')+card('Candidates',tbl(['Name','Family','For','Against'],[
+['Tinyminds','behaviour','Friendly, says "small brains", unit-agnostic','Generic; may already exist'],
+['Hexhive','colony','Describes board and colony, short','Ties to bees and hexes'],
+['Instinct','behaviour','Exactly what the program is','Very generic, hard to search'],
+['Swarmwright','swarm','Distinctive craft feel','Hard to spell for non-natives'],
+['Trailcraft','scent','Scent trails are the intuitive core','Crowded "-craft" space'],
+['Petri','microbes','Fresh, scientific, no ant lineage','Dish metaphor limits skins'],
+['Colony Code','colony','Clear it is programming','"Code" scares casual players'],
+['Reflex','behaviour','Short, matches reflex programs','Many products named Reflex'],
+['Robot / tank / war names','machine','Familiar to programmers','Collide with Robocode, Lux, Battlecode; suggest central control; narrow audience']]))+card('Recommendation','Name the mechanic, not the creature: ants are the default skin (scent trails explain the rules to anyone) but the name stays unit-agnostic. Working title: Tinyminds; fallback: Hexhive. Check domains, app stores and trademarks before committing. Robot, tank and war themes are rejected because they imply a controller and clash with existing games; "battlecode" and "Lux AI" are existing brands and cannot be used.'));
+put('tournament',card('How a match runs','1 Load map and brains. 2 Place one ant per nest cell (line 0, heading 0, no food). 3 Ids run 0-based, row-major; id 0 acts first each cycle; killed ants never act. 4 Run exactly 100,000 cycles. 5 Count food on nest cells only (carried food excluded). Most food wins. 6 Repeat on several seeds and both colours, because position matters.')+card('Ranking without a server','Academy par and boss ants (local), league exams (local, replayable link), daily seeded map (seed from the date), Hall of Fame by pull request with hidden-seed re-runs. Optional later: live ladder on a Worker with D1.')+card('Spec decisions (v2)','Scoring as in the original judging: each pair plays every world twice, once per colour; a win is 2 points, a draw 1 (ladders break ties by food margin). Replay = JSON descriptor, no event log: version, flags, map or generator+seed, brain hashes and sources, cycles, final state hash; anyone can re-run it. Map files keep .map; metadata (name, par, flags) lives in a JSON wrapper. pc beyond the program is rejected at load.')+card('Map generator (Classic, from the task spec)','100&times;100; the perimeter is rock; two hexagonal anthills with side 6 (91 cells each); ten rocks; eight food blobs, each a 3&times;4 rectangle with 5 packets per cell (8&times;12&times;5 = 480); positions and orientations are random, with at least one empty cell between non-food elements and no overlaps. The task does not fix rock shapes: our generator uses random walks of 8-30 cells (draft). Ranked Tinyminds worlds add a point-mirror symmetric mode and a reachability check (BFS; on failure re-roll with seed+1). Files from icfpcontest.org use + and - for the anthills; the loader maps them to a and b.'));
+
+const B=(h,t)=>`&bull; <strong style="color:var(--text-primary)">${h}</strong> ${t}<br>`;
+const ZH={
+'Rulesets: Classic and Tinyminds':[`规则集：经典与 Tinyminds`,`<b>经典（Classic）</b>= ICFP 2004 任务书（第 4 版，逐行核对）：每只蚂蚁最多带 1 份食物，仅在邻居敌人 &ge;5 时死亡（死亡变成 3 份食物，若携带则再加 1），无恐吓规则，移动受阻不丢食物，没有 direction/payload 指令，最多 10,000 个状态，评测世界中每族 91 只蚂蚁。<br><b>Tinyminds</b> = 经典 + 开关：<span class="chip">cap2</span>（携带 2 份）、<span class="chip">scare4</span>、<span class="chip">dropfail</span>、<span class="chip">ext-sense</span>（direction、payload）以及 2,000 条指令上限。本页早先版本把 Tinyminds 的扩展误称为“经典”，已更正。下方演示有规则集切换。`],
+'Spec decisions (v2): review fixes':[`规范决定（v2）：评审修正`,B('flipzero 范围。','x 为 14 位，p&gt;16384 时走零分支的概率是 1/16384，而不是 1/p。原版接受任意 p&ge;1（导入的经典蚂蚁保持此行为）；创作层拒绝 p&gt;16384。')+B('程序末尾。','加载器拒绝最后一条指令可能顺序落出程序的情况，以及目标 &ge; 长度；运行时不再有此情形。')+B('种子。','一个对局种子：地图生成器使用它，s&sub;0 = seed mod 2&sup3;&sup0;（默认 99999，经典一致性测试用 12345），随后 4 步预热。写入回放描述。')+B('巢穴中的食物。','pickup 可在任何有食物的格子进行，包括双方巢穴，所以蚂蚁能偷食物。得分 = 终局时巢穴格子上的食物，无论谁放下。')+B('蚁群数。','经典 = 2。多蚁群开关下：foe = 任何其他蚁群，foemarker/foehome = 任何其他蚁群的标记/巢穴，id 仍按行优先。')+B('恐吓规则（==4 丢食物）。','已对照 ICFP 2004 任务书核实：原版没有恐吓规则（仅 &ge;5 死亡）。它是 Tinyminds 开关 <span class="chip">scare4</span>，经典中关闭。')+B('顺序偏差。','id 0 先行动，上方蚁群每轮先动。每场对局两种颜色各打一次；开关 <span class="chip">altorder</span> 轮流交换先后，并测试是否偏向一方。')+B('过期标记。','标记不衰减：除非蚂蚁 <span class="chip">unmark</span>（学院课程）或开启衰减开关，否则轨迹会过期。')+'<br>'],
+'Assembly (.asm): flat format with labels':[`Assembly (.asm)：带标签的平坦格式`,en=>en.replace(/^[\s\S]*?(<div class="codebox")/,'汇编器把 .asm 转成严格的 .ant。<span class="chip">name:</span> 位于行首（单独一行或在指令前）即定义标签；<span class="chip">else name</span> 与 <span class="chip">goto name</span> 可用标签或数字；允许空行和注释行；地址按指令计数而不是行号。$1').replace(/<p class="snote">[\s\S]*<\/p>$/,'<p class="snote">错误（带行号）：未知的指令、方向或条件；参数个数错误；参数越界；标签重复；目标 &ge; 长度；展开后超过 2,000 条指令；最后一条指令不是 goto。</p>')],
+'Lowering rules (v2)':[`降级规则（v2）`,B('then A else B','sense &hellip; else L1; A; goto L2; L1: B; L2:。缺省的分支直接顺序落下；<span class="chip">;</span> 是空 cont。')+B('loop X','L: X; goto L。<b>exit</b> = L: goto L。')+B('repeat n X','把 X 展开 n 次（没有计数器），n &le; 1000，计入大小上限。')+B('choose { n 个分支 }','均匀：flipzero n else c2; case1; goto end; c2: flipzero n&minus;1 else c3; &hellip; 最后一个分支无条件。')+B('宏','在调用处展开，禁止递归，深度 &le; 8，参数按块代入；展开后检查大小上限，错误信息指出是哪个宏。')+B('标签','增加产生式 <span class="chip">ID :</span>，使 <span class="chip">goto ID ;</span> 有目标；标签作用域为每个 toplevel。')+B('S/R 冲突','无参形式必须带块 <span class="chip">define ID { &hellip; }</span>；带参形式为 <span class="chip">define ID ids = instr</span>。这样由前看符号决定，上方示例已符合。')+'<br>'],
+'Spec decisions (v2)':[`规范决定（v2）`,`计分沿用原版评测：每个世界上每对参赛者各打两场（各执一色）；胜 2 分，平 1 分（天梯以食物差打破平局）。回放 = JSON 描述，不记录事件：版本、开关、地图或生成器+种子、大脑哈希与源码、轮数、最终状态哈希；任何人都能重跑。地图文件仍用 .map；元数据（名称、par、开关）放在 JSON 外壳中。pc 超出程序在加载时拒绝。`],
+'Map generator (Classic, from the task spec)':[`地图生成器（经典，取自任务书）`,`100&times;100；外圈为岩石；两个六边形蚁丘，边长 6（各 91 格）；十块岩石；八个食物块，每块 3&times;4 矩形，每格 5 份（8&times;12&times;5 = 480）；位置与朝向随机，非食物元素之间至少隔一个空格，互不重叠。任务书未规定岩石形状：我们的生成器用 8–30 格的随机游走（草案）。天梯上的 Tinyminds 世界增加点对称模式和连通检查（BFS；失败则用 seed+1 重抽）。icfpcontest.org 的文件用 + 与 - 表示蚁丘：加载器映射为 a 与 b。`],
+'Static delivery (v2)':[`静态交付（v2）`,`<b>页面</b>：index（首页、学院）、workshop、replay、hall，每个都是普通 HTML 并导入共享 ES 模块。<b>路由</b>：只用哈希（#v1.&hellip;），因为静态主机没有重写规则；片段不会发给服务器。<b>file://</b>：模块 Worker 与 import 在其中会失败，所以要用任意静态服务器托管，或提供 dist/offline.html（单文件，Worker 用 Blob URL）。<b>离线</b>：service worker 预缓存页面、模块、i18n JSON、地图与 par 表；缓存名带规则版本。<b>CSP</b>：静态主机常无法设置响应头，所以用 meta 标签（default-src self；worker-src self blob:；connect-src self，仅在启用 AI 草拟时加入服务商）；frame-ancestors 无法这样设置。<b>数据</b>：地图、boss、关卡与 par 表是 CI 生成的静态 JSON；名人堂 JSON 由 Actions 重建。<b>资源</b>：字体与图标自托管（本参考页从 CDN 加载图标字体，游戏不可以）。<b>渲染</b>：瓦片与蚂蚁用 Canvas2D；演示里的 SVG 适合 10&times;10，不适合 40,000 格。<b>CI 基准</b>：入门蚂蚁、轨迹蚂蚁、接触密集的蚁群（一次包围检查最多 42 次邻居查找）、重随机数的大脑；慢超过 20% 即失败。<b>许可</b>：规则来自 ICFP 2004；按规则重新实现，未核对许可前不要复制示例大脑或文本。<b>i18n</b>：设计、前人作品、易用创作、构建、命名、对局各页签 v2 之前的正文仍只有英文；v2 新增卡片已有中文。`],
+'Plan (v2)':[`计划（v2）`,tbl(['阶段','工作','出口标准'],[['0（2–3 天）','冻结规范决定；把演示模拟器移植为 JS 模块；黄金随机数','规范 v1 冻结'],['1（1–2 周）','core + CLI；微测试（15 轮节奏、包围顺序、环绕奇偶）；与演示模拟器做差分模糊测试','每 1,000 轮状态哈希一致'],['2（1–2 周）','带标签与源码映射的汇编器；校验器；规则编译器；lint；回读；带模拟测试的轨迹套件','规则版入门蚂蚁得分与汇编版相当'],['3（2–3 周）','静态页面、Worker、Canvas 视图、回放/跳转、0–1 级编辑器、检查器、预览、离线构建','5 位非程序员：4 位在 5 分钟内拿到第一份食物'],['4（2 周）','8–10 个学院关卡，用优化器生成 boss 与 par，每日种子','所有关卡可通关'],['5','分享链接、本地联赛考试、带隐藏种子的 CI 名人堂','回放可从链接验证'],['6','心情、脚本/汇编、中文、可选 AI 草拟','-']])],
+'MVP cut':[`最小可行版本`,`阶段 0–3，加 5 个学院关卡和分享链接。`],
+'Academy levels (draft)':[`学院关卡（草案）`,tbl(['关卡','概念','场景','入门蚂蚁：5k / 20k / 100k 轮的食物','草案目标'],[['1 觅食','游走、拿食物','30&times;30 环面，7 格巢穴，2 个食物块（3&times;4，每格 5 份），距巢穴 10–12 格','1 / 6 / 24','20,000 轮前 10 份'],['2 返回','在家放下','同一地图','1 / 6 / 24','20,000 轮前 20 份'],['3 随机化','避开岩石','同上，加 8% 散布岩石','0 / 7 / 20','20,000 轮前 20 份'],['4 轨迹','轨迹套件、气味预算','60&times;60 环面，食物块距巢穴 20 格以上','0 / 1 / 4','20,000 轮前 10 份'],['5 带两份','容量 2、规则顺序','关卡 4 地图，cap2','未测量','由优化器调整'],['6 防守','感知敌人、包围规则','2 个蚁群','未测量','击败 boss 蚂蚁']])+`<p class="snote">入门蚂蚁共 7 只，用本页模拟器（Tinyminds 规则）测得；目标为基线的 2–3 倍草案，由 boss 优化器调整。</p>`]
+};
+window.applyZh=l=>document.querySelectorAll('.card').forEach(c=>{const t=c.querySelector('.card-title'),b=c.querySelector('.card-body');if(!t||!b)return;
+  const k=c._en?c._en[0]:t.innerHTML;if(!ZH[k])return;if(!c._en)c._en=[t.innerHTML,b.innerHTML];
+  const z=l==='zh'?ZH[k]:c._en;t.innerHTML=z[0];b.innerHTML=typeof z[1]==='function'?z[1](c._en[1]):z[1]});
+})();
+</script>
+</body>
+</html>
