@@ -21,10 +21,11 @@ Spec: `docs/ant-sim-reference.html`.
 - `web/`               `workshop.html` + `workshop.ts` (canvas viewer), `sim-worker.ts`, `engine.ts`
 - `bench/run.ts`      `npm run bench`: rounds/s and ns per ant-round for four workloads
 - `scripts/lint-core.ts`  core/ is integer-only: no `/`, Math.random, Date or float literals
+- `oracle/ref.py`     second implementation in Python (stdlib only), written from the reference text; `test/crosscheck.test.ts` compares state hashes
 - `testlib/ref-sim.ts` literal transliteration of the task pseudo-code: oracle for the fuzz test
 
 Module Workers need http(s): use `npm start`, not file://.
 Defaults: Classic rules only in v1, seed 12345 (Randomize button in the workshop).
 
-Not yet: official dump comparison (needs the contest traces), marks overlay, replay/seek,
+Not yet: official dump comparison (needs the contest traces), replay/seek,
 rules compiler, lint, skills.

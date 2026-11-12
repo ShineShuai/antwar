@@ -3,7 +3,7 @@ import { COND as C, OP } from './asm.ts';
 import { DE, DO } from './hex.ts';
 import { createRng } from './rng.ts';
 import { ANT_STRIDE } from './types.ts';
-import type { AntId, Cell, Frame, Program, Rules, WorldMap } from './types.ts';
+import type { AntId, Cell, Dir, Frame, Program, Rules, WorldMap } from './types.ts';
 
 /** The ICFP 2004 rules, exactly. */
 export const CLASSIC: Rules = Object.freeze({ cap: 1, ext: false });
@@ -24,11 +24,12 @@ export interface SimOptions {
   programs: Program[];
   seed?: number;
   rules?: Rules;
+  /** Toroidal world (the spec default; needs an even height). */
   wrap?: boolean;
 }
 export type Sim = ReturnType<typeof createSim>;
 
-export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap = false }: SimOptions) {
+export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap = true }: SimOptions) {
   const { W, H } = map, N = W * H, ncol = programs.length;
   if (ncol < 1 || ncol > 2) throw new Error('v1 supports one or two colonies');
   if (N > 65535) throw new Error('world too large: cells must fit u16 with 0xFFFF reserved');
@@ -50,7 +51,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
       }
     }
   }
-  const nbr = (c: Cell, d: number): Cell | -1 => nb[c * 6 + d] as Cell | -1;
+  const nbr = (c: Cell, d: Dir): Cell | -1 => nb[c * 6 + d] as Cell | -1;
   const antAt = (c: Cell): AntId | -1 => occ[c] as AntId | -1;
 
   const cells: number[] = [];
@@ -63,8 +64,8 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
   const wake = new Int32Array(n), alive = new Uint8Array(n).fill(1);
   cells.forEach((p, i) => { occ[p] = i; });
 
-  const sensed = (p: Cell, d: number, sd: number): Cell | -1 =>
-    sd === 0 ? p : nbr(p, (d + [0, 0, 5, 1][sd]) % 6);
+  const sensed = (p: Cell, d: Dir, sd: number): Cell | -1 =>
+    sd === 0 ? p : nbr(p, ((d + [0, 0, 5, 1][sd]) % 6) as Dir);
 
   function holds(c: number, p: Cell | -1, col: number): boolean {
     if (p === -1 || rock[p]) return c === C.rock;
@@ -88,7 +89,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
   function enemies(c: Cell, col: number): number {
     let k = 0;
     for (let d = 0; d < 6; d++) {
-      const q = nbr(c, d);
+      const q = nbr(c, d as Dir);
       if (q !== -1 && occ[q] >= 0 && acol[occ[q]] !== col) k++;
     }
     return k;
@@ -102,7 +103,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
   }
   function surround(c: Cell): void {
     check(c);
-    for (let d = 0; d < 6; d++) check(nbr(c, d));
+    for (let d = 0; d < 6; d++) check(nbr(c, d as Dir));
   }
 
   function stepAnt(i: AntId): void {
@@ -110,7 +111,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
     const col = acol[i], P = programs[col], s = pc[i], p = apos[i] as Cell, a = P.a[s];
     switch (P.op[s]) {
       case OP.SENSE: case OP.SENSEANY: {
-        const q = sensed(p, dir[i], a);
+        const q = sensed(p, dir[i] as Dir, a);
         let all = true, any = false;
         for (let c = 0; P.b[s] >> c; c++) {
           if ((P.b[s] >> c) & 1) { const h = holds(c, q, col); all &&= h; any ||= h; }
@@ -121,7 +122,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
       case OP.MARK: marks[col * N + p] |= 1 << a; pc[i] = P.t[s]; break;
       case OP.UNMARK: marks[col * N + p] &= ~(1 << a); pc[i] = P.t[s]; break;
       case OP.MOVE: {
-        const q = nbr(p, dir[i]);
+        const q = nbr(p, dir[i] as Dir);
         if (q === -1 || rock[q] || occ[q] >= 0) pc[i] = P.e[s];
         else {
           occ[p] = -1; occ[q] = i; apos[i] = q; pc[i] = P.t[s]; wake[i] = cycle + ACT_EVERY;

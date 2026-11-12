@@ -1,5 +1,6 @@
 // Shared types. Cell and AntId are both numbers at runtime; the brands make tsc reject mixing them.
 export type Cell = number & { readonly __cell: unique symbol };
+export type Dir = number & { readonly __dir: unique symbol };
 export type AntId = number & { readonly __ant: unique symbol };
 
 export interface Rules {

@@ -7,6 +7,7 @@ import { parseMap } from '../src/core/map.ts';
 import { CLASSIC, TINYMINDS, createSim } from '../src/core/sim.ts';
 import type { Rules, WorldMap } from '../src/core/types.ts';
 import { refSim } from '../testlib/ref-sim.ts';
+import { lcg, randMap, randProgram } from '../testlib/random.ts';
 
 const fx = (f: string): string => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 
@@ -54,7 +55,7 @@ test('map loader reads the official tiny world', () => {
 const strip = (n: number, extra = '') => parseMap(`${n}\n3\n${'# '.repeat(n)}\n# + ${'. '.repeat(n - 3)}#\n${'# '.repeat(n)}${extra}`);
 
 test('a mover acts every 15 rounds', () => {
-  const sim = createSim({ map: strip(40), programs: [parseIcfp('Move 0 0', CLASSIC)] });
+  const sim = createSim({ map: strip(40), programs: [parseIcfp('Move 0 0', CLASSIC)], wrap: false });
   const x = () => sim.ant(0).pos % 40;
   sim.run(45); assert.equal(x(), 1 + 3); // moves in rounds 1, 16, 31
   sim.run(1); assert.equal(x(), 1 + 4);  // round 46
@@ -63,7 +64,7 @@ test('a mover acts every 15 rounds', () => {
 test('carry capacity: Classic 1, Tinyminds 2', () => {
   for (const [rules, want] of [[CLASSIC, 1], [TINYMINDS, 2]] as [Rules, number][]) {
     const map = strip(10); map.food[1 * 10 + 1] = 5;
-    const sim = createSim({ map, programs: [parseIcfp('PickUp 0 0', rules)], rules });
+    const sim = createSim({ map, programs: [parseIcfp('PickUp 0 0', rules)], rules, wrap: false });
     sim.run(5);
     assert.equal(sim.ant(0).has, want);
     assert.equal(sim.food[11], 5 - want);
@@ -83,35 +84,6 @@ test('starter ant on the tiny world is deterministic and delivers food', () => {
 });
 
 // --- differential fuzz: optimized core vs the spec-literal reference ---------------------
-const lcg = (seed: number): (() => number) => { let s = seed; return () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) >>> 8); };
-
-function randProgram(r: () => number, n: number) {
-  const pick = (k: number): number => r() % k, tgt = () => pick(n);
-  const gens = [
-    () => ({ op: OP.SENSE, a: pick(4), b: 1 << pick(15), t: tgt(), e: tgt() }),
-    () => ({ op: OP.SENSE, a: pick(4), b: 1 << (pick(2) ? 0 : 1), t: tgt(), e: tgt() }),
-    () => ({ op: OP.MARK, a: pick(6), t: tgt() }), () => ({ op: OP.UNMARK, a: pick(6), t: tgt() }),
-    () => ({ op: OP.MOVE, t: tgt(), e: tgt() }), () => ({ op: OP.MOVE, t: tgt(), e: tgt() }),
-    () => ({ op: OP.MOVE, t: tgt(), e: tgt() }), () => ({ op: OP.PICKUP, t: tgt(), e: tgt() }),
-    () => ({ op: OP.DROP, t: tgt() }), () => ({ op: OP.TURN, a: pick(2), t: tgt() }),
-    () => ({ op: OP.TURN, a: pick(2), t: tgt() }), () => ({ op: OP.FLIP, a: 1 + pick(4), t: tgt(), e: tgt() }),
-  ];
-  return makeProgram(Array.from({ length: n }, () => gens[pick(gens.length)]()));
-}
-
-function randMap(r: () => number): WorldMap {
-  const W = 16, H = 12, N = W * H;
-  const map: WorldMap = { W, H, rock: new Uint8Array(N), food: new Uint16Array(N), hill: new Int8Array(N).fill(-1) };
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const p = y * W + x, edge = x === 0 || y === 0 || x === W - 1 || y === H - 1;
-    if (x >= 3 && x <= 6 && y >= 3 && y <= 8) map.hill[p] = 0;
-    else if (x >= 8 && x <= 11 && y >= 3 && y <= 8) map.hill[p] = 1;
-    else if (edge || r() % 100 < 8) map.rock[p] = 1;
-    else if (r() % 100 < 10) map.food[p] = 1 + (r() % 9);
-  }
-  return map;
-}
-
 test('differential fuzz: core == spec-literal reference (Classic)', () => {
   let deaths = 0, delivered = 0;
   for (let seed = 1; seed <= 100; seed++) {
