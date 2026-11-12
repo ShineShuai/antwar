@@ -2,6 +2,7 @@
 import { COND as C, OP } from './asm.ts';
 import { DE, DO } from './hex.ts';
 import { createRng } from './rng.ts';
+import { ANT_STRIDE } from './types.ts';
 import type { AntId, Cell, Frame, Program, Rules, WorldMap } from './types.ts';
 
 /** The ICFP 2004 rules, exactly. */
@@ -143,14 +144,15 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
     score: (): number[] => hillCells.map((cs) => cs.reduce((sum, p) => sum + food[p], 0)),
     alive: (col: number): number => alive.reduce((k, v, i) => k + (v && acol[i] === col ? 1 : 0), 0),
     ant: (i: number) => ({ pos: apos[i], col: acol[i], dir: dir[i], has: has[i], pc: pc[i], alive: !!alive[i] }),
-    /** Render data: cell food plus [pos, colony, dir, carried] for each living ant. */
+    /** Render data for the current round (copies; safe to transfer). */
     frame(): Frame {
-      const out = new Int32Array(alive.reduce((k, v) => k + v, 0) * 4);
+      const out = new Int32Array(alive.reduce((k, v) => k + v, 0) * ANT_STRIDE);
       let k = 0;
       for (let i = 0; i < n; i++) {
-        if (alive[i]) { out[k++] = apos[i]; out[k++] = acol[i]; out[k++] = dir[i]; out[k++] = has[i]; }
+        if (!alive[i]) continue;
+        out[k++] = i; out[k++] = apos[i]; out[k++] = acol[i]; out[k++] = dir[i]; out[k++] = has[i]; out[k++] = pc[i];
       }
-      return { cycle, food: food.slice(), ants: out, score: this.score(),
+      return { cycle, food: food.slice(), marks: marks.slice(), ants: out, score: this.score(),
         alive: Array.from({ length: ncol }, (_, c) => this.alive(c)) };
     },
     /** Canonical per-cell text of the whole state (the spec's dump contents). */

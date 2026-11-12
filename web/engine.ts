@@ -12,7 +12,7 @@ export function createEngine() {
   let sim: Sim | null = null;
   const frame = (s: Sim): Response => {
     const f = s.frame();
-    return { msg: { type: 'frame', hash: s.hash(), ...f }, transfer: [f.food.buffer, f.ants.buffer] };
+    return { msg: { type: 'frame', hash: s.hash(), ...f }, transfer: [f.food.buffer, f.marks.buffer, f.ants.buffer] };
   };
   return {
     handle(m: Request): Response {

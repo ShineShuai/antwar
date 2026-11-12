@@ -1,0 +1,15 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install
+      - run: npm test          # tsc --noEmit (strict) + node --test
+      - run: npm run build     # esbuild -> dist/
+      - run: node bench/run.ts 5000
+      - uses: actions/upload-artifact@v4
+        with: { name: dist, path: dist }

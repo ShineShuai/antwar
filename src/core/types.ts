@@ -31,10 +31,15 @@ export interface WorldMap {
   hill: Int8Array;
 }
 
-/** Render data for one round: cell food plus [pos, colony, dir, carried] per living ant. */
+/** Ints per living ant in Frame.ants: [id, cell, colony, dir, carried, state]. */
+export const ANT_STRIDE = 6;
+
+/** Render data for one round. */
 export interface Frame {
   cycle: number;
   food: Uint16Array;
+  /** Scent bitmasks, colony * cells + cell; bit k = marker k. */
+  marks: Uint8Array;
   ants: Int32Array;
   score: number[];
   alive: number[];

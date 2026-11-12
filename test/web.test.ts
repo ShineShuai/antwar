@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createEngine } from '../web/engine.ts';
 import { STARTER } from '../web/default-ant.ts';
-import { LIGHT, center, createViewer, layout } from '../web/viewer.ts';
+import { LIGHT, cellAt, center, createViewer, layout } from '../web/viewer.ts';
+import { describeCell } from '../web/inspect.ts';
 import { CLASSIC, createSim } from '../src/core/sim.ts';
 import { generateWorld } from '../src/core/gen.ts';
 import { loadBrain } from '../src/core/asm.ts';
@@ -24,7 +25,9 @@ test('engine: init, run, frame; same hash as a direct sim', () => {
   const f = eng.handle({ type: 'run', n: 500 }).msg as Of<'frame'>;
   assert.equal(f.type, 'frame');
   assert.equal(f.cycle, 500);
-  assert.equal(f.ants.length % 4, 0);
+  assert.equal(f.ants.length % 6, 0);
+  assert.equal(f.ants.length / 6, 182);
+  assert.equal(f.marks.length, 2 * 100 * 100);
   assert.deepEqual(f.alive, [91, 91]);
   const P = loadBrain(STARTER, CLASSIC), sim = createSim({ map: generateWorld(3), programs: [P, P], seed: 3 });
   sim.run(500);
@@ -58,8 +61,34 @@ test('viewer: hex layout and draw call counts', () => {
   world.rock[0] = 1; world.hill[5] = 0;
   const ctx = new FakeCtx(), v = createViewer(ctx, world, layout(W, H, 10), LIGHT);
   const food = new Uint16Array(N); food[2] = 3; food[5] = 1; food[0] = 9; // food on rock is not drawn
-  v.draw({ food, ants: Int32Array.from([5, 0, 0, 0, 6, 1, 2, 1, 7, 1, 0, 0]) });
+  const marks = new Uint8Array(2 * N); marks[6] = 0b101; marks[N + 7] = 0b1; marks[0] = 0b1; // marks on rock are not drawn
+  const ants = Int32Array.from([0, 5, 0, 0, 0, 3, 1, 6, 1, 2, 1, 7, 2, 7, 1, 0, 0, 9]);
+  v.draw({ food, marks, ants });
   assert.equal(ctx.calls.fillRect, 1 + 2); // background + two food cells
-  assert.equal(ctx.calls.arc, 3 + 1); // three ants + one carry dot
-  assert.equal(ctx.calls.fill, 2 + 3 + 1); // rock + hill hexes, ants, carry dot
+  const before = ctx.calls.fillRect;
+  v.draw({ food, marks, ants }, { marks: true });
+  assert.equal(ctx.calls.fillRect - before, 1 + 2 + 3); // + three scent pips
+  assert.equal(ctx.calls.arc, 2 * (3 + 1)); // two draws: three ants + one carry dot each
+  assert.equal(ctx.calls.fill, 2 * (2 + 3 + 1)); // rock + hill hexes, ants, carry dot, twice
+});
+
+test('cellAt inverts center for every cell, and tolerates offsets', () => {
+  const W = 7, H = 6, L = layout(W, H, 12);
+  for (let p = 0; p < W * H; p++) {
+    const [cx, cy] = center(L, p % W, (p / W) | 0);
+    assert.equal(cellAt(L, W, H, cx, cy), p);
+    assert.equal(cellAt(L, W, H, cx + L.w * 0.3, cy), p);
+    assert.equal(cellAt(L, W, H, cx, cy - L.h * 0.3), p);
+  }
+  assert.equal(cellAt(L, W, H, -50, -50), -1);
+});
+
+test('describeCell lists food, scents and ants', () => {
+  const W = 3, H = 3, N = 9, marks = new Uint8Array(2 * N);
+  marks[4] = 0b101; marks[N + 4] = 0b10;
+  const food = new Uint16Array(N); food[4] = 7;
+  const ants = Int32Array.from([12, 4, 1, 2, 1, 8]);
+  assert.equal(describeCell({ food, marks, ants }, W, H, 4),
+    'cell 1,1 | food 7 | scent A: 0,2 | scent B: 1 | ant #12 (B) state 8, facing SW, carrying 1');
+  assert.equal(describeCell({ food, marks, ants }, W, H, 0), 'cell 0,0');
 });

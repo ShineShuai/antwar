@@ -18,6 +18,7 @@ Spec: `docs/ant-sim-reference.html`.
 - `src/core/sim.ts`    `createSim()`; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,
   direction/payload). v1: two colonies, no scare rule, no drop on blocked move
 - `web/`               `workshop.html` + `workshop.ts` (canvas viewer), `sim-worker.ts`, `engine.ts`
+- `bench/run.ts`      `npm run bench`: rounds/s and ns per ant-round for four workloads
 - `testlib/ref-sim.ts` literal transliteration of the task pseudo-code: oracle for the fuzz test
 
 Module Workers need http(s): use `npm start`, not file://.
