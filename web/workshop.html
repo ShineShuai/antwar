@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tinyminds workshop</title>
+<style>
+  :root { --bg: #fafaf9; --fg: #1c1917; --mut: #78716c; --card: #fff; --line: #d6d3d1; --err: #b91c1c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1917; --fg: #fafaf9; --mut: #a8a29e; --card: #292524; --line: #44403c; --err: #f87171; }
+  }
+  body { margin: 0; padding: 12px; background: var(--bg); color: var(--fg); font: 14px system-ui, sans-serif; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  canvas { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; }
+  aside { display: grid; gap: 8px; }
+  textarea { width: 100%; height: 140px; box-sizing: border-box; font: 12px ui-monospace, monospace;
+    background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; }
+  label { display: grid; gap: 2px; color: var(--mut); }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  input, select, button { font: inherit; padding: 4px 8px; background: var(--card); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 6px; }
+  #seed { width: 7em; }
+  #status { font-variant-numeric: tabular-nums; }
+  #status.err { color: var(--err); }
+</style>
+<h1 style="font-size:18px;margin:0 0 8px">Tinyminds workshop</h1>
+<main>
+  <canvas id="view" width="900" height="800"></canvas>
+  <aside>
+    <div class="row">
+      <label>Seed <input id="seed" type="number" value="3"></label>
+      <label>Rules <select id="rules"><option value="classic">Classic</option><option value="tiny">Tinyminds</option></select></label>
+      <label>World file <input id="world" type="file"></label>
+    </div>
+    <label>Brain A (red)<textarea id="ba" spellcheck="false"></textarea></label>
+    <label>Brain B (blue)<textarea id="bb" spellcheck="false"></textarea></label>
+    <div class="row">
+      <button id="go">Run</button><button id="step">Step</button><button id="reset">Reset</button>
+      <select id="speed"><option>1</option><option selected>10</option><option>100</option><option>1000</option></select> rounds/frame
+    </div>
+    <div id="status">Ready.</div>
+  </aside>
+</main>
+<script type="module" src="workshop.js"></script>

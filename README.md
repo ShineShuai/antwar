@@ -11,8 +11,12 @@ unchanged in a browser Worker and in Node. Spec: `docs/ant-sim-reference.html`.
 - `src/core/map.js`  `parseMap()` official world files (+/-, a-z hills, 1-9 food)
 - `src/core/hex.js`  hex geometry (spec `adjacent_cell`, disks)
 - `src/core/gen.js`  `generateWorld(seed)`: Classic contest world (spec 3.1); `node cli/gen.js SEED`
+- `web/`  static pages, no build step: `workshop.html` (canvas viewer + Worker), `engine.js` (worker
+  message handler, unit-tested), `viewer.js` (hex renderer). `npm start` serves it at http://localhost:8080/
 - `src/core/sim.js`  `createSim()`; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (flags)
 - `testlib/ref-sim.js`  literal transliteration of the task pseudo-code; the oracle for fuzzing
 
-Not yet: official dump comparison (needs the contest traces), Worker/viewer,
+Module Workers need http(s), so open it through `npm start`, not file://.
+
+Not yet: official dump comparison (needs the contest traces), marks overlay, replay/seek,
 rules compiler, lint, skills. Default seed is 12345 (the official dump seed).

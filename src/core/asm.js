@@ -151,3 +151,10 @@ export function parseIcfp(text, rules) {
   });
   return makeProgram(list);
 }
+
+/** Pick the loader by content: flat .asm has `else`, labels or goto; official .ant has none. */
+export function loadBrain(text, rules) {
+  const code = text.replace(/;.*$/gm, '');
+  const flat = /\belse\b/i.test(code) || /^\s*[a-z_]\w*:/im.test(code) || /^\s*(goto|senseany|senseall|flipzero)\b/im.test(code);
+  return (flat ? assemble : parseIcfp)(text, rules);
+}

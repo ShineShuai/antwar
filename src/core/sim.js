@@ -126,6 +126,16 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
     score: () => hillCells.map((cs) => cs.reduce((sum, p) => sum + food[p], 0)),
     alive: (col) => alive.reduce((k, v, i) => k + (v && acol[i] === col ? 1 : 0), 0),
     ant: (i) => ({ pos: apos[i], col: acol[i], dir: dir[i], has: has[i], pc: pc[i], alive: !!alive[i] }),
+    /** Render data: cell food plus [pos, colony, dir, carried] for each living ant. */
+    frame() {
+      const out = new Int32Array(alive.reduce((k, v) => k + v, 0) * 4);
+      let k = 0;
+      for (let i = 0; i < n; i++) {
+        if (alive[i]) { out[k++] = apos[i]; out[k++] = acol[i]; out[k++] = dir[i]; out[k++] = has[i]; }
+      }
+      return { cycle, food: food.slice(), ants: out, score: this.score(),
+        alive: Array.from({ length: ncol }, (_, c) => this.alive(c)) };
+    },
     /** Canonical per-cell text of the whole state (the spec's dump contents). */
     snapshot() {
       const out = [];
