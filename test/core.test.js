@@ -1,0 +1,129 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createRng } from '../src/core/rng.js';
+import { AsmError, OP, assemble, makeProgram, parseIcfp } from '../src/core/asm.js';
+import { parseMap } from '../src/core/map.js';
+import { CLASSIC, TINYMINDS, createSim } from '../src/core/sim.js';
+import { refSim } from '../testlib/ref-sim.js';
+
+const fx = (f) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
+
+test('rng reproduces the official x0..x99 for s0 = 12345', () => {
+  const rng = createRng(12345);
+  assert.deepEqual(JSON.parse(fx('rng12345.json')).map(() => rng.next()), JSON.parse(fx('rng12345.json')));
+});
+
+test('assembler: labels, comments, blank lines', () => {
+  const P = assemble('; c\nstart: sense ahead food else step\n  goto start\n\nstep: move else start\n  goto start', CLASSIC);
+  assert.equal(P.n, 4);
+  assert.deepEqual([...P.e].slice(0, 3), [2, 0, 0]);
+  assert.equal(P.t[1], 0);
+});
+
+test('assembler: errors name the line', () => {
+  const bad = (src, re) => assert.throws(() => assemble(src, CLASSIC), (e) => e instanceof AsmError && re.test(e.message));
+  bad('move else 0', /line 1: falls off the end/);
+  bad('goto nowhere', /line 1: jump target/);
+  bad('z:\n', /empty program/);
+  bad('a:\na:\ngoto a', /line 2: duplicate label/);
+  bad('flipzero 20000 else 0\ngoto 0', /flipzero p must be 1\.\.16384/);
+  bad('sense ahead bogus else 0\ngoto 0', /unknown condition/);
+  bad('sense ahead friend foe else 0\ngoto 0', /number of conditions/);
+  bad('payload 1 else 0\ngoto 0', /not in this ruleset/);
+  bad('turn up\ngoto 0', /turn left\|right/);
+  assert.doesNotThrow(() => assemble('payload 1 else 0\ngoto 0', TINYMINDS));
+});
+
+test('ICFP .ant loader', () => {
+  const P = parseIcfp(fx('starter.ant'), CLASSIC);
+  assert.equal(P.n, 16);
+  assert.equal(P.op[3], OP.FLIP);
+  assert.throws(() => parseIcfp('Move 5 0', CLASSIC), /state must be/);
+  assert.throws(() => parseIcfp('Drop 0\n\nDrop 0', CLASSIC), /empty state/);
+});
+
+test('map loader reads the official tiny world', () => {
+  const m = parseMap(fx('tiny.world'));
+  assert.equal(m.W * m.H, 100);
+  assert.equal(m.hill.filter((h) => h === 0).length, 16);
+  assert.equal(m.hill.filter((h) => h === 1).length, 16);
+});
+
+const strip = (n, extra = '') => parseMap(`${n}\n3\n${'# '.repeat(n)}\n# + ${'. '.repeat(n - 3)}#\n${'# '.repeat(n)}${extra}`);
+
+test('a mover acts every 15 rounds', () => {
+  const sim = createSim({ map: strip(40), programs: [parseIcfp('Move 0 0', CLASSIC)] });
+  const x = () => sim.ant(0).pos % 40;
+  sim.run(45); assert.equal(x(), 1 + 3); // moves in rounds 1, 16, 31
+  sim.run(1); assert.equal(x(), 1 + 4);  // round 46
+});
+
+test('carry capacity: Classic 1, Tinyminds 2', () => {
+  for (const [rules, want] of [[CLASSIC, 1], [TINYMINDS, 2]]) {
+    const map = strip(10); map.food[1 * 10 + 1] = 5;
+    const sim = createSim({ map, programs: [parseIcfp('PickUp 0 0', rules)], rules });
+    sim.run(5);
+    assert.equal(sim.ant(0).has, want);
+    assert.equal(sim.food[11], 5 - want);
+  }
+});
+
+test('starter ant on the tiny world is deterministic and delivers food', () => {
+  const run = () => {
+    const P = parseIcfp(fx('starter.ant'), CLASSIC);
+    const sim = createSim({ map: parseMap(fx('tiny.world')), programs: [P, P] });
+    sim.run(10000);
+    return { hash: sim.hash(), score: sim.score() };
+  };
+  const a = run();
+  assert.deepEqual(a, run());
+  assert.ok(a.score[0] + a.score[1] > 0, JSON.stringify(a));
+});
+
+// --- differential fuzz: optimized core vs the spec-literal reference ---------------------
+const lcg = (seed) => { let s = seed; return () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) >>> 8); };
+
+function randProgram(r, n) {
+  const pick = (k) => r() % k, tgt = () => pick(n);
+  const gens = [
+    () => ({ op: OP.SENSE, a: pick(4), b: 1 << pick(15), t: tgt(), e: tgt() }),
+    () => ({ op: OP.SENSE, a: pick(4), b: 1 << (pick(2) ? 0 : 1), t: tgt(), e: tgt() }),
+    () => ({ op: OP.MARK, a: pick(6), t: tgt() }), () => ({ op: OP.UNMARK, a: pick(6), t: tgt() }),
+    () => ({ op: OP.MOVE, t: tgt(), e: tgt() }), () => ({ op: OP.MOVE, t: tgt(), e: tgt() }),
+    () => ({ op: OP.MOVE, t: tgt(), e: tgt() }), () => ({ op: OP.PICKUP, t: tgt(), e: tgt() }),
+    () => ({ op: OP.DROP, t: tgt() }), () => ({ op: OP.TURN, a: pick(2), t: tgt() }),
+    () => ({ op: OP.TURN, a: pick(2), t: tgt() }), () => ({ op: OP.FLIP, a: 1 + pick(4), t: tgt(), e: tgt() }),
+  ];
+  return makeProgram(Array.from({ length: n }, () => gens[pick(gens.length)]()));
+}
+
+function randMap(r) {
+  const W = 16, H = 12, N = W * H;
+  const map = { W, H, rock: new Uint8Array(N), food: new Uint16Array(N), hill: new Int8Array(N).fill(-1) };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const p = y * W + x, edge = x === 0 || y === 0 || x === W - 1 || y === H - 1;
+    if (x >= 3 && x <= 6 && y >= 3 && y <= 8) map.hill[p] = 0;
+    else if (x >= 8 && x <= 11 && y >= 3 && y <= 8) map.hill[p] = 1;
+    else if (edge || r() % 100 < 8) map.rock[p] = 1;
+    else if (r() % 100 < 10) map.food[p] = 1 + (r() % 9);
+  }
+  return map;
+}
+
+test('differential fuzz: core == spec-literal reference (Classic)', () => {
+  let deaths = 0, delivered = 0;
+  for (let seed = 1; seed <= 100; seed++) {
+    const r = lcg(seed), map = randMap(r), n = 6 + (r() % 20);
+    const programs = [randProgram(r, n), randProgram(r, n)];
+    const a = createSim({ map, programs, seed }), b = refSim({ map, programs, seed });
+    for (let round = 1; round <= 1500; round++) {
+      a.step(); b.step();
+      if (round % 25 === 0) assert.equal(a.snapshot(), b.snapshot(), `seed ${seed}, round ${round}`);
+    }
+    deaths += a.ants - a.alive(0) - a.alive(1);
+    delivered += a.score()[0] + a.score()[1];
+  }
+  assert.ok(deaths > 0, 'fuzz never exercised the surround rule');
+  console.log(`fuzz coverage: ${deaths} deaths, ${delivered} food on hills`);
+});
