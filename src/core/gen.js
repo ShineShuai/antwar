@@ -1,0 +1,94 @@
+// Contest-world generator, task spec section 3.1: 100x100, rocky perimeter, two hexagonal
+// anthills (side 6 = 91 cells), ten rocks, eight 3x4 food blobs (5 per cell), >= 1 empty cell
+// between non-food elements, nothing overlaps. Rock shape is not in the spec: random growth.
+import { disk, step } from './hex.js';
+
+export const CLASSIC_WORLD = Object.freeze({
+  W: 100, H: 100, hillRadius: 5, rocks: 10, rockSize: [8, 30], blobs: 8, blobW: 3, blobH: 4, perCell: 5,
+});
+
+const mulberry32 = (a) => () => {
+  a = (a + 0x6d2b79f5) | 0;
+  let t = Math.imul(a ^ (a >>> 15), 1 | a);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
+/** Deterministic: same (seed, cfg) -> same world. A failed attempt retries with seed + 1. */
+export function generateWorld(seed, cfg = CLASSIC_WORLD) {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const map = attemptWorld(mulberry32(seed + attempt), cfg);
+    if (map) return map;
+  }
+  throw new Error(`no valid world for seed ${seed}`);
+}
+
+function attemptWorld(rnd, { W, H, hillRadius, rocks, rockSize, blobs, blobW, blobH, perCell }) {
+  const N = W * H, owner = new Uint8Array(N); // 0 empty, 1 hill0, 2 hill1, 3 rock, 4 food
+  const ri = (lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
+  const at = (x, y) => y * W + x;
+  // A non-food cell needs: off the perimeter ring, empty, and all six neighbours empty.
+  const roomy = (x, y) => x >= 2 && x < W - 2 && y >= 2 && y < H - 2 && owner[at(x, y)] === 0
+    && [0, 1, 2, 3, 4, 5].every((d) => { const [nx, ny] = step(x, y, d); return owner[at(nx, ny)] === 0; });
+  const place = (shape, id) => {
+    if (!shape.every(([x, y]) => roomy(x, y))) return false;
+    shape.forEach(([x, y]) => { owner[at(x, y)] = id; });
+    return true;
+  };
+  const tries = (make, id) => {
+    for (let i = 0; i < 3000; i++) if (place(make(), id)) return true;
+    return false;
+  };
+  const margin = hillRadius + 3;
+  for (const id of [1, 2]) {
+    if (!tries(() => disk(ri(margin, W - 1 - margin), ri(margin, H - 1 - margin), hillRadius), id)) return null;
+  }
+  for (let r = 0; r < rocks; r++) {
+    const rock = () => {
+      const cells = [[ri(3, W - 4), ri(3, H - 4)]], seen = new Set([cells[0].join()]);
+      for (let want = ri(...rockSize), guard = 0; cells.length < want && guard < 500; guard++) {
+        const [x, y] = cells[ri(0, cells.length - 1)], [nx, ny] = step(x, y, ri(0, 5));
+        if (!seen.has(`${nx},${ny}`)) { seen.add(`${nx},${ny}`); cells.push([nx, ny]); }
+      }
+      return cells;
+    };
+    if (!tries(rock, 3)) return null;
+  }
+  const food = new Uint16Array(N);
+  for (let b = 0; b < blobs; b++) {
+    let ok = false;
+    for (let i = 0; i < 3000 && !ok; i++) {
+      const [w, h] = rnd() < 0.5 ? [blobW, blobH] : [blobH, blobW];
+      const x0 = ri(1, W - 1 - w), y0 = ri(1, H - 1 - h), cells = [];
+      for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) cells.push([x, y]);
+      if (cells.every(([x, y]) => owner[at(x, y)] === 0)) {
+        cells.forEach(([x, y]) => { owner[at(x, y)] = 4; food[at(x, y)] = perCell; });
+        ok = true;
+      }
+    }
+    if (!ok) return null;
+  }
+  const map = { W, H, rock: new Uint8Array(N), food, hill: new Int8Array(N).fill(-1) };
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const o = owner[at(x, y)];
+      if (x === 0 || y === 0 || x === W - 1 || y === H - 1 || o === 3) map.rock[at(x, y)] = 1;
+      else if (o === 1 || o === 2) map.hill[at(x, y)] = o - 1;
+    }
+  }
+  return allReachable(map) ? map : null;
+}
+
+/** Every food cell and the second hill reachable from the first hill without crossing rock. */
+export function allReachable({ W, H, rock, food, hill }) {
+  const start = hill.findIndex((h) => h === 0), seen = new Uint8Array(W * H), queue = [start];
+  seen[start] = 1;
+  for (let i = 0; i < queue.length; i++) {
+    const x = queue[i] % W, y = (queue[i] / W) | 0;
+    for (let d = 0; d < 6; d++) {
+      const [nx, ny] = step(x, y, d), q = ny * W + nx;
+      if (nx >= 0 && nx < W && ny >= 0 && ny < H && !rock[q] && !seen[q]) { seen[q] = 1; queue.push(q); }
+    }
+  }
+  return food.every((f, p) => !f || seen[p]) && hill.every((h, p) => h !== 1 || seen[p]);
+}

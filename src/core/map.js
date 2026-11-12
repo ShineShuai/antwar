@@ -24,3 +24,18 @@ export function parseMap(text) {
   });
   return map;
 }
+
+/** Inverse of parseMap in the official layout (even rows get a leading space). */
+export function formatMap({ W, H, rock, food, hill }) {
+  const rows = [String(W), String(H)];
+  for (let y = 0; y < H; y++) {
+    const cells = [];
+    for (let x = 0; x < W; x++) {
+      const p = y * W + x;
+      cells.push(rock[p] ? '#' : hill[p] >= 0 ? '+-'[hill[p]] ?? String.fromCharCode(97 + hill[p])
+        : food[p] ? String(food[p]) : '.');
+    }
+    rows.push((y % 2 === 0 ? ' ' : '') + cells.join(' '));
+  }
+  return rows.join('\n') + '\n';
+}

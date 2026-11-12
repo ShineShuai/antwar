@@ -1,5 +1,6 @@
 // Deterministic simulator. Pure functions of (map, programs, seed, rules); no DOM, no I/O.
 import { OP, COND as C } from './asm.js';
+import { DE, DO } from './hex.js';
 import { createRng } from './rng.js';
 
 /** The ICFP 2004 rules, exactly. */
@@ -7,9 +8,6 @@ export const CLASSIC = Object.freeze({ cap: 1, scare: false, dropFail: false, ex
 /** Classic + flags: carry two, scare at 4, drop on blocked move, direction/payload, 2000 cap. */
 export const TINYMINDS = Object.freeze({ cap: 2, scare: true, dropFail: true, ext: true, maxInstr: 2000 });
 const ACT_EVERY = 15; // a mover rests 14 rounds, so it acts again 15 rounds later
-
-const DE = [[1, 0], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1]]; // even rows
-const DO = [[1, 0], [1, 1], [0, 1], [-1, 0], [0, -1], [1, -1]]; // odd rows
 
 export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap = false }) {
   const { W, H } = map, N = W * H, ncol = programs.length;
