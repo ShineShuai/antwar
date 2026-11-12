@@ -12,6 +12,9 @@ export const COND: Record<string, number> = {
   marker: 6, foemarker: 12, home: 13, foehome: 14,
 };
 const SENSE_DIR: Record<string, number> = { here: 0, ahead: 1, leftahead: 2, rightahead: 3 };
+/** Program size caps: authored assembly vs imported official .ant files. */
+export const MAX_AUTHORED = 2000;
+export const MAX_IMPORTED = 10000;
 export const MAX_FLIP = 16384; // x is 14 bit: larger p would not give chance 1/p
 
 export class AsmError extends Error {}
@@ -72,7 +75,7 @@ export function assemble(text: string, rules: Rules): Program {
   });
   const n = src.length;
   if (!n) fail(0, 'empty program');
-  if (n > rules.maxInstr) fail(0, `more than ${rules.maxInstr} instructions`);
+  if (n > MAX_AUTHORED) fail(0, `more than ${MAX_AUTHORED} instructions`);
   const target = (s: string, line: number): number => {
     if (labels.has(s)) {
       const at = labels.get(s) as number;
@@ -125,7 +128,7 @@ export function parseIcfp(text: string, rules: Rules): Program {
   while (lines.length && !(lines.at(-1) ?? '').trim()) lines.pop();
   const n = lines.length;
   if (!n) fail(0, 'empty program');
-  if (n > rules.maxInstr) fail(0, `more than ${rules.maxInstr} states`);
+  if (n > MAX_IMPORTED) fail(0, `more than ${MAX_IMPORTED} states`);
   const st = (s: string, line: number): number => int(s, 0, n - 1, 'state', line);
   const list = lines.map((raw: string, i: number): Instr => {
     const line = i + 1, k = raw.split(';')[0].trim().toLowerCase().split(/\s+/);

@@ -6,9 +6,16 @@ import { ANT_STRIDE } from './types.ts';
 import type { AntId, Cell, Frame, Program, Rules, WorldMap } from './types.ts';
 
 /** The ICFP 2004 rules, exactly. */
-export const CLASSIC: Rules = Object.freeze({ cap: 1, ext: false, maxInstr: 10000 });
-/** Classic + carry two + direction/payload sensing + a 2000-instruction cap. */
-export const TINYMINDS: Rules = Object.freeze({ cap: 2, ext: true, maxInstr: 2000 });
+export const CLASSIC: Rules = Object.freeze({ cap: 1, ext: false });
+/** Post-v1 backlog (not exposed by the clients): Classic + carry two + direction/payload sensing. */
+export const TINYMINDS: Rules = Object.freeze({ cap: 2, ext: true });
+
+/** FNV-1a, 32 bit: the regression fingerprint of the state stream (RNG tab). */
+export function fnv1a(bytes: Uint8Array): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < bytes.length; i++) h = Math.imul(h ^ bytes[i], 0x01000193);
+  return h >>> 0;
+}
 const ACT_EVERY = 15; // a mover rests 14 rounds, so it acts again 15 rounds later
 
 export interface SimOptions {
@@ -24,7 +31,7 @@ export type Sim = ReturnType<typeof createSim>;
 export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap = false }: SimOptions) {
   const { W, H } = map, N = W * H, ncol = programs.length;
   if (ncol < 1 || ncol > 2) throw new Error('v1 supports one or two colonies');
-  if (N > 65535) throw new Error('world too large');
+  if (N > 65535) throw new Error('world too large: cells must fit u16 with 0xFFFF reserved');
   if (wrap && H % 2) throw new Error('wrapped worlds need an even height');
   const rock = Uint8Array.from(map.rock), food = Uint16Array.from(map.food), hill = map.hill;
   const marks = new Uint8Array(ncol * N), occ = new Int32Array(N).fill(-1);
@@ -50,6 +57,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
   for (let p = 0; p < N; p++) if (hill[p] >= 0) cells.push(p); // ids: row-major, both colonies
   if (cells.some((p) => hill[p] >= ncol)) throw new Error('map has more hills than programs');
   const n = cells.length;
+  if (n > 32767) throw new Error('too many ants: ids must fit i16');
   const apos = Int32Array.from(cells), acol = Uint8Array.from(cells, (p) => hill[p]);
   const pc = new Uint16Array(n), dir = new Uint8Array(n), has = new Uint8Array(n);
   const wake = new Int32Array(n), alive = new Uint8Array(n).fill(1);
@@ -134,6 +142,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
     }
   }
 
+  const streamSize = 12 + N * (4 + ncol) + n * 9;
   const hillCells = Array.from({ length: ncol }, (_, k) => cells.filter((p) => hill[p] === k));
   return {
     W, H, ants: n, food, rock, marks,
@@ -155,8 +164,51 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
       return { cycle, food: food.slice(), marks: marks.slice(), ants: out, score: this.score(),
         alive: Array.from({ length: ncol }, (_, c) => this.alive(c)) };
     },
-    /** Canonical per-cell text of the whole state (the spec's dump contents). */
-    snapshot(): string {
+    /** Canonical state stream (RNG tab, v3): little-endian, cells then ants. Also the checkpoint format. */
+    snapshot(): Uint8Array {
+      const out = new Uint8Array(streamSize), dv = new DataView(out.buffer);
+      let o = 0;
+      dv.setUint32(o, cycle, true); dv.setUint32(o + 4, rng.state, true); dv.setUint32(o + 8, rng.draws, true);
+      o += 12;
+      for (let p = 0; p < N; p++) {
+        dv.setUint16(o, food[p], true); o += 2;
+        for (let c = 0; c < ncol; c++) out[o++] = marks[c * N + p];
+        dv.setInt16(o, occ[p], true); o += 2;
+      }
+      for (let i = 0; i < n; i++) {
+        const up = alive[i] === 1; // dead ants: cell 0xFFFF, other fields 0
+        out[o++] = alive[i]; out[o++] = acol[i];
+        dv.setUint16(o, up ? apos[i] : 0xffff, true); o += 2;
+        out[o++] = up ? dir[i] : 0;
+        dv.setUint16(o, up ? pc[i] : 0, true); o += 2;
+        out[o++] = up ? has[i] : 0;
+        out[o++] = up ? Math.max(0, wake[i] - cycle - 1) : 0;
+      }
+      return out;
+    },
+    /** Restore a snapshot taken from a match with the same map, programs and rules. */
+    restore(buf: Uint8Array): void {
+      if (buf.length !== streamSize) throw new Error('snapshot does not match this match');
+      const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+      cycle = dv.getUint32(0, true);
+      rng.load(dv.getUint32(4, true), dv.getUint32(8, true));
+      let o = 12;
+      for (let p = 0; p < N; p++) {
+        food[p] = dv.getUint16(o, true); o += 2;
+        for (let c = 0; c < ncol; c++) marks[c * N + p] = buf[o++];
+        occ[p] = dv.getInt16(o, true); o += 2;
+      }
+      for (let i = 0; i < n; i++) {
+        alive[i] = buf[o++]; o++; // colony is fixed by the map
+        const cell = dv.getUint16(o, true); o += 2;
+        dir[i] = buf[o++]; pc[i] = dv.getUint16(o, true); o += 2;
+        has[i] = buf[o++];
+        wake[i] = cycle + 1 + buf[o++];
+        if (alive[i]) apos[i] = cell;
+      }
+    },
+    /** Canonical per-cell text of the whole state, for readable test diffs. */
+    dump(): string {
       const out: string[] = [];
       for (let p = 0; p < N; p++) {
         const a = occ[p], m: number[] = [];
@@ -166,18 +218,9 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
       }
       return out.join('\n');
     },
-    /** FNV-1a over the full state, for replay and conformance checks. */
+    /** Canonical state hash: FNV-1a over snapshot(). */
     hash(): number {
-      let h = 0x811c9dc5;
-      const mix = (v: number): void => { h = Math.imul(h ^ (v | 0), 0x01000193); };
-      mix(cycle); mix(rng.state);
-      for (let i = 0; i < n; i++) {
-        mix(alive[i]);
-        if (alive[i]) { mix(apos[i]); mix(dir[i]); mix(has[i]); mix(pc[i]); mix(Math.max(0, wake[i] - cycle)); }
-      }
-      for (let p = 0; p < N; p++) mix(food[p]);
-      for (let k = 0; k < marks.length; k++) mix(marks[k]);
-      return h >>> 0;
+      return fnv1a(this.snapshot());
     },
   };
 }

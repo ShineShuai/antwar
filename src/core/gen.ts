@@ -13,11 +13,15 @@ export const CLASSIC_WORLD: Readonly<WorldConfig> = Object.freeze({
   W: 100, H: 100, hillRadius: 5, rocks: 10, rockSize: [8, 30] as [number, number], blobs: 8, blobW: 3, blobH: 4, perCell: 5,
 });
 
+/** Generator version: bump when output for a given seed changes. */
+export const GENERATOR_VERSION = 2;
+
+/** mulberry32: a deterministic integer-only stream of u32 values. */
 const mulberry32 = (a: number) => (): number => {
   a = (a + 0x6d2b79f5) | 0;
   let t = Math.imul(a ^ (a >>> 15), 1 | a);
   t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  return (t ^ (t >>> 14)) >>> 0;
 };
 
 /** Deterministic: same (seed, cfg) -> same world. A failed attempt retries with seed + 1. */
@@ -29,10 +33,10 @@ export function generateWorld(seed: number, cfg: WorldConfig = CLASSIC_WORLD): W
   throw new Error(`no valid world for seed ${seed}`);
 }
 
-function attemptWorld(rnd: () => number, cfg: WorldConfig): WorldMap | null {
+function attemptWorld(next: () => number, cfg: WorldConfig): WorldMap | null {
   const { W, H, hillRadius, rocks, rockSize, blobs, blobW, blobH, perCell } = cfg;
   const N = W * H, owner = new Uint8Array(N); // 0 empty, 1 hill0, 2 hill1, 3 rock, 4 food
-  const ri = (lo: number, hi: number): number => lo + Math.floor(rnd() * (hi - lo + 1));
+  const ri = (lo: number, hi: number): number => lo + (next() % (hi - lo + 1));
   const at = (x: number, y: number): number => y * W + x;
   // A non-food cell needs: off the perimeter ring, empty, and all six neighbours empty.
   const roomy = (x: number, y: number): boolean => x >= 2 && x < W - 2 && y >= 2 && y < H - 2 && owner[at(x, y)] === 0
@@ -65,7 +69,7 @@ function attemptWorld(rnd: () => number, cfg: WorldConfig): WorldMap | null {
   for (let b = 0; b < blobs; b++) {
     let ok = false;
     for (let i = 0; i < 3000 && !ok; i++) {
-      const [w, h] = rnd() < 0.5 ? [blobW, blobH] : [blobH, blobW];
+      const [w, h] = (next() & 1) === 0 ? [blobW, blobH] : [blobH, blobW];
       const x0 = ri(1, W - 1 - w), y0 = ri(1, H - 1 - h), cells = [];
       for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) cells.push([x, y]);
       if (cells.every(([x, y]) => owner[at(x, y)] === 0)) {
@@ -88,13 +92,15 @@ function attemptWorld(rnd: () => number, cfg: WorldConfig): WorldMap | null {
 
 /** Every food cell and the second hill reachable from the first hill without crossing rock. */
 export function allReachable({ W, H, rock, food, hill }: WorldMap): boolean {
-  const start = hill.findIndex((h: number) => h === 0), seen = new Uint8Array(W * H), queue = [start];
+  const start = hill.findIndex((h: number) => h === 0), seen = new Uint8Array(W * H);
+  const qx: number[] = [start % W], qy: number[] = [0]; // y is recovered by counting rows below
+  qy[0] = 0;
+  for (let y = 0; y < H; y++) if (start >= y * W && start < (y + 1) * W) qy[0] = y;
   seen[start] = 1;
-  for (let i = 0; i < queue.length; i++) {
-    const x = queue[i] % W, y = (queue[i] / W) | 0;
+  for (let i = 0; i < qx.length; i++) {
     for (let d = 0; d < 6; d++) {
-      const [nx, ny] = step(x, y, d), q = ny * W + nx;
-      if (nx >= 0 && nx < W && ny >= 0 && ny < H && !rock[q] && !seen[q]) { seen[q] = 1; queue.push(q); }
+      const [nx, ny] = step(qx[i], qy[i], d), q = ny * W + nx;
+      if (nx >= 0 && nx < W && ny >= 0 && ny < H && !rock[q] && !seen[q]) { seen[q] = 1; qx.push(nx); qy.push(ny); }
     }
   }
   return food.every((f: number, p: number) => !f || seen[p]) && hill.every((h: number, p: number) => h !== 1 || seen[p]);

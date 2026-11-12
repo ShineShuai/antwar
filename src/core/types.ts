@@ -7,7 +7,6 @@ export interface Rules {
   readonly cap: number;
   /** direction / payload / senseany / senseall instructions allowed. */
   readonly ext: boolean;
-  readonly maxInstr: number;
 }
 
 export interface Instr { op: number; a?: number; b?: number; t?: number; e?: number }

@@ -120,7 +120,7 @@ test('differential fuzz: core == spec-literal reference (Classic)', () => {
     const a = createSim({ map, programs, seed }), b = refSim({ map, programs, seed });
     for (let round = 1; round <= 1500; round++) {
       a.step(); b.step();
-      if (round % 25 === 0) assert.equal(a.snapshot(), b.snapshot(), `seed ${seed}, round ${round}`);
+      if (round % 25 === 0) assert.equal(a.dump(), b.snapshot(), `seed ${seed}, round ${round}`);
     }
     deaths += a.ants - a.alive(0) - a.alive(1);
     delivered += a.score()[0] + a.score()[1];
@@ -130,7 +130,8 @@ test('differential fuzz: core == spec-literal reference (Classic)', () => {
 });
 
 test('daily seed: stable hash of the UTC date, 30-bit, differs per day', async () => {
-  const { dailySeed, utcDate } = await import('../src/core/seed.ts');
+  const { dailySeed } = await import('../src/core/seed.ts');
+  const { utcDate } = await import('../web/clock.ts');
   assert.equal(dailySeed('2026-11-10'), dailySeed('2026-11-10'));
   assert.notEqual(dailySeed('2026-11-10'), dailySeed('2026-11-11'));
   assert.ok(dailySeed('2026-11-10') < 2 ** 30);
@@ -141,4 +142,51 @@ test('daily seed: stable hash of the UTC date, 30-bit, differs per day', async (
 test('v1 supports at most two colonies', () => {
   const P = parseIcfp('Drop 0', CLASSIC);
   assert.throws(() => createSim({ map: strip(10), programs: [P, P, P] }), /one or two colonies/);
+});
+
+test('canonical state stream: layout, hash, snapshot/restore round trip', async () => {
+  const { fnv1a } = await import('../src/core/sim.ts');
+  assert.equal(fnv1a(new Uint8Array(0)), 0x811c9dc5);
+  assert.equal(fnv1a(Uint8Array.from([97])), 0xe40c292c); // FNV-1a("a")
+  const ant = parseIcfp(fx('starter.ant'), CLASSIC), map = parseMap(fx('tiny.world'));
+  const sim = createSim({ map, programs: [ant, ant] });
+  sim.run(700);
+  const snap = sim.snapshot(), dv = new DataView(snap.buffer);
+  assert.equal(snap.length, 12 + 100 * (4 + 2) + 32 * 9);
+  assert.deepEqual([dv.getUint32(0, true), dv.getUint32(8, true) > 0], [700, true]); // round, draws
+  assert.equal(sim.hash(), fnv1a(snap));
+  sim.run(900);
+  const twin = createSim({ map, programs: [ant, ant] });
+  twin.restore(snap);
+  assert.equal(twin.hash(), fnv1a(snap), 'restored state hashes like its snapshot');
+  twin.run(900);
+  assert.equal(twin.hash(), sim.hash(), 'replay from a checkpoint equals the straight run');
+  assert.throws(() => twin.restore(snap.slice(1)), /does not match/);
+});
+
+test('property: food is conserved (map + carried = initial + 3 x deaths) and runs are repeatable', () => {
+  for (let seed = 1; seed <= 25; seed++) {
+    const r = lcg(seed), map = randMap(r), n = 6 + (r() % 20);
+    const programs = [randProgram(r, n), randProgram(r, n)];
+    const total = (sim: ReturnType<typeof createSim>): number => {
+      let t = sim.food.reduce((a, b) => a + b, 0);
+      for (let i = 0; i < sim.ants; i++) if (sim.ant(i).alive) t += sim.ant(i).has;
+      return t;
+    };
+    const a = createSim({ map, programs, seed }), b = createSim({ map, programs, seed });
+    const initial = total(a);
+    a.run(1200); b.run(1200);
+    const deaths = a.ants - a.alive(0) - a.alive(1);
+    assert.equal(total(a), initial + 3 * deaths, `seed ${seed}`);
+    assert.equal(a.hash(), b.hash(), `seed ${seed} repeatable`);
+  }
+});
+
+test('size caps: authored 2000 instructions, imported official ants 10000', () => {
+  const states = (n: number) => Array.from({ length: n }, (_, i) => `Drop ${(i + 1) % n}`).join('\n');
+  assert.equal(parseIcfp(states(2001), CLASSIC).n, 2001);
+  assert.throws(() => parseIcfp(states(10001), CLASSIC), /more than 10000/);
+  const asm = (n: number) => `${Array.from({ length: n - 1 }, () => 'drop').join('\n')}\ngoto 0`;
+  assert.equal(assemble(asm(2000), CLASSIC).n, 2000);
+  assert.throws(() => assemble(asm(2001), CLASSIC), /more than 2000/);
 });

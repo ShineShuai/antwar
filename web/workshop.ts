@@ -7,7 +7,7 @@ import type { Layout } from './viewer.ts';
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 const MATCH = 100000;
 const canvas = $<HTMLCanvasElement>('view'), ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-const seedBox = $<HTMLInputElement>('seed'), rulesBox = $<HTMLSelectElement>('rules');
+const seedBox = $<HTMLInputElement>('seed');
 const speedBox = $<HTMLSelectElement>('speed'), goBtn = $<HTMLButtonElement>('go'), statusBox = $('status');
 let worker: Worker | undefined, viewer: ReturnType<typeof createViewer> | undefined;
 let mapText = '', running = false, busy = false, cycle = 0;
@@ -31,7 +31,7 @@ function start(): void {
   busy = false; cycle = 0; setRunning(false);
   worker = new Worker(new URL('./sim-worker.js', import.meta.url), { type: 'module' });
   worker.onmessage = (e: MessageEvent<Reply>) => onMessage(e.data);
-  send({ type: 'init', seed: Number(seedBox.value), mapText, rules: rulesBox.value as 'classic' | 'tiny',
+  send({ type: 'init', seed: Number(seedBox.value), mapText, rules: 'classic',
     brains: [$<HTMLTextAreaElement>('ba').value, $<HTMLTextAreaElement>('bb').value] });
 }
 
@@ -75,7 +75,6 @@ $('rand').onclick = () => {
   start();
 };
 seedBox.onchange = () => { mapText = ''; start(); };
-rulesBox.onchange = start;
 $<HTMLInputElement>('world').onchange = async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (file) { mapText = await file.text(); start(); }

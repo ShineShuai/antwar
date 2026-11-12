@@ -2,7 +2,7 @@
 import type { Frame } from '../src/core/types.ts';
 
 export type Request =
-  | { type: 'init'; seed: number; mapText?: string; rules?: 'classic' | 'tiny'; brains: string[] }
+  | { type: 'init'; seed: number; mapText?: string; rules?: 'classic'; brains: string[] }
   | { type: 'run'; n: number }
   | { type: 'frame' };
 

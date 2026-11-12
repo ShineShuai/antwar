@@ -4,17 +4,19 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "tsc --noEmit && node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.core.json && tsc -p tsconfig.web.json && tsc -p tsconfig.worker.json && tsc -p tsconfig.node.json",
+    "lint": "node scripts/lint-core.ts",
+    "test": "npm run typecheck && npm run lint && node --test \"test/**/*.test.ts\"",
     "build": "node build.ts",
     "bench": "node bench/run.ts",
     "start": "node build.ts && node cli/serve.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "esbuild": "^0.28.2",
     "typescript": "^6.0.3"
   }
 }

@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es2023",
-    "lib": ["es2023", "dom", "dom.iterable"],
+    "target": "es2022",
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "strict": true,
@@ -9,8 +8,6 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
-    "skipLibCheck": true,
-    "types": ["node"]
-  },
-  "include": ["src", "web", "cli", "test", "testlib", "bench", "build.ts"]
+    "skipLibCheck": true
+  }
 }

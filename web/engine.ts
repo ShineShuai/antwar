@@ -2,7 +2,7 @@
 import { loadBrain } from '../src/core/asm.ts';
 import { generateWorld } from '../src/core/gen.ts';
 import { parseMap } from '../src/core/map.ts';
-import { CLASSIC, TINYMINDS, createSim } from '../src/core/sim.ts';
+import { CLASSIC, createSim } from '../src/core/sim.ts';
 import type { Sim } from '../src/core/sim.ts';
 import type { Reply, Request } from './protocol.ts';
 
@@ -19,7 +19,8 @@ export function createEngine() {
       try {
         switch (m.type) {
           case 'init': {
-            const rules = m.rules === 'tiny' ? TINYMINDS : CLASSIC;
+            if (m.rules !== undefined && m.rules !== 'classic') throw new Error('v1 accepts only the classic ruleset');
+            const rules = CLASSIC;
             const map = m.mapText ? parseMap(m.mapText) : generateWorld(m.seed);
             const programs = m.brains.map((text) => loadBrain(text, rules));
             if (programs.length === 1) programs.push(programs[0]);

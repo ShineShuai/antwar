@@ -92,3 +92,9 @@ test('describeCell lists food, scents and ants', () => {
     'cell 1,1 | food 7 | scent A: 0,2 | scent B: 1 | ant #12 (B) state 8, facing SW, carrying 1');
   assert.equal(describeCell({ food, marks, ants }, W, H, 0), 'cell 0,0');
 });
+
+test('engine accepts only the classic ruleset in v1', () => {
+  const eng = createEngine();
+  const bad = eng.handle({ type: 'init', seed: 1, rules: 'tiny' as 'classic', brains: [STARTER] }).msg as Of<'error'>;
+  assert.match(bad.message, /only the classic ruleset/);
+});
