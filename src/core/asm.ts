@@ -1,16 +1,8 @@
 // Program loader: flat assembly (.asm, labels) and the official ICFP .ant format -> IR.
 // IR = parallel typed arrays; every instruction has a success target `t` and an else target `e`.
 import type { Instr, Program, Rules } from './types.ts';
-
-export const OP = {
-  SENSE: 0, SENSEANY: 1, MARK: 2, UNMARK: 3, MOVE: 4, PICKUP: 5,
-  DROP: 6, TURN: 7, FLIP: 8, GOTO: 9, DIRECTION: 10, PAYLOAD: 11,
-};
-/** Condition ids; marker k is 6 + k. */
-export const COND: Record<string, number> = {
-  friend: 0, foe: 1, friendwithfood: 2, foewithfood: 3, food: 4, rock: 5,
-  marker: 6, foemarker: 12, home: 13, foehome: 14,
-};
+import { COND, FLAT_BY_NAME, OP } from './isa.ts';
+export { COND, OP };
 const SENSE_DIR: Record<string, number> = { here: 0, ahead: 1, leftahead: 2, rightahead: 3 };
 /** Program size caps: authored assembly vs imported official .ant files. */
 export const MAX_AUTHORED = 2000;
@@ -36,10 +28,10 @@ export function makeProgram(list: Instr[]): Program {
   const n = list.length;
   const P: Program = {
     n, op: new Uint8Array(n), a: new Int32Array(n), b: new Int32Array(n),
-    t: new Uint16Array(n), e: new Uint16Array(n),
+    t: new Uint16Array(n), e: new Uint16Array(n), lines: new Int32Array(n),
   };
   list.forEach((I: Instr, i: number) => {
-    P.op[i] = I.op; P.a[i] = I.a ?? 0; P.b[i] = I.b ?? 0; P.t[i] = I.t ?? 0; P.e[i] = I.e ?? 0;
+    P.op[i] = I.op; P.a[i] = I.a ?? 0; P.b[i] = I.b ?? 0; P.t[i] = I.t ?? 0; P.e[i] = I.e ?? 0; P.lines[i] = I.line ?? 0;
   });
   return P;
 }
@@ -55,12 +47,9 @@ function parseConds(tok: string[], line: number): { mask: number; count: number 
   return { mask, count };
 }
 
-const NEEDS_ELSE = new Set<string>(
-  ['sense', 'senseany', 'senseall', 'move', 'pickup', 'flipzero', 'direction', 'payload']);
-const EXT_OPS = new Set<string>(['senseany', 'senseall', 'direction', 'payload']);
-const ARITY: Record<string, number> = { mark: 2, unmark: 2, turn: 2, goto: 2, drop: 1 };
-
-/** Flat assembly: `name:` labels, `else <label|n>`, comments after `;`, success falls through. */
+/** Flat assembly: `name:` labels, `else <label|n>`, comments after `;`, success falls through.
+ * `goto` is a compile-time edge, as in every earlier ICFP 2004 toolchain: it costs no round, is resolved here,
+ * and does not exist in the IR. A cycle made only of gotos is rejected. */
 export function assemble(text: string, rules: Rules): Program {
   const labels = new Map<string, number>(), src: { l: string; line: number }[] = [];
   text.split(/\r?\n/).forEach((raw: string, i: number) => {
@@ -84,42 +73,60 @@ export function assemble(text: string, rules: Rules): Program {
     }
     return int(s, 0, n - 1, 'jump target', line);
   };
-  const list = src.map(({ l, line }, pc) => {
-    const k = l.split(/\s+/), o = k[0], e = k.indexOf('else'), I: Instr = { op: -1, t: pc + 1, e: 0 };
-    if (!(NEEDS_ELSE.has(o) || o in ARITY)) fail(line, `unknown op "${o}"`);
-    if (EXT_OPS.has(o) && !rules.ext) fail(line, `${o} is not in this ruleset`);
-    if (NEEDS_ELSE.has(o)) {
+  const list = src.map(({ l, line }, pc): Instr => {
+    const k = l.split(/\s+/), o = k[0], e = k.indexOf('else'), I: Instr = { op: -1, t: pc + 1, e: 0, line };
+    const info = FLAT_BY_NAME.get(o);
+    if (!info) return fail(line, `unknown op "${o}"`);
+    if (info.ext && !rules.ext) fail(line, `${o} is not in this ruleset`);
+    if (info.hasElse) {
       if (e < 0 || e !== k.length - 2) fail(line, 'expected "else <target>" at the end');
       I.e = target(k[e + 1], line);
-    } else if (e >= 0 || k.length !== ARITY[o]) fail(line, `wrong arguments for ${o}`);
+    } else if (e >= 0 || k.length !== info.arity) fail(line, `wrong arguments for ${o}`);
     switch (o) {
       case 'sense': case 'senseany': case 'senseall': {
         const { mask, count } = parseConds(k.slice(2, e), line);
         if (!count || (o === 'sense' && count !== 1)) fail(line, `${o}: wrong number of conditions`);
-        Object.assign(I, { op: o === 'senseany' ? OP.SENSEANY : OP.SENSE, a: senseDir(k[1], line), b: mask });
+        Object.assign(I, { op: info.op, a: senseDir(k[1], line), b: mask });
         break;
       }
-      case 'mark': case 'unmark':
-        Object.assign(I, { op: o === 'mark' ? OP.MARK : OP.UNMARK, a: int(k[1], 0, 5, 'marker', line) });
-        break;
+      case 'mark': case 'unmark': Object.assign(I, { op: info.op, a: int(k[1], 0, 5, 'marker', line) }); break;
       case 'turn':
         if (k[1] !== 'left' && k[1] !== 'right') fail(line, 'turn left|right');
-        Object.assign(I, { op: OP.TURN, a: k[1] === 'right' ? 1 : 0 });
+        Object.assign(I, { op: info.op, a: k[1] === 'right' ? 1 : 0 });
         break;
-      case 'flipzero': Object.assign(I, { op: OP.FLIP, a: int(k[1], 1, MAX_FLIP, 'flipzero p', line) }); break;
-      case 'goto': Object.assign(I, { op: OP.GOTO, t: target(k[1], line) }); break;
-      case 'direction': Object.assign(I, { op: OP.DIRECTION, a: int(k[1], 0, 5, 'direction', line) }); break;
-      case 'payload': Object.assign(I, { op: OP.PAYLOAD, a: int(k[1], 0, rules.cap, 'payload', line) }); break;
-      case 'move': I.op = OP.MOVE; break;
-      case 'pickup': I.op = OP.PICKUP; break;
-      case 'drop': I.op = OP.DROP; break;
+      case 'flipzero': Object.assign(I, { op: info.op, a: int(k[1], 1, MAX_FLIP, 'flipzero p', line) }); break;
+      case 'goto': Object.assign(I, { op: info.op, t: target(k[1], line) }); break;
+      case 'direction': Object.assign(I, { op: info.op, a: int(k[1], 0, 5, 'direction', line) }); break;
+      case 'payload': Object.assign(I, { op: info.op, a: int(k[1], 0, rules.cap, 'payload', line) }); break;
+      default: I.op = info.op; // move, pickup, drop
     }
     return I;
   });
   list.forEach((I, pc) => {
     if ((I.t as number) >= n) fail(src[pc].line, 'falls off the end of the program; finish with goto');
   });
-  return makeProgram(list);
+  // Resolve gotos: every edge points at the first real instruction it reaches.
+  const final = (from: number): number => {
+    const seen = new Set<number>();
+    let at = from;
+    while (list[at].op === OP.GOTO) {
+      if (seen.has(at)) fail(src[at].line, 'goto cycle: these gotos never reach an instruction');
+      seen.add(at);
+      at = list[at].t as number;
+    }
+    return at;
+  };
+  const keep = list.map((_, i) => i).filter((i) => list[i].op !== OP.GOTO);
+  const entry = final(0), lead = entry === 0 ? 0 : 1; // program starts at index 0: copy the entry target there
+  const index = new Map(keep.map((old, k) => [old, k + lead]));
+  const usesElse = (op: number): boolean => ![OP.MARK, OP.UNMARK, OP.DROP, OP.TURN].includes(op);
+  const remap = (old: number): Instr => {
+    const I = list[old];
+    return { ...I, t: index.get(final(I.t as number)), e: usesElse(I.op) ? index.get(final(I.e as number)) : 0 };
+  };
+  const out = keep.map(remap);
+  if (lead) out.unshift(remap(entry));
+  return makeProgram(out);
 }
 
 /** Official ICFP 2004 .ant: one state per line, explicit targets (Sense dir st1 st2 cond). */
@@ -156,6 +163,7 @@ export function parseIcfp(text: string, rules: Rules): Program {
       default: return fail(line, k[0] ? `unknown instruction "${k[0]}"` : 'empty state');
     }
   });
+  list.forEach((I, i) => { I.line = i + 1; });
   return makeProgram(list);
 }
 

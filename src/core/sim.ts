@@ -1,14 +1,12 @@
 // Deterministic simulator. Pure functions of (map, programs, seed, rules); no DOM, no I/O.
 import { COND as C, OP } from './asm.ts';
 import { DE, DO } from './hex.ts';
+import { CLASSIC, TINYMINDS, unsupported } from './rules.ts';
 import { createRng } from './rng.ts';
 import { ANT_STRIDE } from './types.ts';
 import type { AntId, Cell, Dir, Frame, Program, Rules, WorldMap } from './types.ts';
 
-/** The ICFP 2004 rules, exactly. */
-export const CLASSIC: Rules = Object.freeze({ cap: 1, ext: false });
-/** Post-v1 backlog (not exposed by the clients): Classic + carry two + direction/payload sensing. */
-export const TINYMINDS: Rules = Object.freeze({ cap: 2, ext: true });
+export { CLASSIC, TINYMINDS };
 
 /** FNV-1a, 32 bit: the regression fingerprint of the state stream (RNG tab). */
 export function fnv1a(bytes: Uint8Array): number {
@@ -31,7 +29,9 @@ export type Sim = ReturnType<typeof createSim>;
 
 export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap = true }: SimOptions) {
   const { W, H } = map, N = W * H, ncol = programs.length;
-  if (ncol < 1 || ncol > 2) throw new Error('v1 supports one or two colonies');
+  const missing = unsupported(rules); // VARIATION POINT (all flags): see docs/EXTENDING.md
+  if (missing.length) throw new Error(`ruleset needs features not implemented yet: ${missing.join(', ')}`);
+  if (ncol < 1 || ncol > rules.maxColonies) throw new Error('v1 supports one or two colonies'); // VARIATION POINT: maxColonies
   if (N > 65535) throw new Error('world too large: cells must fit u16 with 0xFFFF reserved');
   if (wrap && H % 2) throw new Error('wrapped worlds need an even height');
   const rock = Uint8Array.from(map.rock), food = Uint16Array.from(map.food), hill = map.hill;
@@ -97,6 +97,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
   function check(c: Cell | -1): void { // check_for_surrounded_ant_at
     if (c === -1) return;
     const a = antAt(c);
+    // VARIATION POINT: scareThreshold (an ant with exactly that many enemy neighbours drops its food and survives)
     if (a !== -1 && enemies(c, acol[a]) >= 5) {
       occ[c] = -1; alive[a] = 0; food[c] += 3 + has[a]; has[a] = 0;
     }
@@ -123,6 +124,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
       case OP.UNMARK: marks[col * N + p] &= ~(1 << a); pc[i] = P.t[s]; break;
       case OP.MOVE: {
         const q = nbr(p, dir[i] as Dir);
+        // VARIATION POINT: dropOnBlocked (a blocked mover carrying two drops one packet here)
         if (q === -1 || rock[q] || occ[q] >= 0) pc[i] = P.e[s];
         else {
           occ[p] = -1; occ[q] = i; apos[i] = q; pc[i] = P.t[s]; wake[i] = cycle + ACT_EVERY;
@@ -137,7 +139,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
       case OP.DROP: food[p] += has[i]; has[i] = 0; pc[i] = P.t[s]; break;
       case OP.TURN: dir[i] = (dir[i] + (a ? 1 : 5)) % 6; pc[i] = P.t[s]; break;
       case OP.FLIP: pc[i] = rng.int(a) === 0 ? P.t[s] : P.e[s]; break;
-      case OP.GOTO: pc[i] = P.t[s]; break;
+      default: throw new Error(`bad opcode ${P.op[s]} (gotos are resolved when the program is loaded)`);
       case OP.DIRECTION: pc[i] = dir[i] === a ? P.t[s] : P.e[s]; break;
       case OP.PAYLOAD: pc[i] = has[i] === a ? P.t[s] : P.e[s]; break;
     }
@@ -148,6 +150,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
   return {
     W, H, ants: n, food, rock, marks,
     get cycle(): number { return cycle; },
+    // VARIATION POINT: altOrder (alternate which colony acts first); Classic: ascending id
     step(): void { cycle++; for (let i = 0; i < n; i++) stepAnt(i as AntId); },
     run(rounds: number): void { for (let r = 0; r < rounds; r++) this.step(); },
     /** Food on each colony's hill cells (carried food does not count). */

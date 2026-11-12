@@ -5,12 +5,14 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseIcfp } from '../src/core/asm.ts';
 import { parseMap } from '../src/core/map.ts';
-import { CLASSIC, createSim } from '../src/core/sim.ts';
+import { RULESETS } from '../src/core/rules.ts';
+import type { RulesId } from '../src/core/rules.ts';
+import { createSim } from '../src/core/sim.ts';
 
 interface AntCheck { id: number; alive?: boolean; x?: number; y?: number; dir?: number; pc?: number; food?: number; rest?: number }
 interface CellCheck { x: number; y: number; food?: number; marks?: number[] }
 interface Check { round: number; ants?: AntCheck[]; cells?: CellCheck[]; draws?: number }
-interface Case { name: string; map: string; ants: string[]; seed?: number; wrap?: boolean; checks: Check[] }
+interface Case { name: string; map: string; ants: string[]; seed?: number; wrap?: boolean; rules?: RulesId; checks: Check[] }
 
 const file = fileURLToPath(new URL('../spec/micro-tests.json', import.meta.url));
 const cases = (JSON.parse(readFileSync(file, 'utf8')) as { cases: Case[] }).cases;
@@ -18,7 +20,8 @@ const cases = (JSON.parse(readFileSync(file, 'utf8')) as { cases: Case[] }).case
 for (const c of cases) {
   test(`micro-test (TypeScript): ${c.name}`, () => {
     const map = parseMap(c.map);
-    const sim = createSim({ map, programs: c.ants.map((t) => parseIcfp(t, CLASSIC)), seed: c.seed ?? 12345, wrap: c.wrap ?? true });
+    const rules = RULESETS[c.rules ?? 'classic'];
+    const sim = createSim({ map, programs: c.ants.map((t) => parseIcfp(t, rules)), seed: c.seed ?? 12345, wrap: c.wrap ?? true, rules });
     for (const chk of [...c.checks].sort((a, b) => a.round - b.round)) {
       sim.run(chk.round - sim.cycle);
       for (const e of chk.ants ?? []) {

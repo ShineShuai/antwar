@@ -4,13 +4,21 @@ export type Dir = number & { readonly __dir: unique symbol };
 export type AntId = number & { readonly __ant: unique symbol };
 
 export interface Rules {
-  /** Food an ant can carry. */
+  /** Food an ant can carry (Classic 1). */
   readonly cap: number;
-  /** direction / payload / senseany / senseall instructions allowed. */
+  /** direction / payload / senseany / senseall instructions allowed (Classic: no). */
   readonly ext: boolean;
+  /** Enemy neighbours at which an ant drops its food and survives; 0 = no scare rule (Classic). */
+  readonly scareThreshold: number;
+  /** A blocked move with two packets drops one on the current cell (Classic: no). */
+  readonly dropOnBlocked: boolean;
+  /** Most colonies a match may have (Classic 2). */
+  readonly maxColonies: number;
+  /** Alternate which colony acts first each round (Classic: ascending id). */
+  readonly altOrder: boolean;
 }
 
-export interface Instr { op: number; a?: number; b?: number; t?: number; e?: number }
+export interface Instr { op: number; a?: number; b?: number; t?: number; e?: number; /** source line, for source maps */ line?: number }
 
 /** Program IR: every instruction has a success target `t` and an else target `e`. */
 export interface Program {
@@ -20,6 +28,8 @@ export interface Program {
   readonly b: Int32Array;
   readonly t: Uint16Array;
   readonly e: Uint16Array;
+  /** Source line of each instruction (assembly line or .ant state line + 1), for explain-why. */
+  readonly lines: Int32Array;
 }
 
 export interface WorldMap {

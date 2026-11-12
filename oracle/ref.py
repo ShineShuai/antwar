@@ -11,6 +11,10 @@ import struct
 
 MOD30 = 1 << 30
 
+# Rulesets mirror src/core/rules.ts. A flag this oracle does not implement is rejected, never ignored.
+RULESETS = {'classic': dict(cap=1, ext=False, scare=0, dropfail=False, maxcol=2, altorder=False)}
+IMPLEMENTED = {'cap': 1, 'ext': False, 'scare': 0, 'dropfail': False, 'maxcol': 2, 'altorder': False}  # extend with the ruleset
+
 
 class Rng:
     """s' = (s * 22695477 + 1) mod 2^30; x_i = floor(s_(i+4) / 2^16) mod 2^14; randomint(n) = x_i mod n."""
@@ -89,7 +93,11 @@ class Ant:
 
 
 class World:
-    def __init__(self, text, programs, seed, wrap):
+    def __init__(self, text, programs, seed, wrap, rules=None):
+        self.rules = rules or RULESETS['classic']
+        missing = [k for k, v in self.rules.items() if v != IMPLEMENTED[k]]
+        if missing:
+            raise NotImplementedError('ruleset needs features not implemented yet: ' + ', '.join(missing))
         self.w, self.h, self.rock, self.food, self.base = parse_map(text)
         self.wrap, self.progs, self.rng, self.round = wrap, programs, Rng(seed), 0
         self.ncol = len(programs)
@@ -181,7 +189,7 @@ class World:
             self.marks[a.colony][p] &= ~(1 << ins[1])
             a.pc = ins[2]
         elif op == 'pickup':
-            if a.food >= 1 or self.food.get(p, 0) == 0:  # CAP = 1 in Classic
+            if a.food >= self.rules['cap'] or self.food.get(p, 0) == 0:  # CAP = 1 in Classic
                 a.pc = ins[2]
             else:
                 self.food[p] -= 1

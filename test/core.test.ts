@@ -18,14 +18,18 @@ test('rng reproduces the official x0..x99 for s0 = 12345', () => {
 
 test('assembler: labels, comments, blank lines', () => {
   const P = assemble('; c\nstart: sense ahead food else step\n  goto start\n\nstep: move else start\n  goto start', CLASSIC);
-  assert.equal(P.n, 4);
-  assert.deepEqual([...P.e].slice(0, 3), [2, 0, 0]);
-  assert.equal(P.t[1], 0);
+  assert.equal(P.n, 2, 'the two gotos are resolved away');
+  assert.deepEqual([...P.e], [1, 0]);
+  assert.deepEqual([...P.t], [0, 0]);
+  assert.deepEqual([...P.lines], [2, 5], 'source lines survive for explain-why');
 });
 
 test('assembler: errors name the line', () => {
   const bad = (src: string, re: RegExp) => assert.throws(() => assemble(src, CLASSIC), (e) => e instanceof AsmError && re.test(e.message));
   bad('move else 0', /line 1: falls off the end/);
+  bad('a: goto b\nb: goto a', /goto cycle/);
+  bad('a: goto a', /goto cycle/);
+  bad('goto 0', /goto cycle/);
   bad('goto nowhere', /line 1: jump target/);
   bad('z:\n', /empty program/);
   bad('a:\na:\ngoto a', /line 2: duplicate label/);
@@ -159,6 +163,6 @@ test('size caps: authored 2000 instructions, imported official ants 10000', () =
   assert.equal(parseIcfp(states(2001), CLASSIC).n, 2001);
   assert.throws(() => parseIcfp(states(10001), CLASSIC), /more than 10000/);
   const asm = (n: number) => `${Array.from({ length: n - 1 }, () => 'drop').join('\n')}\ngoto 0`;
-  assert.equal(assemble(asm(2000), CLASSIC).n, 2000);
+  assert.equal(assemble(asm(2000), CLASSIC).n, 1999, 'the cap counts source lines; the final goto is resolved away');
   assert.throws(() => assemble(asm(2001), CLASSIC), /more than 2000/);
 });

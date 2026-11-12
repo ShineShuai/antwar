@@ -15,7 +15,7 @@ type Of<T extends Reply['type']> = Extract<Reply, { type: T }>;
 test('loadBrain picks the format by content', () => {
   assert.equal(loadBrain(STARTER, CLASSIC).n, 16); // "else" absent from the comments
   assert.equal(loadBrain('Sense Ahead 1 0 Food ; else here\nMove 0 0', CLASSIC).n, 2);
-  assert.equal(loadBrain('a: sense ahead food else a\ngoto a', CLASSIC).n, 2);
+  assert.equal(loadBrain('a: sense ahead food else a\ngoto a', CLASSIC).n, 1);
 });
 
 test('engine: init, run, frame; same hash as a direct sim', () => {

@@ -3,12 +3,14 @@
 import json
 import sys
 
-from ref import World, parse_ant
+from ref import RULESETS, World, parse_ant
 
 
 def check_case(case):
+    if case.get('rules', 'classic') not in RULESETS:
+        return None  # not in this oracle yet
     progs = [parse_ant(t) for t in case['ants']]
-    w = World(case['map'], progs, case.get('seed', 12345), case.get('wrap', True))
+    w = World(case['map'], progs, case.get('seed', 12345), case.get('wrap', True), RULESETS[case.get('rules', 'classic')])
     errors = []
     for chk in sorted(case['checks'], key=lambda c: c['round']):
         while w.round < chk['round']:
@@ -37,6 +39,9 @@ def main():
     failed = 0
     for case in data['cases']:
         errs = check_case(case)
+        if errs is None:
+            print('skip ' + case['name'] + ' (ruleset not in the Python oracle yet)')
+            continue
         print(('FAIL ' if errs else 'ok   ') + case['name'])
         for e in errs:
             print('     ' + e)
