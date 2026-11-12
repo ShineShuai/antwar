@@ -5,11 +5,11 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = fileURLToPath(new URL('..', import.meta.url));
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css' };
+const root = fileURLToPath(new URL('../dist/', import.meta.url));
+const types: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css' };
 
 createServer(async (req, res) => {
-  const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  const path = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname);
   const file = normalize(join(root, path === '/' ? 'web/workshop.html' : path));
   if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
   try {

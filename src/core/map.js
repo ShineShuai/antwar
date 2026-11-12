@@ -1,15 +1,17 @@
+import type { WorldMap } from './types.ts';
+
 // World files: ICFP format (W, H, then H rows of space-separated cells) and a-z hills.
 // '#' rock, '.' clear, '+' / '-' hills 0 / 1, 'a'..'z' hill 0..25, '1'..'9' food.
-export function parseMap(text) {
-  const rows = text.split(/\r?\n/).filter((l) => l.trim());
+export function parseMap(text: string): WorldMap {
+  const rows = text.split(/\r?\n/).filter((l: string) => l.trim());
   const W = Number(rows[0]), H = Number(rows[1]);
   if (!Number.isInteger(W) || !Number.isInteger(H) || W < 3 || H < 3 || W * H > 40000) {
     throw new Error('bad world size');
   }
   if (rows.length - 2 !== H) throw new Error(`expected ${H} rows, got ${rows.length - 2}`);
   const N = W * H;
-  const map = { W, H, rock: new Uint8Array(N), food: new Uint16Array(N), hill: new Int8Array(N).fill(-1) };
-  rows.slice(2).forEach((row, y) => {
+  const map: WorldMap = { W, H, rock: new Uint8Array(N), food: new Uint16Array(N), hill: new Int8Array(N).fill(-1) };
+  rows.slice(2).forEach((row: string, y: number) => {
     const cells = row.replace(/\s+/g, '');
     if (cells.length !== W) throw new Error(`row ${y}: expected ${W} cells`);
     [...cells].forEach((c, x) => {
@@ -26,7 +28,7 @@ export function parseMap(text) {
 }
 
 /** Inverse of parseMap in the official layout (even rows get a leading space). */
-export function formatMap({ W, H, rock, food, hill }) {
+export function formatMap({ W, H, rock, food, hill }: WorldMap): string {
   const rows = [String(W), String(H)];
   for (let y = 0; y < H; y++) {
     const cells = [];

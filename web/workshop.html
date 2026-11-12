@@ -28,14 +28,14 @@
   <canvas id="view" width="900" height="800"></canvas>
   <aside>
     <div class="row">
-      <label>Seed <input id="seed" type="number" value="3"></label>
+      <label>Seed <input id="seed" type="number" value="12345"></label>
       <label>Rules <select id="rules"><option value="classic">Classic</option><option value="tiny">Tinyminds</option></select></label>
       <label>World file <input id="world" type="file"></label>
     </div>
     <label>Brain A (red)<textarea id="ba" spellcheck="false"></textarea></label>
     <label>Brain B (blue)<textarea id="bb" spellcheck="false"></textarea></label>
     <div class="row">
-      <button id="go">Run</button><button id="step">Step</button><button id="reset">Reset</button>
+      <button id="rand">Randomize</button><button id="go">Run</button><button id="step">Step</button><button id="reset">Reset</button>
       <select id="speed"><option>1</option><option selected>10</option><option>100</option><option>1000</option></select> rounds/frame
     </div>
     <div id="status">Ready.</div>

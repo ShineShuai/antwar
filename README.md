@@ -1,22 +1,27 @@
-# Tinyminds core
+# Core of the ant-colony programming game (name open)
 
-Deterministic ant-colony simulator: pure ES modules (no build step, no dependencies), runs
-unchanged in a browser Worker and in Node. Spec: `docs/ant-sim-reference.html`.
+Deterministic ant-colony simulator in strict TypeScript. Node 22.18+ runs the `.ts` sources
+directly (type stripping); esbuild bundles the browser pages into `dist/`. MIT licence.
+Spec: `docs/ant-sim-reference.html`.
 
-    npm test                                  # unit tests + differential fuzz vs the spec-literal reference
-    node cli/run.js --map test/fixtures/tiny.world --ant test/fixtures/starter.ant --rounds 10000
+    npm install                  # typescript, esbuild, @types/node
+    npm test                     # tsc --noEmit (strict) + node --test on the .ts sources
+    npm start                    # build to dist/ and serve http://localhost:8080/
+    node cli/run.ts --map test/fixtures/tiny.world --ant test/fixtures/starter.ant --rounds 10000
 
-- `src/core/rng.js`  ICFP 2004 generator (verified against the official x0..x99, s0 = 12345)
-- `src/core/asm.js`  `assemble()` flat `.asm` with labels; `parseIcfp()` official `.ant`
-- `src/core/map.js`  `parseMap()` official world files (+/-, a-z hills, 1-9 food)
-- `src/core/hex.js`  hex geometry (spec `adjacent_cell`, disks)
-- `src/core/gen.js`  `generateWorld(seed)`: Classic contest world (spec 3.1); `node cli/gen.js SEED`
-- `web/`  static pages, no build step: `workshop.html` (canvas viewer + Worker), `engine.js` (worker
-  message handler, unit-tested), `viewer.js` (hex renderer). `npm start` serves it at http://localhost:8080/
-- `src/core/sim.js`  `createSim()`; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (flags)
-- `testlib/ref-sim.js`  literal transliteration of the task pseudo-code; the oracle for fuzzing
+- `src/core/types.ts`  shared types; branded `Cell` / `AntId` stop index mix-ups at compile time
+- `src/core/rng.ts`    ICFP 2004 generator (matches the official x0..x99 for s0 = 12345)
+- `src/core/asm.ts`    `assemble()` flat `.asm` with labels; `parseIcfp()` official `.ant`; `loadBrain()`
+- `src/core/map.ts`    `parseMap()` / `formatMap()` official world files
+- `src/core/gen.ts`    `generateWorld(seed)`: Classic contest world (spec 3.1); `node cli/gen.ts SEED`
+- `src/core/seed.ts`   `dailySeed()` = hash of the UTC date
+- `src/core/sim.ts`    `createSim()`; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,
+  direction/payload). v1: two colonies, no scare rule, no drop on blocked move
+- `web/`               `workshop.html` + `workshop.ts` (canvas viewer), `sim-worker.ts`, `engine.ts`
+- `testlib/ref-sim.ts` literal transliteration of the task pseudo-code: oracle for the fuzz test
 
-Module Workers need http(s), so open it through `npm start`, not file://.
+Module Workers need http(s): use `npm start`, not file://.
+Defaults: Classic rules, seed 12345 (Randomize button in the workshop).
 
 Not yet: official dump comparison (needs the contest traces), marks overlay, replay/seek,
-rules compiler, lint, skills. Default seed is 12345 (the official dump seed).
+rules compiler, lint, skills.

@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRng } from '../src/core/rng.js';
-import { AsmError, OP, assemble, makeProgram, parseIcfp } from '../src/core/asm.js';
-import { parseMap } from '../src/core/map.js';
-import { CLASSIC, TINYMINDS, createSim } from '../src/core/sim.js';
-import { refSim } from '../testlib/ref-sim.js';
+import { createRng } from '../src/core/rng.ts';
+import { AsmError, OP, assemble, makeProgram, parseIcfp } from '../src/core/asm.ts';
+import { parseMap } from '../src/core/map.ts';
+import { CLASSIC, TINYMINDS, createSim } from '../src/core/sim.ts';
+import type { Rules, WorldMap } from '../src/core/types.ts';
+import { refSim } from '../testlib/ref-sim.ts';
 
-const fx = (f) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
+const fx = (f: string): string => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 
 test('rng reproduces the official x0..x99 for s0 = 12345', () => {
   const rng = createRng(12345);
@@ -22,7 +23,7 @@ test('assembler: labels, comments, blank lines', () => {
 });
 
 test('assembler: errors name the line', () => {
-  const bad = (src, re) => assert.throws(() => assemble(src, CLASSIC), (e) => e instanceof AsmError && re.test(e.message));
+  const bad = (src: string, re: RegExp) => assert.throws(() => assemble(src, CLASSIC), (e) => e instanceof AsmError && re.test(e.message));
   bad('move else 0', /line 1: falls off the end/);
   bad('goto nowhere', /line 1: jump target/);
   bad('z:\n', /empty program/);
@@ -50,7 +51,7 @@ test('map loader reads the official tiny world', () => {
   assert.equal(m.hill.filter((h) => h === 1).length, 16);
 });
 
-const strip = (n, extra = '') => parseMap(`${n}\n3\n${'# '.repeat(n)}\n# + ${'. '.repeat(n - 3)}#\n${'# '.repeat(n)}${extra}`);
+const strip = (n: number, extra = '') => parseMap(`${n}\n3\n${'# '.repeat(n)}\n# + ${'. '.repeat(n - 3)}#\n${'# '.repeat(n)}${extra}`);
 
 test('a mover acts every 15 rounds', () => {
   const sim = createSim({ map: strip(40), programs: [parseIcfp('Move 0 0', CLASSIC)] });
@@ -60,7 +61,7 @@ test('a mover acts every 15 rounds', () => {
 });
 
 test('carry capacity: Classic 1, Tinyminds 2', () => {
-  for (const [rules, want] of [[CLASSIC, 1], [TINYMINDS, 2]]) {
+  for (const [rules, want] of [[CLASSIC, 1], [TINYMINDS, 2]] as [Rules, number][]) {
     const map = strip(10); map.food[1 * 10 + 1] = 5;
     const sim = createSim({ map, programs: [parseIcfp('PickUp 0 0', rules)], rules });
     sim.run(5);
@@ -82,10 +83,10 @@ test('starter ant on the tiny world is deterministic and delivers food', () => {
 });
 
 // --- differential fuzz: optimized core vs the spec-literal reference ---------------------
-const lcg = (seed) => { let s = seed; return () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) >>> 8); };
+const lcg = (seed: number): (() => number) => { let s = seed; return () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) >>> 8); };
 
-function randProgram(r, n) {
-  const pick = (k) => r() % k, tgt = () => pick(n);
+function randProgram(r: () => number, n: number) {
+  const pick = (k: number): number => r() % k, tgt = () => pick(n);
   const gens = [
     () => ({ op: OP.SENSE, a: pick(4), b: 1 << pick(15), t: tgt(), e: tgt() }),
     () => ({ op: OP.SENSE, a: pick(4), b: 1 << (pick(2) ? 0 : 1), t: tgt(), e: tgt() }),
@@ -98,9 +99,9 @@ function randProgram(r, n) {
   return makeProgram(Array.from({ length: n }, () => gens[pick(gens.length)]()));
 }
 
-function randMap(r) {
+function randMap(r: () => number): WorldMap {
   const W = 16, H = 12, N = W * H;
-  const map = { W, H, rock: new Uint8Array(N), food: new Uint16Array(N), hill: new Int8Array(N).fill(-1) };
+  const map: WorldMap = { W, H, rock: new Uint8Array(N), food: new Uint16Array(N), hill: new Int8Array(N).fill(-1) };
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const p = y * W + x, edge = x === 0 || y === 0 || x === W - 1 || y === H - 1;
     if (x >= 3 && x <= 6 && y >= 3 && y <= 8) map.hill[p] = 0;
@@ -126,4 +127,18 @@ test('differential fuzz: core == spec-literal reference (Classic)', () => {
   }
   assert.ok(deaths > 0, 'fuzz never exercised the surround rule');
   console.log(`fuzz coverage: ${deaths} deaths, ${delivered} food on hills`);
+});
+
+test('daily seed: stable hash of the UTC date, 30-bit, differs per day', async () => {
+  const { dailySeed, utcDate } = await import('../src/core/seed.ts');
+  assert.equal(dailySeed('2026-11-10'), dailySeed('2026-11-10'));
+  assert.notEqual(dailySeed('2026-11-10'), dailySeed('2026-11-11'));
+  assert.ok(dailySeed('2026-11-10') < 2 ** 30);
+  assert.equal(utcDate(new Date('2026-11-10T23:59:59Z')), '2026-11-10');
+  assert.equal(utcDate(new Date('2026-11-10T00:00:00Z')), '2026-11-10');
+});
+
+test('v1 supports at most two colonies', () => {
+  const P = parseIcfp('Drop 0', CLASSIC);
+  assert.throws(() => createSim({ map: strip(10), programs: [P, P, P] }), /one or two colonies/);
 });

@@ -5,13 +5,13 @@ export function createRng(seed = 12345) {
   for (let i = 0; i < 4; i++) advance();
   return {
     /** Next 14-bit value, 0..16383. */
-    next() {
+    next(): number {
       const x = s >>> 16;
       advance();
       return x;
     },
     /** randomint(n) from the task spec: x mod n. */
-    int(n) {
+    int(n: number): number {
       return this.next() % n;
     },
     get state() {

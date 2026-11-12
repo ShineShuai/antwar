@@ -1,19 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { generateWorld, allReachable } from '../src/core/gen.js';
-import { disk, step } from '../src/core/hex.js';
-import { formatMap, parseMap } from '../src/core/map.js';
-import { parseIcfp } from '../src/core/asm.js';
-import { CLASSIC, createSim } from '../src/core/sim.js';
+import { generateWorld, allReachable } from '../src/core/gen.ts';
+import { disk, step } from '../src/core/hex.ts';
+import { formatMap, parseMap } from '../src/core/map.ts';
+import type { WorldMap } from '../src/core/types.ts';
+import { parseIcfp } from '../src/core/asm.ts';
+import { CLASSIC, createSim } from '../src/core/sim.ts';
 
-const cellsOf = (m, pred) => [...m.rock.keys()].filter((p) => pred(p));
-const neighbours = (m, p) => [0, 1, 2, 3, 4, 5].map((d) => step(p % m.W, (p / m.W) | 0, d))
+const cellsOf = (m: WorldMap, pred: (p: number) => boolean): number[] => [...m.rock.keys()].filter((p) => pred(p));
+const neighbours = (m: WorldMap, p: number): number[] => [0, 1, 2, 3, 4, 5].map((d) => step(p % m.W, (p / m.W) | 0, d))
   .filter(([x, y]) => x >= 0 && x < m.W && y >= 0 && y < m.H).map(([x, y]) => y * m.W + x);
-const components = (m, cells) => {
+const components = (m: WorldMap, cells: number[]): number => {
   const left = new Set(cells); let n = 0;
   while (left.size) {
-    n++; const q = [left.values().next().value]; left.delete(q[0]);
+    n++; const q: number[] = [left.values().next().value as number]; left.delete(q[0]);
     for (let i = 0; i < q.length; i++) for (const r of neighbours(m, q[i])) if (left.delete(r)) q.push(r);
   }
   return n;
@@ -23,7 +24,7 @@ test('generated worlds follow the task spec (section 3.1)', () => {
   for (let seed = 1; seed <= 15; seed++) {
     const m = generateWorld(seed);
     assert.equal(m.W * m.H, 10000);
-    const edge = (p) => p % 100 === 0 || p % 100 === 99 || p < 100 || p >= 9900;
+    const edge = (p: number): boolean => p % 100 === 0 || p % 100 === 99 || p < 100 || p >= 9900;
     assert.ok(cellsOf(m, edge).every((p) => m.rock[p]), 'rocky perimeter');
     const food = cellsOf(m, (p) => m.food[p] > 0);
     assert.equal(food.length, 96); // 8 blobs x 12 cells
@@ -43,8 +44,8 @@ test('generated worlds follow the task spec (section 3.1)', () => {
         assert.ok(!m.rock[q] && (m.hill[q] < 0 || m.hill[q] === m.hill[p]), `gap at ${p},${q}`);
       }
     }
-    assert.equal(components(m, cellsOf(m, (p) => m.rock[p])), 11); // perimeter + ten separate rocks
-    assert.ok(cellsOf(m, (p) => m.food[p] > 0 && (m.rock[p] || m.hill[p] >= 0)).length === 0);
+    assert.equal(components(m, cellsOf(m, (p) => m.rock[p] === 1)), 11); // perimeter + ten separate rocks
+    assert.ok(cellsOf(m, (p) => m.food[p] > 0 && (m.rock[p] === 1 || m.hill[p] >= 0)).length === 0);
     assert.ok(allReachable(m));
   }
 });

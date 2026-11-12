@@ -1,14 +1,20 @@
 // Spec-literal reference simulator (ICFP 2004 task, section 2): slow, 2-D arrays, boolean
 // food flag, decrementing `resting`. Classic rules only. Shares only the RNG and the IR.
-import { OP } from '../src/core/asm.js';
-import { createRng } from '../src/core/rng.js';
+import { OP } from '../src/core/asm.ts';
+import { createRng } from '../src/core/rng.ts';
+import type { Program, WorldMap } from '../src/core/types.ts';
 
-export function refSim({ map, programs, seed }) {
+type Pos = [number, number];
+interface RefAnt {
+  id: number; color: number; state: number; resting: number; dir: number; food: boolean; pos: Pos; alive: boolean;
+}
+
+export function refSim({ map, programs, seed }: { map: WorldMap; programs: Program[]; seed: number }) {
   const { W, H } = map, rng = createRng(seed), ncol = programs.length;
-  const key = ([x, y]) => y * W + x;
-  const inside = ([x, y]) => x >= 0 && x < W && y >= 0 && y < H;
-  const rocky = (q) => !inside(q) || map.rock[key(q)] === 1;
-  const adjacent = ([x, y], d) => {
+  const key = ([x, y]: Pos): number => y * W + x;
+  const inside = ([x, y]: Pos): boolean => x >= 0 && x < W && y >= 0 && y < H;
+  const rocky = (q: Pos): boolean => !inside(q) || map.rock[key(q)] === 1;
+  const adjacent = ([x, y]: Pos, d: number): Pos => {
     const even = y % 2 === 0;
     switch (d) {
       case 0: return [x + 1, y];
@@ -20,18 +26,18 @@ export function refSim({ map, programs, seed }) {
     }
   };
   const food = Array.from(map.food);
-  const mark = Array.from({ length: ncol }, () => new Array(W * H).fill(0));
-  const grid = new Array(W * H).fill(null), ants = [];
+  const mark = Array.from({ length: ncol }, () => new Array<number>(W * H).fill(0));
+  const grid: (RefAnt | null)[] = new Array(W * H).fill(null), ants: RefAnt[] = [];
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const c = map.hill[y * W + x];
       if (c < 0) continue;
-      const a = { id: ants.length, color: c, state: 0, resting: 0, dir: 0, food: false, pos: [x, y], alive: true };
+      const a: RefAnt = { id: ants.length, color: c, state: 0, resting: 0, dir: 0, food: false, pos: [x, y], alive: true };
       ants.push(a); grid[y * W + x] = a;
     }
   }
-  const antAt = (q) => (inside(q) ? grid[key(q)] : null);
-  const matches = (q, cond, c) => {
+  const antAt = (q: Pos): RefAnt | null => (inside(q) ? grid[key(q)] : null);
+  const matches = (q: Pos, cond: number, c: number): boolean => {
     if (rocky(q)) return cond === 5;
     const a = antAt(q);
     switch (cond) {
@@ -47,18 +53,18 @@ export function refSim({ map, programs, seed }) {
       default: return ((mark[c][key(q)] >> (cond - 6)) & 1) === 1;
     }
   };
-  const adjacentAnts = (q, c) => {
+  const adjacentAnts = (q: Pos, c: number): number => {
     let n = 0;
     for (let d = 0; d < 6; d++) { const a = antAt(adjacent(q, d)); if (a && a.color === c) n++; }
     return n;
   };
-  const checkSurrounded = (q) => {
+  const checkSurrounded = (q: Pos): void => {
     const a = antAt(q);
     if (a && adjacentAnts(q, 1 - a.color) >= 5) {
       grid[key(q)] = null; a.alive = false; food[key(q)] += 3 + (a.food ? 1 : 0);
     }
   };
-  const step = (a) => {
+  const step = (a: RefAnt): void => {
     if (!a.alive) return;
     if (a.resting > 0) { a.resting--; return; }
     const P = programs[a.color], s = a.state, p = a.pos, k = P.a[s];
