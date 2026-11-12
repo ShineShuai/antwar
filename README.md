@@ -22,6 +22,7 @@ Spec: `docs/ant-sim-reference.html`.
 - `bench/run.ts`      `npm run bench`: rounds/s and ns per ant-round for four workloads
 - `scripts/lint-core.ts`  core/ is integer-only: no `/`, Math.random, Date or float literals
 - `oracle/ref.py`     second implementation in Python (stdlib only), written from the reference text; `test/crosscheck.test.ts` compares state hashes
+- `spec/micro-tests.json`  language-neutral micro-tests (expected values worked out by hand from the reference); `test/micro.test.ts` and `oracle/micro.py` run them
 - `testlib/ref-sim.ts` literal transliteration of the task pseudo-code: oracle for the fuzz test
 
 Module Workers need http(s): use `npm start`, not file://.

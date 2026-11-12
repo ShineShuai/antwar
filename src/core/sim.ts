@@ -153,7 +153,10 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
     /** Food on each colony's hill cells (carried food does not count). */
     score: (): number[] => hillCells.map((cs) => cs.reduce((sum, p) => sum + food[p], 0)),
     alive: (col: number): number => alive.reduce((k, v, i) => k + (v && acol[i] === col ? 1 : 0), 0),
-    ant: (i: number) => ({ pos: apos[i], col: acol[i], dir: dir[i], has: has[i], pc: pc[i], alive: !!alive[i] }),
+    ant: (i: number) => ({ pos: apos[i], col: acol[i], dir: dir[i], has: has[i], pc: pc[i], alive: !!alive[i],
+      rest: alive[i] ? Math.max(0, wake[i] - cycle - 1) : 0 }),
+    /** Number of RNG values drawn so far. */
+    get draws(): number { return rng.draws; },
     /** Render data for the current round (copies; safe to transfer). */
     frame(): Frame {
       const out = new Int32Array(alive.reduce((k, v) => k + v, 0) * ANT_STRIDE);

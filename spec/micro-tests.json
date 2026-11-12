@@ -1,0 +1,364 @@
+{
+ "format": 1,
+ "note": "Language-neutral micro-tests. Expected values are derived by hand from the reference text, not from either implementation. Maps are official .map text, ants are official .ant text (one per colony), world wraps unless wrap=false. checks[].ants lists only the fields to compare: id, alive, x, y, dir, pc, food, rest; cells: x, y, food, marks (one bitmask per colony); draws = RNG draws so far.",
+ "cases": [
+  {
+   "name": "pace: a mover acts every 15 rounds",
+   "spec": "Ant tab: resting = 14 after a successful move; Semantics: resting>0 decrements and skips",
+   "map": "12\n4\n. . . . . . . . . . . .\n. + . . . . . . . . . .\n. . . . . . . . . . . .\n. . . . . . . . . . . .\n",
+   "ants": [
+    "Move 0 0"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 0,
+       "x": 2,
+       "y": 1,
+       "rest": 14
+      }
+     ]
+    },
+    {
+     "round": 15,
+     "ants": [
+      {
+       "id": 0,
+       "x": 2,
+       "y": 1,
+       "rest": 0
+      }
+     ]
+    },
+    {
+     "round": 16,
+     "ants": [
+      {
+       "id": 0,
+       "x": 3,
+       "y": 1,
+       "rest": 14
+      }
+     ]
+    },
+    {
+     "round": 45,
+     "ants": [
+      {
+       "id": 0,
+       "x": 4,
+       "y": 1,
+       "rest": 0
+      }
+     ]
+    },
+    {
+     "round": 46,
+     "ants": [
+      {
+       "id": 0,
+       "x": 5,
+       "y": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "move failure: blocked by rock keeps the ant, no rest, takes the else branch",
+   "spec": "Semantics: Move fails if the target is obstructed; next = else; resting unchanged",
+   "map": "6\n4\n. . . . . .\n. + # . . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "Move 1 2\nMark 0 1\nMark 1 2"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 0,
+       "x": 1,
+       "y": 1,
+       "pc": 2,
+       "rest": 0
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "cells": [
+      {
+       "x": 1,
+       "y": 1,
+       "marks": [
+        2
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "wrap and row parity: north-east across the top edge of a 4x4 torus",
+   "spec": "World tab: dir 5 is (x,y-1) on even rows and (x+1,y-1) on odd rows; coordinates wrap",
+   "map": "4\n4\n. + . .\n. . . .\n. . . .\n. . . .\n",
+   "ants": [
+    "Turn Left 1\nMove 1 1"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 0,
+       "dir": 5,
+       "pc": 1,
+       "x": 1,
+       "y": 0
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "ants": [
+      {
+       "id": 0,
+       "x": 1,
+       "y": 3,
+       "rest": 14
+      }
+     ]
+    },
+    {
+     "round": 17,
+     "ants": [
+      {
+       "id": 0,
+       "x": 2,
+       "y": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "wrap west across the left edge",
+   "spec": "World tab: x' = (x' + max_x) mod max_x",
+   "map": "6\n4\n+ . . . . .\n. . . . . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "Turn Left 1\nTurn Left 2\nTurn Left 3\nMove 3 3"
+   ],
+   "checks": [
+    {
+     "round": 3,
+     "ants": [
+      {
+       "id": 0,
+       "dir": 3,
+       "x": 0,
+       "y": 0
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "ants": [
+      {
+       "id": 0,
+       "x": 5,
+       "y": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "self-sensing: an ant carrying food matches FriendWithFood on its own cell",
+   "spec": "Ant tab: friendwithfood -> friend && has_food > 0; Here is the current cell",
+   "map": "6\n4\n. . . . . .\n. + 5 . . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "Move 1 0\nPickUp 2 1\nSense Here 3 4 FriendWithFood\nMark 0 5\nMark 1 5\nDrop 5"
+   ],
+   "checks": [
+    {
+     "round": 17,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 3,
+       "food": 1,
+       "x": 2,
+       "y": 1
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 4
+      }
+     ]
+    },
+    {
+     "round": 18,
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "marks": [
+        1
+       ]
+      }
+     ]
+    },
+    {
+     "round": 19,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 5,
+       "food": 0
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "surround: five enemy neighbours kill an ant; it leaves 3 food",
+   "spec": "Combat tab: >= 5 enemy neighbours kill; dead ant value 3 + carried; checked after a successful move",
+   "map": "8\n6\n. . . . . . . .\n. . . . - - # .\n. . . - . + . .\n. . . . - - # .\n. . . . . . . .\n. . . . . . . .\n",
+   "ants": [
+    "Drop 0",
+    "Move 0 0"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 3,
+       "alive": false
+      },
+      {
+       "id": 2,
+       "x": 4,
+       "y": 2,
+       "rest": 14
+      },
+      {
+       "id": 0,
+       "alive": true,
+       "x": 4,
+       "y": 1
+      },
+      {
+       "id": 1,
+       "x": 5,
+       "y": 1
+      },
+      {
+       "id": 4,
+       "x": 4,
+       "y": 3
+      },
+      {
+       "id": 5,
+       "x": 5,
+       "y": 3
+      }
+     ],
+     "cells": [
+      {
+       "x": 5,
+       "y": 2,
+       "food": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "surround boundary: four enemy neighbours do not kill (Classic has no scare rule)",
+   "spec": "Combat tab: kill threshold 5; the 4-enemy case is a deferred flag, off in Classic",
+   "map": "8\n6\n. . . . . . . .\n. . . . - - # .\n. . . - . + . .\n. . . . . - # .\n. . . . . . . .\n. . . . . . . .\n",
+   "ants": [
+    "Drop 0",
+    "Move 0 0"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 3,
+       "alive": true,
+       "food": 0
+      }
+     ],
+     "cells": [
+      {
+       "x": 5,
+       "y": 2,
+       "food": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "flip consumes one draw: seed 12345 first draw 7193 mod 3 = 2, so the else branch",
+   "spec": "RNG tab: randomint(n) = x_i mod n, i increments per call; flipzero r = 0 -> next, else jump",
+   "map": "6\n4\n. . . . . .\n. + . . . .\n. . . . . .\n. . . . . .\n",
+   "seed": 12345,
+   "ants": [
+    "Flip 3 1 2\nDrop 1\nDrop 2"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "draws": 1,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 2
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "draws": 1
+    }
+   ]
+  },
+  {
+   "name": "flip with p = 1 always takes the zero branch and still consumes a draw",
+   "spec": "RNG tab: randomint(1) = 0",
+   "map": "6\n4\n. . . . . .\n. + . . . .\n. . . . . .\n. . . . . .\n",
+   "seed": 12345,
+   "ants": [
+    "Flip 1 1 2\nDrop 1\nDrop 2"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "draws": 1,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 1
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
