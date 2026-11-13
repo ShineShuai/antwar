@@ -1,5 +1,7 @@
-import { STARTER } from './default-ant.ts';
+import { EXAMPLES, STARTER } from './default-ant.ts';
 import { describeCell } from './inspect.ts';
+import { GENERATOR_VERSION } from '../src/core/gen.ts';
+import { decodeShare, encodeShare } from './share.ts';
 import type { Reply, Request } from './protocol.ts';
 import { DARK, LIGHT, cellAt, createViewer, layout } from './viewer.ts';
 import type { Layout } from './viewer.ts';
@@ -13,7 +15,29 @@ let worker: Worker | undefined, viewer: ReturnType<typeof createViewer> | undefi
 let mapText = '', running = false, busy = false, cycle = 0;
 let geom: { L: Layout; W: number; H: number } | undefined, last: Extract<Reply, { type: 'frame' }> | undefined;
 const marksBox = $<HTMLInputElement>('marks'), inspectBox = $('inspect');
-$<HTMLTextAreaElement>('ba').value = $<HTMLTextAreaElement>('bb').value = STARTER;
+const baBox = $<HTMLTextAreaElement>('ba'), bbBox = $<HTMLTextAreaElement>('bb');
+baBox.value = bbBox.value = STARTER;
+
+// Edits survive a reload (per-browser convenience only); a share link, when present, wins over them.
+const KEY = 'tinyminds.workshop.v1';
+const save = (): void => {
+  try { localStorage.setItem(KEY, JSON.stringify({ seed: seedBox.value, a: baBox.value, b: bbBox.value })); } catch { /* storage may be blocked */ }
+};
+const restore = (): void => {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { seed?: string; a?: string; b?: string } | null;
+    if (typeof s?.a === 'string' && typeof s.b === 'string') { baBox.value = s.a; bbBox.value = s.b; }
+    if (typeof s?.seed === 'string' && s.seed !== '') seedBox.value = s.seed;
+  } catch { /* corrupt or blocked storage: keep the defaults */ }
+};
+async function fromHash(): Promise<boolean> {
+  if (!location.hash.startsWith('#v1.')) return false;
+  const p = await decodeShare(location.hash.slice(4));
+  if (!p) { say('That share link is damaged or too large.', true); return false; }
+  seedBox.value = String(p.seed); baBox.value = p.brains[0]; bbBox.value = p.brains[1]; mapText = p.map ?? '';
+  if (p.gen !== undefined && p.gen !== GENERATOR_VERSION) say('Link made with another world generator: the map may differ.', true);
+  return true;
+}
 
 const say = (text: string, err = false): void => {
   statusBox.textContent = text;
@@ -72,11 +96,32 @@ $('reset').onclick = start;
 $('rand').onclick = () => {
   seedBox.value = String(crypto.getRandomValues(new Uint32Array(1))[0] & 0x3fffffff);
   mapText = '';
+  save();
   start();
 };
-seedBox.onchange = () => { mapText = ''; start(); };
+seedBox.onchange = () => { mapText = ''; save(); start(); };
+baBox.oninput = bbBox.oninput = save; // a shared link is never written over your saved brains until you edit
 $<HTMLInputElement>('world').onchange = async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (file) { mapText = await file.text(); start(); }
 };
+document.querySelectorAll<HTMLSelectElement>('select.ex').forEach((sel) => {
+  sel.add(new Option('load example…', ''));
+  EXAMPLES.forEach((e, i) => sel.add(new Option(e.name, String(i))));
+  sel.onchange = () => {
+    if (sel.value === '') return;
+    $<HTMLTextAreaElement>(sel.dataset.for ?? '').value = EXAMPLES[Number(sel.value)].text;
+    sel.value = '';
+    save();
+    start();
+  };
+});
+$('share').onclick = async () => {
+  const link = `${location.href.split('#')[0]}#v1.${await encodeShare({
+    seed: Number(seedBox.value), brains: [baBox.value, bbBox.value], map: mapText || undefined, gen: GENERATOR_VERSION })}`;
+  history.replaceState(null, '', link);
+  try { await navigator.clipboard.writeText(link); say(`Link copied (${link.length} characters).`); } catch { say('Link is in the address bar.'); }
+};
+addEventListener('hashchange', () => { void fromHash().then((ok) => { if (ok) start(); }); });
+if (!(await fromHash())) restore();
 start();

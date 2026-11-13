@@ -6,7 +6,8 @@ Spec: `reference.html`.
 
     npm install                  # typescript, @types/node
     npm test                     # 4 strict typechecks (core/web/worker/node) + lint-core + node --test
-    npm run build                # tsc emit (rewriteRelativeImportExtensions) -> dist/
+    npm run build                # tsc emit (rewriteRelativeImportExtensions) -> dist/ (index.html, reference.html, web/, src/)
+    npm run check                # build, then verify every relative URL in dist/ resolves
     npm start                    # build, then serve http://localhost:8080/
     node cli/run.ts --map test/fixtures/tiny.world --ant test/fixtures/starter.ant --rounds 10000
 
@@ -28,6 +29,17 @@ Spec: `reference.html`.
 - `testlib/ref-sim.ts` literal transliteration of the task pseudo-code: oracle for the fuzz test
 
 Module Workers need http(s): use `npm start`, not file://.
+
+## Play it on GitHub Pages
+
+1. Push to a GitHub repo whose default branch is `main`.
+2. Settings -> Pages -> Build and deployment -> Source: **GitHub Actions**.
+3. Every push to `main` runs `.github/workflows/ci.yml`: tests, `npm run check`, then deploys `dist/`.
+4. Play at `https://<user>.github.io/<repo>/`; the spec is at `.../reference.html`.
+
+All URLs are relative, so a project site works. In the workshop, **Copy link** puts both brains and the seed in the
+URL fragment (never sent to a server); anyone opening it gets the same match. Edits are also kept in the browser's
+local storage.
 Defaults: Classic rules only in v1, seed 12345 (Randomize button in the workshop).
 
 Not yet: official dump comparison (needs the contest traces), replay/seek,

@@ -10,7 +10,7 @@ const types: Record<string, string> = { '.html': 'text/html', '.js': 'text/javas
 
 createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname);
-  const file = normalize(join(root, path === '/' ? 'web/workshop.html' : path));
+  const file = normalize(join(root, path === '/' ? 'index.html' : path));
   if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
   try {
     const body = await readFile(file);
