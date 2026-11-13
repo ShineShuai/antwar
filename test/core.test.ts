@@ -11,9 +11,12 @@ import { lcg, randMap, randProgram } from '../testlib/random.ts';
 
 const fx = (f: string): string => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 
-test('rng reproduces the official x0..x99 for s0 = 12345', () => {
-  const rng = createRng(12345);
-  assert.deepEqual(JSON.parse(fx('rng12345.json')).map(() => rng.next()), JSON.parse(fx('rng12345.json')));
+test('rng reproduces x0..x99 for s0 = 12345 (official) and s0 = 99999 (the reference page demo)', () => {
+  for (const seed of [12345, 99999]) {
+    const want = JSON.parse(fx(`rng${seed}.json`)) as number[], rng = createRng(seed);
+    assert.equal(want.length, 100);
+    assert.deepEqual(want.map(() => rng.next()), want, `seed ${seed}`);
+  }
 });
 
 test('assembler: labels, comments, blank lines', () => {
