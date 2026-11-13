@@ -15,7 +15,7 @@ jobs:
       - run: npm install
       - run: npm test            # tsc --noEmit (strict) + lint-core + node --test
       - run: npm run check       # tsc emit -> dist/, then verify every relative URL resolves
-      - run: node bench/run.ts 5000
+      - run: node bench/run.ts 5000 --gate 3   # coarse regression guard vs bench/baseline.json
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with: { path: dist }

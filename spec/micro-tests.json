@@ -359,6 +359,519 @@
      ]
     }
    ]
+  },
+  {
+   "name": "marks: mark and unmark set and clear single bits of the own colony byte",
+   "spec": "Ant tab: 6 markers per colony; Mark i sets, Unmark i clears bit i, other bits and colonies untouched",
+   "map": "6\n4\n. . . . . .\n. + . . . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "Mark 0 1\nMark 5 2\nUnmark 0 3\nDrop 3"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "cells": [
+      {
+       "x": 1,
+       "y": 1,
+       "marks": [
+        1
+       ]
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "cells": [
+      {
+       "x": 1,
+       "y": 1,
+       "marks": [
+        33
+       ]
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 3
+      }
+     ],
+     "cells": [
+      {
+       "x": 1,
+       "y": 1,
+       "marks": [
+        32
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "marks: Marker reads the own bit only; FoeMarker sees any bit of the other colony",
+   "spec": "Ant tab: marker m = own colony marker m; foemarker = any enemy marker present; a colony never sees its own marks as foe marks",
+   "map": "6\n4\n. . . . . .\n. a b . . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "Mark 2 1\nSense Here 3 2 FoeMarker\nSense Here 4 3 Marker 2\nDrop 3\nDrop 4",
+    "Turn Left 1\nTurn Left 2\nTurn Left 3\nSense Ahead 4 7 FoeMarker\nSense Ahead 6 5 Marker 2\nDrop 5\nDrop 6\nDrop 7"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "cells": [
+      {
+       "x": 1,
+       "y": 1,
+       "marks": [
+        4,
+        0
+       ]
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 4
+      },
+      {
+       "id": 1,
+       "dir": 3,
+       "pc": 3
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "ants": [
+      {
+       "id": 1,
+       "pc": 4
+      }
+     ]
+    },
+    {
+     "round": 5,
+     "ants": [
+      {
+       "id": 1,
+       "pc": 5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "pickup and drop: capacity one, a second pickup fails, drop puts the packet back",
+   "spec": "Semantics tab: PickUp fails when has_food >= CAP (1 in Classic) or the cell has no food; Drop adds has_food to the cell",
+   "map": "6\n4\n. . . . . .\n. + 3 . . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "Move 1 0\nPickUp 2 1\nPickUp 4 3\nDrop 5\nDrop 4\nPickUp 6 7\nTurn Left 6\nDrop 7"
+   ],
+   "checks": [
+    {
+     "round": 16,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 2,
+       "food": 1
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 2
+      }
+     ]
+    },
+    {
+     "round": 17,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 3,
+       "food": 1
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 2
+      }
+     ]
+    },
+    {
+     "round": 18,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 5,
+       "food": 0
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 3
+      }
+     ]
+    },
+    {
+     "round": 19,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 6,
+       "food": 1
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "pickup on a cell without food takes the else branch",
+   "spec": "Semantics tab: PickUp fails when food_at(pos) == 0",
+   "map": "6\n4\n. . . . . .\n. + . . . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "PickUp 1 2\nDrop 1\nDrop 2"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 2,
+       "food": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "sensing on an odd row: LeftAhead is direction-1 (north-east), found by the first test only",
+   "spec": "Ant tab: leftahead = adjacent(pos, turn_left(dir)); odd row, dir 5 -> (x+1, y-1)",
+   "map": "6\n4\n. . 5 . . .\n. + . . . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "Sense LeftAhead 1 5 Food\nSense RightAhead 6 2 Food\nSense Ahead 6 3 Food\nSense Here 6 4 Food\nDrop 4\nDrop 5\nDrop 6"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 1
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "sensing on an odd row: RightAhead is direction+1 (south-east)",
+   "spec": "Ant tab: rightahead = adjacent(pos, turn_right(dir)); odd row, dir 1 -> (x+1, y+1)",
+   "map": "6\n4\n. . . . . .\n. + . . . .\n. . 5 . . .\n. . . . . .\n",
+   "ants": [
+    "Sense RightAhead 1 5 Food\nSense LeftAhead 6 2 Food\nSense Ahead 6 3 Food\nSense Here 6 4 Food\nDrop 4\nDrop 5\nDrop 6"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 1
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "sensing on an even row: LeftAhead is (x, y-1)",
+   "spec": "Ant tab: even row, dir 5 -> (x, y-1); the parity of the row picks the offset table",
+   "map": "6\n4\n. . . . . .\n. 5 . . . .\n. + . . . .\n. . . . . .\n",
+   "ants": [
+    "Sense LeftAhead 1 5 Food\nSense RightAhead 6 2 Food\nSense Ahead 6 3 Food\nSense Here 6 4 Food\nDrop 4\nDrop 5\nDrop 6"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 1
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "home and foehome: own nest vs the other colony nest, here and ahead",
+   "spec": "Ant tab: home = base_at(pos, colony); foehome = a nest of another colony",
+   "map": "6\n4\n. . . . . .\n. a b . . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "Sense Here 1 5 Home\nSense Here 5 2 FoeHome\nSense Ahead 3 5 FoeHome\nSense Ahead 5 4 Home\nDrop 4\nDrop 5",
+    "Drop 0"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 1
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 2
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 3
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "move failure: blocked by an ant; ids act in ascending order",
+   "spec": "Semantics tab: Move fails when the target is obstructed or occupied; id 0 acts before id 1, so it is still blocked",
+   "map": "6\n4\n. . . . . .\n. + + . . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "Move 1 2\nDrop 1\nDrop 2"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 0,
+       "x": 1,
+       "y": 1,
+       "pc": 2,
+       "rest": 0
+      },
+      {
+       "id": 1,
+       "x": 3,
+       "y": 1,
+       "pc": 1,
+       "rest": 14
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "surround order: the mover is checked first, then directions 0..5, and a kill lowers later counts",
+   "spec": "Combat tab: check_for_surrounded_ants = destination, then dir 0..5 sequentially. The ants at (6,5) and (6,6) each have 5 enemies after the move; (6,5) is checked first and dies, which leaves (6,6) with 4",
+   "map": "10\n8\n. . . . . . . . . .\n. . . . . . . . . .\n. . . . . . . . . .\n. . . . . . . . . .\n. . . . . . - - # .\n. . . . - . + - # .\n. . . . . + - + . .\n. . . . . + + . . .\n",
+   "ants": [
+    "Drop 0",
+    "Move 0 0"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 2,
+       "alive": true,
+       "x": 5,
+       "y": 5,
+       "rest": 14
+      },
+      {
+       "id": 3,
+       "alive": false
+      },
+      {
+       "id": 6,
+       "alive": true,
+       "x": 6,
+       "y": 6
+      },
+      {
+       "id": 0,
+       "alive": true
+      },
+      {
+       "id": 1,
+       "alive": true
+      },
+      {
+       "id": 4,
+       "alive": true
+      },
+      {
+       "id": 5,
+       "alive": true
+      },
+      {
+       "id": 7,
+       "alive": true
+      },
+      {
+       "id": 8,
+       "alive": true
+      },
+      {
+       "id": 9,
+       "alive": true
+      }
+     ],
+     "cells": [
+      {
+       "x": 6,
+       "y": 5,
+       "food": 3
+      },
+      {
+       "x": 6,
+       "y": 6,
+       "food": 0
+      }
+     ]
+    }
+   ],
+   "wrap": false
+  },
+  {
+   "name": "surround: a carried packet is added to the 3 of a dead ant",
+   "spec": "Combat tab: dead ant value 3 + carried. The victim picks up at round 16; the attackers (17 idle states, then Move) strike at round 18. Four enemies at round 1 do not kill (no scare rule)",
+   "map": "8\n6\n. . . . . . . .\n. . - . - # . .\n. . . + 2 - # .\n. . . - - # . .\n. . . . . . . .\n. . . . . . . .\n",
+   "ants": [
+    "Move 1 0\nPickUp 2 1\nTurn Left 2",
+    "Drop 1\nDrop 2\nDrop 3\nDrop 4\nDrop 5\nDrop 6\nDrop 7\nDrop 8\nDrop 9\nDrop 10\nDrop 11\nDrop 12\nDrop 13\nDrop 14\nDrop 15\nDrop 16\nDrop 17\nMove 18 17\nDrop 18"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 2,
+       "alive": true,
+       "x": 4,
+       "y": 2
+      }
+     ]
+    },
+    {
+     "round": 16,
+     "ants": [
+      {
+       "id": 2,
+       "alive": true,
+       "food": 1,
+       "pc": 2
+      }
+     ],
+     "cells": [
+      {
+       "x": 4,
+       "y": 2,
+       "food": 1
+      }
+     ]
+    },
+    {
+     "round": 17,
+     "ants": [
+      {
+       "id": 2,
+       "alive": true,
+       "food": 1
+      }
+     ]
+    },
+    {
+     "round": 18,
+     "ants": [
+      {
+       "id": 2,
+       "alive": false
+      },
+      {
+       "id": 0,
+       "alive": true,
+       "x": 3,
+       "y": 1
+      }
+     ],
+     "cells": [
+      {
+       "x": 4,
+       "y": 2,
+       "food": 5
+      }
+     ]
+    }
+   ],
+   "wrap": false
   }
  ]
 }

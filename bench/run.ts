@@ -1,12 +1,20 @@
-// node bench/run.ts [rounds]  - rounds/second and ns per ant-round for four workloads (median of 3).
+// node bench/run.ts [rounds] [--gate FACTOR] [--write]
+// Rounds/second and ns per ant-round for four workloads (median of 3).
+// --gate F fails if any workload is more than F times slower than bench/baseline.json (a coarse guard against
+// accidental slowdowns: shared CI runners are noisy, so CI uses 3). --write refreshes the baseline on this machine.
+import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
+import { parseArgs } from 'node:util';
 import { parseIcfp } from '../src/core/asm.ts';
 import { generateWorld } from '../src/core/gen.ts';
 import { CLASSIC, createSim } from '../src/core/sim.ts';
 import type { WorldMap } from '../src/core/types.ts';
 import { STARTER } from '../web/default-ant.ts';
 
-const rounds = Number(process.argv[2]) || 20000;
+const { values: opt, positionals } = parseArgs({ allowPositionals: true, options: { gate: { type: 'string' }, write: { type: 'boolean', default: false } } });
+const rounds = Number(positionals[0]) || 20000;
+const baselineFile = new URL('./baseline.json', import.meta.url);
+const measured: Record<string, number> = {};
 
 /** 40x40 world, two 8x8 anthills 8 cells apart: ants meet quickly, so surround checks dominate. */
 function dense(): WorldMap {
@@ -42,6 +50,22 @@ for (const [name, map, text] of scenarios) {
     ms.push(performance.now() - t0);
   }
   const med = ms.sort((a, b) => a - b)[1];
+  measured[name] = (med * 1e6) / (rounds * ants);
   console.log(`${name.padEnd(36)} ${String(ants).padStart(4)} ants  ${med.toFixed(0).padStart(5)} ms  ` +
     `${((rounds / med) * 1000).toFixed(0).padStart(7)} rounds/s  ${((med * 1e6) / (rounds * ants)).toFixed(1).padStart(5)} ns/ant-round`);
+}
+
+if (opt.write) {
+  const ns = Object.fromEntries(Object.entries(measured).map(([k, v]) => [k, Math.round(v * 10) / 10]));
+  writeFileSync(baselineFile, `${JSON.stringify({ rounds, ns }, null, 1)}\n`);
+  console.log(`wrote bench/baseline.json (${rounds} rounds)`);
+}
+if (opt.gate !== undefined) {
+  const factor = Number(opt.gate), base = JSON.parse(readFileSync(baselineFile, 'utf8')) as { rounds: number; ns: Record<string, number> };
+  if (!(factor > 1)) throw new Error('--gate needs a factor above 1');
+  if (base.rounds !== rounds) console.log(`note: baseline was taken at ${base.rounds} rounds, this run used ${rounds}`);
+  const slow = Object.entries(measured).filter(([k, v]) => v > base.ns[k] * factor);
+  slow.forEach(([k, v]) => console.error(`SLOWER than ${factor}x baseline: ${k}: ${v.toFixed(1)} vs ${base.ns[k]} ns/ant-round`));
+  if (slow.length) process.exit(1);
+  console.log(`bench gate ok (limit ${factor}x baseline)`);
 }

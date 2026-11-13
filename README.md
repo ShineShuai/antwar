@@ -21,7 +21,7 @@ Spec: `reference.html`.
 - `src/core/sim.ts`    `createSim()`, canonical state stream `snapshot()`/`restore()`, `hash()` = FNV-1a of it; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,
   direction/payload). v1: two colonies, no scare rule, no drop on blocked move
 - `web/`               `workshop.html` + `workshop.ts` (canvas viewer), `sim-worker.ts`, `engine.ts`
-- `bench/run.ts`      `npm run bench`: rounds/s and ns per ant-round for four workloads
+- `bench/run.ts`      `npm run bench`: rounds/s and ns per ant-round for four workloads; `--gate 3` compares with `bench/baseline.json` (`--write` refreshes it)
 - `scripts/lint-core.ts`  core/ is integer-only: no `/`, Math.random, Date or float literals
 - `oracle/ref.py`     second implementation in Python (stdlib only), written from the reference text; `test/crosscheck.test.ts` compares state hashes
 - `spec/micro-tests.json`  language-neutral micro-tests (expected values worked out by hand from the reference); `test/micro.test.ts` and `oracle/micro.py` run them

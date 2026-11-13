@@ -1,0 +1,9 @@
+{
+ "rounds": 5000,
+ "ns": {
+  "starter ant, contest world": 71.7,
+  "always-move swarm, dense contact": 23.6,
+  "rng-heavy (flip every round)": 32.5,
+  "starter ant, dense world": 31.3
+ }
+}

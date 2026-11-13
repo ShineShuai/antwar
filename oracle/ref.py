@@ -63,10 +63,13 @@ COND = ['friend', 'foe', 'friendwithfood', 'foewithfood', 'food', 'rock', 'marke
 
 def parse_ant(text):
     prog = []
-    for line in text.splitlines():
+    lines = text.splitlines()
+    while lines and not lines[-1].strip():  # trailing blank lines are ignored, like src/core/asm.ts
+        lines.pop()
+    for line in lines:
         t = line.split(';')[0].split()
         if not t:
-            continue
+            raise ValueError('empty state')
         op = t[0].lower()
         if op == 'sense':
             cond = t[4].lower()
