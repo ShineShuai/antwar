@@ -57,6 +57,7 @@ export function assemble(text: string, rules: Rules): Program {
     const m = /^([a-z_][a-z0-9_]*):\s*(.*)$/.exec(l);
     if (m) {
       if (labels.has(m[1])) fail(i + 1, `duplicate label ${m[1]}`);
+      if (FLAT_BY_NAME.has(m[1]) || m[1] === 'else') fail(i + 1, `label "${m[1]}" is a reserved word`);
       labels.set(m[1], src.length);
       l = m[2];
     }
@@ -85,7 +86,8 @@ export function assemble(text: string, rules: Rules): Program {
     switch (o) {
       case 'sense': case 'senseany': case 'senseall': {
         const { mask, count } = parseConds(k.slice(2, e), line);
-        if (!count || (o === 'sense' && count !== 1)) fail(line, `${o}: wrong number of conditions`);
+        // senseall with no conditions is always true, senseany with none always false (spec, Instructions tab)
+        if (o === 'sense' && count !== 1) fail(line, `${o}: wrong number of conditions`);
         Object.assign(I, { op: info.op, a: senseDir(k[1], line), b: mask });
         break;
       }

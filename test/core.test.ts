@@ -38,6 +38,9 @@ test('assembler: errors name the line', () => {
   bad('sense ahead friend foe else 0\ngoto 0', /number of conditions/);
   bad('payload 1 else 0\ngoto 0', /not in this ruleset/);
   bad('turn up\ngoto 0', /turn left\|right/);
+  bad('move: drop\ngoto move', /line 1: label "move" is a reserved word/);
+  bad('else: drop\ngoto else', /reserved word/);
+  assert.doesNotThrow(() => assemble('home: drop\ngoto home', CLASSIC), 'condition names may be labels');
   assert.doesNotThrow(() => assemble('payload 1 else 0\ngoto 0', TINYMINDS));
 });
 
@@ -56,7 +59,7 @@ test('map loader reads the official tiny world', () => {
   assert.equal(m.hill.filter((h) => h === 1).length, 16);
 });
 
-const strip = (n: number, extra = '') => parseMap(`${n}\n3\n${'# '.repeat(n)}\n# + ${'. '.repeat(n - 3)}#\n${'# '.repeat(n)}${extra}`);
+const strip = (n: number, extra = '') => parseMap(`${n}\n4\n${'# '.repeat(n)}\n# + ${'. '.repeat(n - 3)}#\n${'# '.repeat(n)}\n${'# '.repeat(n)}${extra}`);
 
 test('a mover acts every 15 rounds', () => {
   const sim = createSim({ map: strip(40), programs: [parseIcfp('Move 0 0', CLASSIC)], wrap: false });
@@ -165,4 +168,28 @@ test('size caps: authored 2000 instructions, imported official ants 10000', () =
   const asm = (n: number) => `${Array.from({ length: n - 1 }, () => 'drop').join('\n')}\ngoto 0`;
   assert.equal(assemble(asm(2000), CLASSIC).n, 1999, 'the cap counts source lines; the final goto is resolved away');
   assert.throws(() => assemble(asm(2001), CLASSIC), /more than 2000/);
+});
+
+test('senseall with no conditions is always true, senseany with none always false (Tinyminds)', () => {
+  const map = parseMap('6\n4\n. . . . . .\n. + . . . .\n. . . . . .\n. . . . . .\n');
+  const run = (src: string): number[] => {
+    const sim = createSim({ map, programs: [assemble(src, TINYMINDS)], rules: TINYMINDS });
+    const pcs: number[] = [];
+    for (let r = 0; r < 4; r++) { sim.step(); pcs.push(sim.ant(0).pc); }
+    return pcs;
+  };
+  // success -> turn left (pc 1), else -> turn right (pc 2); both return to the sense
+  assert.deepEqual(run('s: senseall here else r\n turn left\n goto s\nr: turn right\n goto s'), [1, 0, 1, 0]);
+  assert.deepEqual(run('s: senseany here else r\n turn left\n goto s\nr: turn right\n goto s'), [2, 0, 2, 0]);
+  assert.throws(() => assemble('senseall here else 0\ngoto 0', CLASSIC), /not in this ruleset/);
+  assert.throws(() => assemble('sense here else 0\ngoto 0', CLASSIC), /number of conditions/);
+});
+
+test('map loader enforces the spec size limits: 3..200 per side, even height', () => {
+  const grid = (w: number, h: number): string => `${w}\n${h}\n${Array.from({ length: h }, () => '.'.repeat(w)).join('\n')}\n`;
+  assert.doesNotThrow(() => parseMap(grid(200, 200)));
+  assert.throws(() => parseMap(grid(10, 5)), /bad world size 10x5/);
+  assert.throws(() => parseMap(grid(201, 4)), /bad world size/);
+  assert.throws(() => parseMap(grid(4, 202)), /bad world size/);
+  assert.throws(() => parseMap(grid(2, 4)), /bad world size/);
 });

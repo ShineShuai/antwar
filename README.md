@@ -2,7 +2,7 @@
 
 Deterministic ant-colony simulator in strict TypeScript. Node 22.18+ runs the `.ts` sources
 directly (type stripping); one `tsc` emit writes unbundled ES modules for the browser to `dist/`. MIT licence.
-Spec: `docs/ant-sim-reference.html`.
+Spec: `reference.html`.
 
     npm install                  # typescript, @types/node
     npm test                     # 4 strict typechecks (core/web/worker/node) + lint-core + node --test
@@ -12,7 +12,7 @@ Spec: `docs/ant-sim-reference.html`.
 
 - `src/core/types.ts`  shared types; branded `Cell` / `AntId` stop index mix-ups at compile time
 - `src/core/rng.ts`    ICFP 2004 generator (matches the official x0..x99 for s0 = 12345)
-- `src/core/asm.ts`    `assemble()` flat `.asm` with labels; `parseIcfp()` official `.ant`; `loadBrain()`
+- `src/core/asm.ts`    `assemble()` flat `.asm` with labels (`goto` is a zero-cost edge, resolved at load); `parseIcfp()` official `.ant`; `loadBrain()`
 - `src/core/map.ts`    `parseMap()` / `formatMap()` official world files
 - `src/core/gen.ts`    `generateWorld(seed)`: Classic contest world (spec 3.1); `node cli/gen.ts SEED`
 - `src/core/isa.ts`    the instruction table; `src/core/rules.ts` the rulesets registry (see `docs/EXTENDING.md`)
@@ -24,6 +24,7 @@ Spec: `docs/ant-sim-reference.html`.
 - `scripts/lint-core.ts`  core/ is integer-only: no `/`, Math.random, Date or float literals
 - `oracle/ref.py`     second implementation in Python (stdlib only), written from the reference text; `test/crosscheck.test.ts` compares state hashes
 - `spec/micro-tests.json`  language-neutral micro-tests (expected values worked out by hand from the reference); `test/micro.test.ts` and `oracle/micro.py` run them
+- `test/refdemo.test.ts` runs the demo simulator inside `reference.html` against the core, round by round
 - `testlib/ref-sim.ts` literal transliteration of the task pseudo-code: oracle for the fuzz test
 
 Module Workers need http(s): use `npm start`, not file://.

@@ -41,7 +41,7 @@ test('engine: errors come back as messages', () => {
   const bad = eng.handle({ type: 'init', seed: 1, brains: ['move else 0'] }).msg as Of<'error'>;
   assert.equal(bad.type, 'error');
   assert.match(bad.message, /line 1/);
-  assert.match((eng.handle({ type: 'init', seed: 1, mapText: '5\n5\n', brains: [STARTER] }).msg as Of<'error'>).message, /rows/);
+  assert.match((eng.handle({ type: 'init', seed: 1, mapText: '5\n4\n', brains: [STARTER] }).msg as Of<'error'>).message, /rows/);
 });
 
 class FakeCtx {

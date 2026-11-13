@@ -9,7 +9,7 @@ jobs:
         with: { node-version: 22 }
       - run: npm install
       - run: npm test          # tsc --noEmit (strict) + node --test
-      - run: npm run build     # esbuild -> dist/
+      - run: npm run build     # tsc emit -> dist/
       - run: node bench/run.ts 5000
       - uses: actions/upload-artifact@v4
         with: { name: dist, path: dist }

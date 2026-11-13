@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assemble, parseIcfp } from '../src/core/asm.ts';
 import { CLASSIC, createSim } from '../src/core/sim.ts';
+import { readFileSync } from 'node:fs';
 import { parseMap } from '../src/core/map.ts';
 import type { Program } from '../src/core/types.ts';
 
@@ -37,4 +38,35 @@ test('a looping instruction followed by goto takes one round per pass, not two',
   const dirs: number[] = [];
   for (let r = 1; r <= 7; r++) { sim.step(); dirs.push(sim.ant(0).dir); }
   assert.deepEqual(dirs, [5, 4, 3, 2, 1, 0, 5]); // one left turn per round
+});
+
+test('the starter ant in flat form (with gotos) plays exactly like its official form, which the Python oracle checks', () => {
+  const flat = `search: sense ahead food else wander
+    move else search
+    pickup else search
+    goto home
+  wander: flipzero 3 else w2
+    turn left
+    goto search
+  w2: flipzero 2 else w3
+    turn right
+    goto search
+  w3: move else wander
+    goto search
+  home: sense ahead home else hturn
+    move else home
+    drop
+    goto search
+  hturn: flipzero 3 else h2
+    turn left
+    goto home
+  h2: flipzero 2 else h3
+    turn right
+    goto home
+  h3: move else hturn
+    goto home`;
+  const official = readFileSync(new URL('./fixtures/starter.ant', import.meta.url), 'utf8');
+  const map = parseMap(readFileSync(new URL('./fixtures/tiny.world', import.meta.url), 'utf8'));
+  const hash = (P: Program): number => { const sim = createSim({ map, programs: [P, P] }); sim.run(10000); return sim.hash(); };
+  assert.equal(hash(assemble(flat, CLASSIC)), hash(parseIcfp(official, CLASSIC)));
 });

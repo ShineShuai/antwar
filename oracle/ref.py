@@ -35,6 +35,7 @@ class Rng:
 def parse_map(text):
     rows = [ln for ln in text.splitlines() if ln.strip()]
     w, h = int(rows[0]), int(rows[1])
+    assert 3 <= w <= 200 and 3 <= h <= 200 and h % 2 == 0, 'world size: 3..200 per side, height even'
     assert len(rows) - 2 == h, 'row count'
     rock, food, base = set(), {}, {}
     for y, row in enumerate(rows[2:]):

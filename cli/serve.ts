@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Static file server for local use: node cli/serve.js [port]  ->  http://localhost:8080/
+// Static file server for local use: node cli/serve.ts [port]  ->  http://localhost:8080/
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';

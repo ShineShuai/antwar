@@ -1,6 +1,6 @@
 // The instruction set in one place: opcodes, condition ids and the flat-assembly table.
 // To add an instruction: add an opcode and a FLAT_OPS row here, parse its arguments in asm.ts, execute it in
-// sim.ts and testlib/ref.py, then add micro-tests (see docs/EXTENDING.md).
+// sim.ts and oracle/ref.py, then add micro-tests (see docs/EXTENDING.md).
 export const OP = {
   SENSE: 0, SENSEANY: 1, MARK: 2, UNMARK: 3, MOVE: 4, PICKUP: 5,
   DROP: 6, TURN: 7, FLIP: 8, GOTO: 9, DIRECTION: 10, PAYLOAD: 11,
