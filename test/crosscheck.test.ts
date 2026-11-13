@@ -64,3 +64,20 @@ test('Python oracle agrees on the official tiny world and a full contest world (
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('TypeScript loader and Python oracle both reject a blank state inside a program and ignore trailing blanks', { skip: !hasPython && 'python3 not found' }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'xcheck-'));
+  try {
+    const map = join(dir, 'm.world'), ant = join(dir, 'a.ant');
+    writeFileSync(map, '6\n4\n. . . . . .\n. + . . . .\n. . . . . .\n. . . . . .\n');
+    const run = (text: string) => { writeFileSync(ant, text); return spawnSync('python3', [oracle, '--map', map, '--ant', ant, '--rounds', '3'], { encoding: 'utf8' }); };
+    assert.throws(() => parseIcfp('Drop 0\n\nDrop 0', CLASSIC), /empty state/);
+    const bad = run('Drop 0\n\nDrop 0');
+    assert.notEqual(bad.status, 0);
+    assert.match(bad.stderr, /empty state/);
+    assert.equal(parseIcfp('Drop 0\n\n\n', CLASSIC).n, 1);
+    assert.equal(run('Drop 0\n\n\n').status, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

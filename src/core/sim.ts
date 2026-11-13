@@ -94,12 +94,17 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
     }
     return k;
   }
+  /** Food counters are 16 bit (snapshot format): an overflow is an error, never a silent wrap. */
+  function give(c: number, k: number): void {
+    if (food[c] + k > 0xffff) throw new Error(`food overflow at cell ${c}`);
+    food[c] += k;
+  }
   function check(c: Cell | -1): void { // check_for_surrounded_ant_at
     if (c === -1) return;
     const a = antAt(c);
     // VARIATION POINT: scareThreshold (an ant with exactly that many enemy neighbours drops its food and survives)
     if (a !== -1 && enemies(c, acol[a]) >= 5) {
-      occ[c] = -1; alive[a] = 0; food[c] += 3 + has[a]; has[a] = 0;
+      occ[c] = -1; alive[a] = 0; give(c, 3 + has[a]); has[a] = 0;
     }
   }
   function surround(c: Cell): void {
@@ -136,7 +141,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
         if (has[i] >= rules.cap || food[p] === 0) pc[i] = P.e[s];
         else { food[p]--; has[i]++; pc[i] = P.t[s]; }
         break;
-      case OP.DROP: food[p] += has[i]; has[i] = 0; pc[i] = P.t[s]; break;
+      case OP.DROP: give(p, has[i]); has[i] = 0; pc[i] = P.t[s]; break;
       case OP.TURN: dir[i] = (dir[i] + (a ? 1 : 5)) % 6; pc[i] = P.t[s]; break;
       case OP.FLIP: pc[i] = rng.int(a) === 0 ? P.t[s] : P.e[s]; break;
       default: throw new Error(`bad opcode ${P.op[s]} (gotos are resolved when the program is loaded)`);
@@ -147,16 +152,16 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
 
   const streamSize = 12 + N * (4 + ncol) + n * 9;
   const hillCells = Array.from({ length: ncol }, (_, k) => cells.filter((p) => hill[p] === k));
-  return {
+  const sim = {
     W, H, ants: n, food, rock, marks,
     get cycle(): number { return cycle; },
     // VARIATION POINT: altOrder (alternate which colony acts first); Classic: ascending id
     step(): void { cycle++; for (let i = 0; i < n; i++) stepAnt(i as AntId); },
-    run(rounds: number): void { for (let r = 0; r < rounds; r++) this.step(); },
+    run(rounds: number): void { for (let r = 0; r < rounds; r++) sim.step(); },
     /** Food on each colony's hill cells (carried food does not count). */
     score: (): number[] => hillCells.map((cs) => cs.reduce((sum, p) => sum + food[p], 0)),
     alive: (col: number): number => alive.reduce((k, v, i) => k + (v && acol[i] === col ? 1 : 0), 0),
-    ant: (i: number) => ({ pos: apos[i], col: acol[i], dir: dir[i], has: has[i], pc: pc[i], alive: !!alive[i],
+    ant: (i: number) => ({ pos: alive[i] ? apos[i] : -1, col: acol[i], dir: dir[i], has: has[i], pc: pc[i], alive: !!alive[i],
       rest: alive[i] ? Math.max(0, wake[i] - cycle - 1) : 0 }),
     /** Number of RNG values drawn so far. */
     get draws(): number { return rng.draws; },
@@ -168,8 +173,8 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
         if (!alive[i]) continue;
         out[k++] = i; out[k++] = apos[i]; out[k++] = acol[i]; out[k++] = dir[i]; out[k++] = has[i]; out[k++] = pc[i];
       }
-      return { cycle, food: food.slice(), marks: marks.slice(), ants: out, score: this.score(),
-        alive: Array.from({ length: ncol }, (_, c) => this.alive(c)) };
+      return { cycle, food: food.slice(), marks: marks.slice(), ants: out, score: sim.score(),
+        alive: Array.from({ length: ncol }, (_, c) => sim.alive(c)) };
     },
     /** Canonical state stream (RNG tab, v3): little-endian, cells then ants. Also the checkpoint format. */
     snapshot(): Uint8Array {
@@ -227,7 +232,8 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
     },
     /** Canonical state hash: FNV-1a over snapshot(). */
     hash(): number {
-      return fnv1a(this.snapshot());
+      return fnv1a(sim.snapshot());
     },
   };
+  return sim;
 }

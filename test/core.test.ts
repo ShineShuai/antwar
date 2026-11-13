@@ -196,3 +196,22 @@ test('map loader enforces the spec size limits: 3..200 per side, even height', (
   assert.throws(() => parseMap(grid(4, 202)), /bad world size/);
   assert.throws(() => parseMap(grid(2, 4)), /bad world size/);
 });
+
+test('food counters are 16 bit: an overflow throws instead of wrapping', () => {
+  const sim = createSim({ map: strip(10), programs: [parseIcfp('Drop 0', CLASSIC)], wrap: false });
+  const snap = sim.snapshot(), dv = new DataView(snap.buffer), N = 10 * 4;
+  dv.setUint16(12 + sim.ant(0).pos * 5, 0xffff, true); // cell record: u16 food, 1 marks byte, i16 occupant
+  snap[12 + N * 5 + 7] = 1;                              // ant record: alive, colony, cell(2), dir, pc(2), has, rest
+  sim.restore(snap);
+  assert.throws(() => sim.step(), /food overflow at cell/);
+});
+
+test('Sim methods do not depend on `this`; a dead ant reports no position', () => {
+  const { run, hash, frame } = createSim({ map: strip(10), programs: [parseIcfp('Move 0 0', CLASSIC)], wrap: false });
+  run(3);
+  assert.equal(typeof hash(), 'number');
+  assert.equal(frame().cycle, 3);
+  const dead = createSim({ map: parseMap(fx('tiny.world')), programs: [parseIcfp(fx('starter.ant'), CLASSIC), parseIcfp(fx('starter.ant'), CLASSIC)] });
+  dead.run(10000);
+  for (let i = 0; i < dead.ants; i++) assert.equal(dead.ant(i).alive, dead.ant(i).pos >= 0);
+});
