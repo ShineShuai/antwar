@@ -1,5 +1,5 @@
 // Rules compiler: source text -> flat assembly -> IR, with a source map (pc -> rule) and plain-English lint.
-import { AsmError, assemble } from '../core/asm.ts';
+import { AsmError, assemble, loadBrain } from '../core/asm.ts';
 import { CLASSIC } from '../core/rules.ts';
 import type { Program, Rules } from '../core/types.ts';
 import { lower } from './lower.ts';
@@ -75,4 +75,19 @@ export function lint(ast: Ast): string[] {
   for (const k of written) if (!read.has(k)) out.push(`marker ${k} is written but no rule ever reads it`);
   for (const k of read) if (!written.has(k) && !(ast.kits.trail && k <= 2) && !(ast.kits.foodtrail && k === 3)) out.push(`marker ${k} is read but no rule ever writes it`);
   return out;
+}
+
+/** Rules text starts (after comments) with when, always, otherwise, mood or kit; no assembly line does. */
+export function looksLikeRules(text: string): boolean {
+  for (const raw of text.split('\n')) {
+    const t = raw.replace(/[#;].*$/, '').trim();
+    if (t) return /^(when|always|otherwise|mood|kit)(\s|$)/i.test(t);
+  }
+  return false;
+}
+
+/** Load a brain in any of the three formats: rules, flat assembly, official .ant. `compiled` is set for rules. */
+export function loadAnyBrain(text: string, rules: Rules = CLASSIC): { program: Program; compiled?: Compiled } {
+  if (looksLikeRules(text)) { const compiled = compileRules(text, rules); return { program: compiled.program, compiled }; }
+  return { program: loadBrain(text, rules) };
 }

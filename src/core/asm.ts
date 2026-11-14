@@ -169,9 +169,14 @@ export function parseIcfp(text: string, rules: Rules): Program {
   return makeProgram(list);
 }
 
-/** Pick the loader by content: flat .asm has `else`, labels or goto; official .ant has none. */
-export function loadBrain(text: string, rules: Rules): Program {
+/** Flat .asm has `else`, labels or goto; official .ant has none. */
+export function brainFormat(text: string): 'asm' | 'ant' {
   const code = text.replace(/;.*$/gm, '');
   const flat = /\belse\b/i.test(code) || /^\s*[a-z_]\w*:/im.test(code) || /^\s*(goto|senseany|senseall|flipzero)\b/im.test(code);
-  return (flat ? assemble : parseIcfp)(text, rules);
+  return flat ? 'asm' : 'ant';
+}
+
+/** Pick the loader by content. */
+export function loadBrain(text: string, rules: Rules): Program {
+  return (brainFormat(text) === 'asm' ? assemble : parseIcfp)(text, rules);
 }

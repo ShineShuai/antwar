@@ -27,6 +27,17 @@
   #status { font-variant-numeric: tabular-nums; }
   #status.err { color: var(--err); }
   #inspect { color: var(--mut); font-size: 12px; min-height: 2.6em; }
+  .note { font-size: 12px; color: var(--mut); min-height: 1.3em; overflow-wrap: anywhere; }
+  .note .err { color: var(--err); }
+  .note .warn { color: #a16207; }
+  @media (prefers-color-scheme: dark) { .note .warn { color: #fbbf24; } }
+  .fire { display: grid; grid-template-columns: 56px 44px 1fr; gap: 6px; align-items: center; font-size: 11px; margin: 2px 0; }
+  .fire .bar { display: flex; height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .fire .bar i { display: block; height: 100%; }
+  .fire .bar .t { background: #a8a29e; }
+  .fire .bar .a { background: #2563eb; }
+  .fire code { font-size: 11px; overflow-wrap: anywhere; }
+  .fh { margin: 6px 0 2px; color: var(--fg); }
 </style>
 <h1 style="font-size:18px;margin:0 0 8px">Tinyminds workshop</h1>
 <main>
@@ -44,13 +55,28 @@
         (<code>sense ahead food else 3</code>, labels, <code>goto</code> costs nothing). Pick an example, edit, press Reset.
         <a href="../reference.html" target="_blank" rel="noopener">Full reference</a>.</p>
     </details>
+    <details>
+      <summary>Rules language</summary>
+      <p>The easiest way to write a brain: ordered rules, the first one that matches fires, every round, from the top.
+        Rules are grouped in <code>mood</code>s; <code>switch</code> changes mood for free.</p>
+      <p><code>when food ahead and not home ahead -&gt; step</code><br>
+        <code>when carrying -&gt; switch home</code><br>
+        <code>otherwise wander</code></p>
+      <p>Conditions: <code>food rock foe friend home</code>, <code>marker N</code>, <code>carrying</code>, each with
+        <code>here ahead left ahead right ahead</code>. Actions: <code>move step pickup drop turn left|right|around|random mark N
+        unmark N wander explore switch MOOD</code>. If an action fails, the next rule is tried. Add <code>kit trail</code> and
+        <code>kit foodtrail</code> for <code>return home</code>, <code>follow trail</code>, <code>lay trail</code>, <code>roam</code>.
+        Pick "Trail forager" as an example; the note under the editor shows size and warnings.</p>
+    </details>
     <div class="brain">
       <div class="row"><label for="ba">Brain A (red)</label><select class="ex" data-for="ba" aria-label="Load an example into A"></select></div>
       <textarea id="ba" spellcheck="false"></textarea>
+      <div class="note" id="na"></div>
     </div>
     <div class="brain">
       <div class="row"><label for="bb">Brain B (blue)</label><select class="ex" data-for="bb" aria-label="Load an example into B"></select></div>
       <textarea id="bb" spellcheck="false"></textarea>
+      <div class="note" id="nb"></div>
     </div>
     <div class="row">
       <button id="rand">Randomize</button><button id="go">Run</button><button id="step">Step</button><button id="reset">Reset</button>
@@ -60,6 +86,13 @@
     <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="marks" checked> show scents</label>
     <div id="status">Ready.</div>
     <div id="inspect">Click a cell to inspect it.</div>
+    <details id="explain">
+      <summary>Explain why (rules brains)</summary>
+      <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="explainOn"> count which rule each ant acts in (slower)</label>
+      <p>Where the acting ant-rounds go: grey = sensing the rule's conditions, blue = its action. Counts cover the rounds run
+        with the box ticked, since the last Reset.</p>
+      <div id="fires"></div>
+    </details>
   </aside>
 </main>
 <script type="module" src="workshop.js"></script>

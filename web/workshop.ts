@@ -2,6 +2,8 @@ import { EXAMPLES, STARTER } from './default-ant.ts';
 import { describeCell } from './inspect.ts';
 import { GENERATOR_VERSION } from '../src/core/gen.ts';
 import { decodeShare, encodeShare } from './share.ts';
+import { describeBrain, fireRows } from './brain.ts';
+import type { BrainInfo } from './brain.ts';
 import type { Reply, Request } from './protocol.ts';
 import { DARK, LIGHT, cellAt, createViewer, layout } from './viewer.ts';
 import type { Layout } from './viewer.ts';
@@ -16,6 +18,8 @@ let mapText = '', running = false, busy = false, cycle = 0;
 let geom: { L: Layout; W: number; H: number } | undefined, last: Extract<Reply, { type: 'frame' }> | undefined;
 const marksBox = $<HTMLInputElement>('marks'), inspectBox = $('inspect');
 const baBox = $<HTMLTextAreaElement>('ba'), bbBox = $<HTMLTextAreaElement>('bb');
+const explainBox = $<HTMLInputElement>('explainOn'), firesBox = $('fires');
+let infos: BrainInfo[] = []; // the brains as they were when the match was started (rule ids match the Worker's)
 baBox.value = bbBox.value = STARTER;
 
 // Edits survive a reload (per-browser convenience only); a share link, when present, wins over them.
@@ -50,8 +54,43 @@ const setRunning = (on: boolean): void => {
   if (on) pump();
 };
 
+/** The note under an editor: size and lint warnings, or the error with its line number. */
+function note(box: HTMLElement, info: BrainInfo): void {
+  box.replaceChildren();
+  const add = (cls: string, text: string): void => { const d = document.createElement('div'); d.className = cls; d.textContent = text; box.append(d); };
+  if (!info.ok) { add('err', info.error); return; }
+  add('', info.summary);
+  info.warnings.forEach((w) => add('warn', `warning: ${w}`));
+}
+let noteTimer: ReturnType<typeof setTimeout> | undefined;
+const updateNotes = (): void => { note($('na'), describeBrain(baBox.value)); note($('nb'), describeBrain(bbBox.value)); };
+const updateNotesSoon = (): void => { clearTimeout(noteTimer); noteTimer = setTimeout(updateNotes, 250); };
+
+function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void {
+  firesBox.replaceChildren();
+  fires.forEach((f, c) => {
+    const info = infos[c];
+    if (!f || !info?.ok || info.kind !== 'rules') return;
+    const head = document.createElement('div');
+    head.className = 'fh';
+    head.textContent = `Colony ${c ? 'B' : 'A'}: ${f.total} acting ant-rounds counted`;
+    firesBox.append(head);
+    for (const row of fireRows(info.rules, f)) {
+      const d = document.createElement('div'), bar = document.createElement('div'), t = document.createElement('i'), a = document.createElement('i');
+      const pct = document.createElement('span'), code = document.createElement('code');
+      d.className = 'fire'; bar.className = 'bar'; t.className = 't'; a.className = 'a';
+      t.style.width = `${row.test * 100}%`; a.style.width = `${row.act * 100}%`;
+      pct.textContent = `${((row.test + row.act) * 100).toFixed(1)}%`; code.textContent = row.label;
+      bar.append(t, a); d.append(bar, pct, code); firesBox.append(d);
+    }
+  });
+}
+
 function start(): void {
   worker?.terminate();
+  infos = [describeBrain(baBox.value), describeBrain(bbBox.value)];
+  firesBox.replaceChildren();
+  updateNotes();
   busy = false; cycle = 0; setRunning(false);
   worker = new Worker(new URL('./sim-worker.js', import.meta.url), { type: 'module' });
   worker.onmessage = (e: MessageEvent<Reply>) => onMessage(e.data);
@@ -71,6 +110,7 @@ function onMessage(m: Reply): void {
   busy = false; cycle = m.cycle;
   last = m;
   viewer?.draw(m, { marks: marksBox.checked });
+  renderFires(m.fires);
   const [a, b] = m.score, done = cycle >= MATCH;
   say(`Round ${cycle} | A ${a} (${m.alive[0]} ants) | B ${b} (${m.alive[1]} ants)` +
     (done ? ` | ${a === b ? 'draw' : a > b ? 'A wins' : 'B wins'}` : ''));
@@ -80,7 +120,7 @@ function onMessage(m: Reply): void {
 function pump(): void {
   if (!running || busy) return;
   busy = true;
-  send({ type: 'run', n: Math.min(Number(speedBox.value), MATCH - cycle) });
+  send({ type: 'run', n: Math.min(Number(speedBox.value), MATCH - cycle), explain: explainBox.checked });
 }
 
 marksBox.onchange = () => { if (last) viewer?.draw(last, { marks: marksBox.checked }); };
@@ -91,7 +131,7 @@ canvas.onclick = (e) => {
   inspectBox.textContent = p < 0 ? '' : describeCell(last, geom.W, geom.H, p);
 };
 goBtn.onclick = () => setRunning(!running);
-$('step').onclick = () => { setRunning(false); if (!busy) { busy = true; send({ type: 'run', n: 1 }); } };
+$('step').onclick = () => { setRunning(false); if (!busy) { busy = true; send({ type: 'run', n: 1, explain: explainBox.checked }); } };
 $('reset').onclick = start;
 $('rand').onclick = () => {
   seedBox.value = String(crypto.getRandomValues(new Uint32Array(1))[0] & 0x3fffffff);
@@ -100,7 +140,7 @@ $('rand').onclick = () => {
   start();
 };
 seedBox.onchange = () => { mapText = ''; save(); start(); };
-baBox.oninput = bbBox.oninput = save; // a shared link is never written over your saved brains until you edit
+baBox.oninput = bbBox.oninput = () => { save(); updateNotesSoon(); }; // a shared link is never written over your saved brains until you edit
 $<HTMLInputElement>('world').onchange = async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (file) { mapText = await file.text(); start(); }

@@ -44,9 +44,48 @@ h3: move else hturn
   goto home
 `;
 
+/** Rules examples: these are exactly ants/forager.rules and ants/trail.rules (test/brain.test.ts keeps them in step). */
+export const FORAGER_RULES = `# Level 1 forager (no kits): look for food, carry it home by luck. The reference's starter, as rules.
+mood search
+  when food ahead and not home ahead -> move
+  when food here and not home here -> pickup, switch home
+  otherwise wander
+
+mood home
+  when home here -> drop, switch search
+  when home ahead -> move
+  otherwise wander
+`;
+
+export const TRAIL_RULES = `# Trail forager (rules version of ants/trail.asm): the mod-3 trail kit plus a food trail.
+kit trail
+kit foodtrail
+
+mood start
+  always -> turn random, switch search
+
+mood search
+  when food here and not home here -> pickup, lay trail, turn around, switch return
+  when food ahead and not home ahead -> step
+  when food left ahead and not home left ahead -> turn left, step
+  when food right ahead and not home right ahead -> turn right, step
+  always -> follow trail
+  otherwise explore
+
+mood return
+  when home here -> drop, turn random, switch search
+  always -> return home
+  when home ahead -> move
+  when home left ahead -> turn left, move
+  when home right ahead -> turn right, move
+  otherwise roam
+`;
+
 export const EXAMPLES: readonly { name: string; text: string }[] = [
   { name: 'Starter (official .ant)', text: STARTER },
   { name: 'Starter (flat asm)', text: STARTER_ASM },
+  { name: 'Forager (rules, no trails)', text: FORAGER_RULES },
+  { name: 'Trail forager (rules, trail kit)', text: TRAIL_RULES },
   { name: 'Charger (always moves)', text: 'Move 0 1\nTurn Left 0\n' },
   { name: 'Idle (does nothing)', text: 'Drop 0\n' },
 ];

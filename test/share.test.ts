@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MAX_INFLATED, decodeShare, encodeShare } from '../web/share.ts';
 import { EXAMPLES } from '../web/default-ant.ts';
-import { loadBrain } from '../src/core/asm.ts';
+import { loadAnyBrain } from '../src/lang/index.ts';
 import { CLASSIC } from '../src/core/rules.ts';
 
 test('share link round trip: seed, both brains, optional map; URL-safe token', async () => {
@@ -32,5 +32,5 @@ test('share link decoder rejects garbage, wrong shapes and oversized payloads', 
 });
 
 test('every built-in example loads as a Classic brain', () => {
-  for (const e of EXAMPLES) assert.ok(loadBrain(e.text, CLASSIC).n > 0, e.name);
+  for (const e of EXAMPLES) assert.ok(loadAnyBrain(e.text, CLASSIC).program.n > 0, e.name);
 });
