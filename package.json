@@ -14,6 +14,7 @@
     "build": "node build.ts",
     "bench": "node bench/run.ts",
     "check": "node build.ts && node scripts/check-dist.ts",
+    "eval": "node cli/eval.ts",
     "start": "node build.ts && node cli/serve.ts"
   },
   "devDependencies": {

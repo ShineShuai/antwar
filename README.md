@@ -21,6 +21,8 @@ Spec: `reference.html`.
 - `src/core/sim.ts`    `createSim()`, canonical state stream `snapshot()`/`restore()`, `hash()` = FNV-1a of it; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,
   direction/payload). v1: two colonies, no scare rule, no drop on blocked move
 - `web/`               `workshop.html` + `workshop.ts` (canvas viewer), `sim-worker.ts`, `engine.ts`
+- `cli/eval.ts`       `npm run eval -- --ant FILE`: food home, time to 25/50/90%, carrier statistics over generated worlds; `--vs` plays two brains
+- `ants/`             hand-designed trail ants (generators + generated `.asm`); results and design in `docs/TRAILS.md`
 - `bench/run.ts`      `npm run bench`: rounds/s and ns per ant-round for four workloads; `--gate 3` compares with `bench/baseline.json` (`--write` refreshes it)
 - `scripts/lint-core.ts`  core/ is integer-only: no `/`, Math.random, Date or float literals
 - `oracle/ref.py`     second implementation in Python (stdlib only), written from the reference text; `test/crosscheck.test.ts` compares state hashes
