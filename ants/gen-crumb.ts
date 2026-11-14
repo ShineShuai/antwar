@@ -88,8 +88,8 @@ for (let h = 0; h < 6; h++) {
   } else {
     L(`x${h}t`, `goto x${h}w`);
   }
-  L(`x${h}w`, `flipzero 5 else x${h}wt`); I(`goto m${h}`);
-  L(`x${h}wt`, `flipzero 2 else x${h}wr`); I('turn left'); I(`goto m${Lh(h)}`);
+  L(`x${h}w`, `flipzero 5 else m${h}`);                  // falls through 1 time in 5 (turn), else straight on
+  I(`flipzero 2 else x${h}wr`); I('turn left'); I(`goto m${Lh(h)}`);
   L(`x${h}wr`, 'turn right'); I(`goto m${Rh(h)}`);
   L(`m${h}`, `move else x${h}rot`); I(`goto a${h}`);
   L(`x${h}rot`, `flipzero 2 else x${h}rr`); I('turn left'); I(`goto x${Lh(h)}`);

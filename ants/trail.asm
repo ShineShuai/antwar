@@ -75,30 +75,36 @@ x0cr: turn right
 x0t: sense here marker 3 else x0j
   sense ahead marker 3 else x0tl
   sense ahead marker 1 else x0tl
-  goto m0
+  goto mt0
 x0tl: sense leftahead marker 3 else x0tr
   sense leftahead marker 1 else x0tr
   turn left
-  goto m0
+  goto mt0
 x0tr: sense rightahead marker 3 else x0end
   sense rightahead marker 1 else x0end
   turn right
-  goto m0
+  goto mt0
 x0end: flipzero 4 else x0w
   unmark 3
   goto x0w
 x0j: sense ahead marker 3 else x0w
   sense ahead marker 1 else x0w
-  goto m0
-x0w: flipzero 5 else x0wt
-  goto m0
-x0wt: flipzero 2 else x0wr
+  goto mt0
+x0w: flipzero 5 else m0
+  flipzero 2 else x0wr
   turn left
   goto m0
 x0wr: turn right
   goto m0
 m0: move else x0rot
   goto a1
+mt0: move else x0y
+  goto a1
+x0y: flipzero 2 else x0yr
+  turn left
+  goto m0
+x0yr: turn right
+  goto m0
 x0rot: flipzero 2 else x0rr
   turn left
   goto x0
@@ -129,8 +135,10 @@ r0hl: sense leftahead home else r0hr
 r0hr: sense rightahead home else lost
   turn right
   goto rh0
-rm0: move else r0
+rm0: move else mb0
   goto ra2
+mb0: flipzero 4 else r0
+  goto lost
 ; carrier arrival: mark the way, then sync with the code under us
 ra0: mark 3
   sense here marker 0 else ra0b
@@ -175,30 +183,36 @@ x1cr: turn right
 x1t: sense here marker 3 else x1j
   sense ahead marker 3 else x1tl
   sense ahead marker 2 else x1tl
-  goto m1
+  goto mt1
 x1tl: sense leftahead marker 3 else x1tr
   sense leftahead marker 2 else x1tr
   turn left
-  goto m1
+  goto mt1
 x1tr: sense rightahead marker 3 else x1end
   sense rightahead marker 2 else x1end
   turn right
-  goto m1
+  goto mt1
 x1end: flipzero 4 else x1w
   unmark 3
   goto x1w
 x1j: sense ahead marker 3 else x1w
   sense ahead marker 2 else x1w
-  goto m1
-x1w: flipzero 5 else x1wt
-  goto m1
-x1wt: flipzero 2 else x1wr
+  goto mt1
+x1w: flipzero 5 else m1
+  flipzero 2 else x1wr
   turn left
   goto m1
 x1wr: turn right
   goto m1
 m1: move else x1rot
   goto a2
+mt1: move else x1y
+  goto a2
+x1y: flipzero 2 else x1yr
+  turn left
+  goto m1
+x1yr: turn right
+  goto m1
 x1rot: flipzero 2 else x1rr
   turn left
   goto x1
@@ -229,8 +243,10 @@ r1hl: sense leftahead home else r1hr
 r1hr: sense rightahead home else lost
   turn right
   goto rh1
-rm1: move else r1
+rm1: move else mb1
   goto ra0
+mb1: flipzero 4 else r1
+  goto lost
 ; carrier arrival: mark the way, then sync with the code under us
 ra1: mark 3
   sense here marker 1 else ra1b
@@ -275,30 +291,36 @@ x2cr: turn right
 x2t: sense here marker 3 else x2j
   sense ahead marker 3 else x2tl
   sense ahead marker 0 else x2tl
-  goto m2
+  goto mt2
 x2tl: sense leftahead marker 3 else x2tr
   sense leftahead marker 0 else x2tr
   turn left
-  goto m2
+  goto mt2
 x2tr: sense rightahead marker 3 else x2end
   sense rightahead marker 0 else x2end
   turn right
-  goto m2
+  goto mt2
 x2end: flipzero 4 else x2w
   unmark 3
   goto x2w
 x2j: sense ahead marker 3 else x2w
   sense ahead marker 0 else x2w
-  goto m2
-x2w: flipzero 5 else x2wt
-  goto m2
-x2wt: flipzero 2 else x2wr
+  goto mt2
+x2w: flipzero 5 else m2
+  flipzero 2 else x2wr
   turn left
   goto m2
 x2wr: turn right
   goto m2
 m2: move else x2rot
   goto a0
+mt2: move else x2y
+  goto a0
+x2y: flipzero 2 else x2yr
+  turn left
+  goto m2
+x2yr: turn right
+  goto m2
 x2rot: flipzero 2 else x2rr
   turn left
   goto x2
@@ -329,8 +351,10 @@ r2hl: sense leftahead home else r2hr
 r2hr: sense rightahead home else lost
   turn right
   goto rh2
-rm2: move else r2
+rm2: move else mb2
   goto ra1
+mb2: flipzero 4 else r2
+  goto lost
 ; carrier arrival: mark the way, then sync with the code under us
 ra2: mark 3
   sense here marker 2 else ra2b

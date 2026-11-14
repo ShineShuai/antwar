@@ -108,9 +108,8 @@ x0y: flipzero 2 else x0yr
   goto m5
 x0yr: turn right
   goto m1
-x0w: flipzero 5 else x0wt
-  goto m0
-x0wt: flipzero 2 else x0wr
+x0w: flipzero 5 else m0
+  flipzero 2 else x0wr
   turn left
   goto m5
 x0wr: turn right
@@ -289,9 +288,8 @@ x1y: flipzero 2 else x1yr
   goto m0
 x1yr: turn right
   goto m2
-x1w: flipzero 5 else x1wt
-  goto m1
-x1wt: flipzero 2 else x1wr
+x1w: flipzero 5 else m1
+  flipzero 2 else x1wr
   turn left
   goto m0
 x1wr: turn right
@@ -470,9 +468,8 @@ x2y: flipzero 2 else x2yr
   goto m1
 x2yr: turn right
   goto m3
-x2w: flipzero 5 else x2wt
-  goto m2
-x2wt: flipzero 2 else x2wr
+x2w: flipzero 5 else m2
+  flipzero 2 else x2wr
   turn left
   goto m1
 x2wr: turn right
@@ -652,9 +649,8 @@ x3y: flipzero 2 else x3yr
   goto m2
 x3yr: turn right
   goto m4
-x3w: flipzero 5 else x3wt
-  goto m3
-x3wt: flipzero 2 else x3wr
+x3w: flipzero 5 else m3
+  flipzero 2 else x3wr
   turn left
   goto m2
 x3wr: turn right
@@ -834,9 +830,8 @@ x4y: flipzero 2 else x4yr
   goto m3
 x4yr: turn right
   goto m5
-x4w: flipzero 5 else x4wt
-  goto m4
-x4wt: flipzero 2 else x4wr
+x4w: flipzero 5 else m4
+  flipzero 2 else x4wr
   turn left
   goto m3
 x4wr: turn right
@@ -1016,9 +1011,8 @@ x5y: flipzero 2 else x5yr
   goto m4
 x5yr: turn right
   goto m0
-x5w: flipzero 5 else x5wt
-  goto m5
-x5wt: flipzero 2 else x5wr
+x5w: flipzero 5 else m5
+  flipzero 2 else x5wr
   turn left
   goto m4
 x5wr: turn right

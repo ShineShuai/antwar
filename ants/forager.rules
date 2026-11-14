@@ -1,0 +1,10 @@
+# Level 1 forager (no kits): look for food, carry it home by luck. The reference's starter, as rules.
+mood search
+  when food ahead and not home ahead -> move
+  when food here and not home here -> pickup, switch home
+  otherwise wander
+
+mood home
+  when home here -> drop, switch search
+  when home ahead -> move
+  otherwise wander
