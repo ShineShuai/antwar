@@ -10,6 +10,8 @@
 //   * Food trail (marker 3, optional): carriers mark every cell they walk; empty ants that stand on or see a food-trail cell
 //     with code p+1 follow it outwards; an ant at a trail end eats the marker (1 in 4) so stale trails vanish.
 //   * Nest food is never picked up (food on a Home cell is a delivered packet).
+//   * Anti-jam (same two rules as ants/gen-crumb.ts): a follower whose trail move is blocked steps off the lane; a blocked
+//     carrier sidesteps one time in four.
 // An ant is never told where it is: every routine re-reads the cell it stands on, so a wrong guess costs a few rounds.
 const foodTrail = !process.argv.includes('--no-food-trail');
 const nx = (p: number): number => (p + 1) % 3, pv = (p: number): number => (p + 2) % 3;
@@ -57,18 +59,21 @@ for (let p = 0; p < 3; p++) {
   L(`x${p}cr`, 'turn right'); I(`goto m${p}`);
   if (foodTrail) {
     L(`x${p}t`, `sense here marker 3 else x${p}j`);
-    I(`sense ahead marker 3 else x${p}tl`); I(`sense ahead marker ${nx(p)} else x${p}tl`); I(`goto m${p}`);
-    L(`x${p}tl`, `sense leftahead marker 3 else x${p}tr`); I(`sense leftahead marker ${nx(p)} else x${p}tr`); I('turn left'); I(`goto m${p}`);
-    L(`x${p}tr`, `sense rightahead marker 3 else x${p}end`); I(`sense rightahead marker ${nx(p)} else x${p}end`); I('turn right'); I(`goto m${p}`);
+    I(`sense ahead marker 3 else x${p}tl`); I(`sense ahead marker ${nx(p)} else x${p}tl`); I(`goto mt${p}`);
+    L(`x${p}tl`, `sense leftahead marker 3 else x${p}tr`); I(`sense leftahead marker ${nx(p)} else x${p}tr`); I('turn left'); I(`goto mt${p}`);
+    L(`x${p}tr`, `sense rightahead marker 3 else x${p}end`); I(`sense rightahead marker ${nx(p)} else x${p}end`); I('turn right'); I(`goto mt${p}`);
     L(`x${p}end`, `flipzero 4 else x${p}w`); I('unmark 3'); I(`goto x${p}w`);
-    L(`x${p}j`, `sense ahead marker 3 else x${p}w`); I(`sense ahead marker ${nx(p)} else x${p}w`); I(`goto m${p}`);
+    L(`x${p}j`, `sense ahead marker 3 else x${p}w`); I(`sense ahead marker ${nx(p)} else x${p}w`); I(`goto mt${p}`);
   } else {
     L(`x${p}t`, `goto x${p}w`);
   }
-  L(`x${p}w`, `flipzero 5 else x${p}wt`); I(`goto m${p}`);
-  L(`x${p}wt`, `flipzero 2 else x${p}wr`); I('turn left'); I(`goto m${p}`);
+  L(`x${p}w`, `flipzero 5 else m${p}`);                  // falls through 1 time in 5 (turn), else straight on
+  I(`flipzero 2 else x${p}wr`); I('turn left'); I(`goto m${p}`);
   L(`x${p}wr`, 'turn right'); I(`goto m${p}`);
   L(`m${p}`, `move else x${p}rot`); I(`goto a${nx(p)}`);
+  L(`mt${p}`, `move else x${p}y`); I(`goto a${nx(p)}`);   // trail move: when blocked, step off the lane
+  L(`x${p}y`, `flipzero 2 else x${p}yr`); I('turn left'); I(`goto m${p}`);
+  L(`x${p}yr`, 'turn right'); I(`goto m${p}`);
   L(`x${p}rot`, `flipzero 2 else x${p}rr`); I('turn left'); I(`goto x${p}`);
   L(`x${p}rr`, 'turn right'); I(`goto x${p}`);
 
@@ -84,7 +89,8 @@ for (let p = 0; p < 3; p++) {
   L(`r${p}gr`, `sense rightahead marker ${pv(p)} else r${p}hl`); I('turn right'); I(`goto rm${p}`);
   L(`r${p}hl`, `sense leftahead home else r${p}hr`); I('turn left'); I(`goto rh${p}`);
   L(`r${p}hr`, 'sense rightahead home else lost'); I('turn right'); I(`goto rh${p}`);
-  L(`rm${p}`, `move else r${p}`); I(`goto ra${pv(p)}`);
+  L(`rm${p}`, `move else mb${p}`); I(`goto ra${pv(p)}`);
+  L(`mb${p}`, `flipzero 4 else r${p}`); I('goto lost');   // blocked: now and then sidestep, which breaks jams
 
   C('carrier arrival: mark the way, then sync with the code under us');
   L(`ra${p}`, foodTrail ? 'mark 3' : `sense here marker ${p} else ra${p}b`);

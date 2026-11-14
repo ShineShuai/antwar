@@ -12,6 +12,7 @@ import { parseArgs } from 'node:util';
 import { loadBrain } from '../src/core/asm.ts';
 import { generateWorld } from '../src/core/gen.ts';
 import { CLASSIC, createSim } from '../src/core/sim.ts';
+import { compileRules } from '../src/lang/index.ts';
 
 const { values: o } = parseArgs({ options: {
   ant: { type: 'string' }, vs: { type: 'string' }, swap: { type: 'boolean', default: false }, seeds: { type: 'string', default: '20' }, from: { type: 'string', default: '1' },
@@ -19,7 +20,10 @@ const { values: o } = parseArgs({ options: {
 } });
 if (!o.ant) { console.error('usage: eval.ts --ant FILE [--vs FILE] [--swap] [--seeds N] [--from SEED] [--rounds N] [--json]'); process.exit(2); }
 const STUCK = 5000, rounds = Number(o.rounds);
-const load = (f: string) => loadBrain(readFileSync(f, 'utf8'), CLASSIC);
+const load = (f: string) => { // .rules files go through the rules compiler
+  const text = readFileSync(f, 'utf8');
+  return f.endsWith('.rules') ? compileRules(text).program : loadBrain(text, CLASSIC);
+};
 const mine = load(o.ant), foe = o.vs ? load(o.vs) : loadBrain('Drop 0', CLASSIC);
 
 export interface Row {

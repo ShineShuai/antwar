@@ -1,0 +1,22 @@
+# Trail forager (rules version of ants/trail.asm): the mod-3 trail kit plus a food trail.
+kit trail
+kit foodtrail
+
+mood start
+  always -> turn random, switch search
+
+mood search
+  when food here and not home here -> pickup, lay trail, turn around, switch return
+  when food ahead and not home ahead -> step
+  when food left ahead and not home left ahead -> turn left, step
+  when food right ahead and not home right ahead -> turn right, step
+  always -> follow trail
+  otherwise explore
+
+mood return
+  when home here -> drop, turn random, switch search
+  always -> return home
+  when home ahead -> move
+  when home left ahead -> turn left, move
+  when home right ahead -> turn right, move
+  otherwise roam
