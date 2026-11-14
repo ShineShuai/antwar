@@ -74,8 +74,17 @@ written but never read (or read but never written).
   by every searching ant and usually fails after sensing), 28% to `explore`, 14% to `return home`; the four food checks
   cost 6% each. The biggest saving for a rule author is reordering or rationing `follow trail`.
 
+## In the workshop
+
+Either brain box accepts rules (detected by the first real line: `when`, `always`, `otherwise`, `mood` or `kit`), flat
+assembly or official `.ant`. Under each editor a note shows the size, the lint warnings or the error with its line number
+(live, 250 ms after the last key). Two rules examples are in the "load example" menu. **Explain why** (tick "count which rule
+each ant acts in") makes the Worker attribute every acting ant-round to a rule's test or action; the panel shows the
+shares as bars. Counting does not change the match (same state hash) but runs about 3x slower, so it is off by default.
+Share links carry rules text like any other brain.
+
 ## Not done
 
 Level 0 (templates, sliders, role mix), level 3 (the structured script language), skills beyond the trail kit, the Academy
-UI and in-browser editing. The compiler is the part those layers sit on; `compileRules` returns the source map (`ruleAt`) a
-trace or an explain-why panel needs.
+UI, and rule-level editing aids (highlighting, a rule list you can drag, a per-ant trace). The compiler is the part those
+layers sit on; `compileRules` returns the source map (`ruleAt`) a trace needs.
