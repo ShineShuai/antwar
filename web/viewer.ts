@@ -6,7 +6,7 @@ const SQRT3 = Math.sqrt(3);
 
 export interface Layout { w: number; h: number; width: number; height: number }
 export interface Palette {
-  bg: string; rock: string; hill: string[]; food: string; ant: string[]; mark: string[]; carry: string;
+  bg: string; rock: string; hill: string[]; food: string; ant: string[]; mark: string[]; carry: string; select: string;
 }
 /** The subset of CanvasRenderingContext2D the viewer uses (so tests can fake it). */
 export interface Ctx {
@@ -41,9 +41,9 @@ export function cellAt(L: Layout, W: number, H: number, px: number, py: number):
 }
 
 export const LIGHT: Palette = { bg: '#fafaf9', rock: '#78716c', hill: ['#fecaca', '#bfdbfe'], food: '#16a34a',
-  ant: ['#dc2626', '#2563eb'], mark: ['#7f1d1d', '#1e3a8a'], carry: '#ffffff' };
+  ant: ['#dc2626', '#2563eb'], mark: ['#7f1d1d', '#1e3a8a'], carry: '#ffffff', select: '#facc15' };
 export const DARK: Palette = { bg: '#1c1917', rock: '#57534e', hill: ['#7f1d1d', '#1e3a8a'], food: '#4ade80',
-  ant: ['#f87171', '#60a5fa'], mark: ['#fca5a5', '#93c5fd'], carry: '#ffffff' };
+  ant: ['#f87171', '#60a5fa'], mark: ['#fca5a5', '#93c5fd'], carry: '#ffffff', select: '#fde047' };
 
 export function createViewer(ctx: Ctx, { W, H, rock, hill }: Pick<WorldMap, 'W' | 'H' | 'rock' | 'hill'>,
   L: Layout, colors: Palette) {
@@ -64,7 +64,7 @@ export function createViewer(ctx: Ctx, { W, H, rock, hill }: Pick<WorldMap, 'W' 
   };
   const disc = (cx: number, cy: number, r: number): void => { ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill(); };
   return {
-    draw({ food, marks, ants }: DrawData, opts: { marks?: boolean } = {}): void {
+    draw({ food, marks, ants }: DrawData, opts: { marks?: boolean; /** id of an ant to ring */ selected?: number | null } = {}): void {
       ctx.fillStyle = colors.bg;
       ctx.fillRect(0, 0, L.width, L.height);
       for (const [cx, cy, c] of fixed) { ctx.fillStyle = c; hex(cx, cy); }
@@ -87,6 +87,12 @@ export function createViewer(ctx: Ctx, { W, H, rock, hill }: Pick<WorldMap, 'W' 
             }
           }
         }
+      }
+      for (let i = 0; i < ants.length; i += ANT_STRIDE) {
+        if (ants[i] !== opts.selected) continue;
+        const [cx, cy] = center(L, ants[i + 1] % W, (ants[i + 1] / W) | 0);
+        ctx.fillStyle = colors.select;
+        disc(cx, cy, L.w * 0.75);
       }
       for (let i = 0; i < ants.length; i += ANT_STRIDE) {
         const [cx, cy] = center(L, ants[i + 1] % W, (ants[i + 1] / W) | 0);

@@ -23,7 +23,7 @@ Spec: `reference.html`.
 - `web/`               `workshop.html` + `workshop.ts` (canvas viewer), `sim-worker.ts`, `engine.ts`
 - `src/lang/`         rules compiler (levels 1-2, trail kit): `compileRules(text)`; `node cli/rc.ts FILE.rules [--asm] [--fire-counts]`; see `docs/RULES.md`
 - `src/lang/templates.ts` level 0: templates, sliders, role mix -> rules text; `node cli/personality.ts --template trail --mix 70/20/10`; `web/personality.ts` the controls
-- `web/brain.ts`      what the workshop shows under an editor (size, lint, errors) and the explain-why rows
+- `web/brain.ts`      what the workshop shows under an editor (size, lint, errors), the explain-why rows, and `whereIs`/`traceRows`: a pc pointed back at a rule or source line (click an ant to follow it)
 - `cli/eval.ts`       `npm run eval -- --ant FILE`: food home, time to 25/50/90%, carrier statistics over generated worlds; `--vs` plays two brains and counts the packets each steals from the other's nest (`docs/STEALING.md`)
 - `ants/`             hand-designed trail ants (generators + generated `.asm`; results in `docs/TRAILS.md`) and the same ants as `.rules`
 - `bench/run.ts`      `npm run bench`: rounds/s and ns per ant-round for four workloads; `--gate 3` compares with `bench/baseline.json` (`--write` refreshes it)
