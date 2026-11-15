@@ -55,12 +55,14 @@ text starts with a `# personality:` line that lets the controls come back, and o
 generator wrote).
 
 * Templates: **Forager** (no trails, carries home by luck), **Trail-layer** (the trail kit, i.e. `ants/trail.rules`),
-  **Guard** (stands still, fights foes in view), **Raider** (trail-layer that also heads for foe nests).
+  **Guard** (walks around inside the nest and sits on food, so nobody can stand there to take it; bold or fierce guards also leave
+  their post for foes in view), **Raider** (trail-layer that also heads for foe nests).
 * Sliders: **Curiosity** = share of random wandering (`when 1 in N -> wander`, N = 16, 8, 4, 2); **Boldness** = timid (flee
   a foe ahead), indifferent, bold (step toward a foe ahead), fierce (also the sides); carriers never fight; **Sociability** =
   loner, follower, devoted (`follow trail` after / before the food checks), trail templates only.
 * Role mix (trail and raider): worker = the template, scout = trail-layer with curiosity 3 that lays but never follows
-  trails, guard = the guard; percentages compile to the `mix` flip chain. 911 instructions for a 3-role program.
+  trails, guard = the guard; percentages compile to the `mix` flip chain (801 instructions for 70/20/10). The control starts at
+  90/10/0 because every share given to guards or scouts measured as a loss (`docs/STEALING.md`).
 
 Measured like everything else (20 worlds, 100,000 rounds, idle opponent; head to head over 80 games, both hills), with the
 compiler as it was before the `follow trail` optimization (explorer step 3% slower; the comparisons between rows hold):
@@ -72,7 +74,7 @@ compiler as it was before the `follow trail` optimization (explorer step 3% slow
 | curiosity 1 / 2 / 3 / 4 | 480 / 480 / 478 / 438 | 12 / 12 / 6 / 3 | 61.9k / 63.4k / 68.7k / 88.7k | |
 | sociability loner / follower / devoted (curiosity 1) | 461 / 480 / 478 | 5 / 12 / 9 | 76.4k / 61.9k / 57.0k | |
 | boldness fierce (curiosity 1) | 478 (382) | 8 | 65.8k | 33-47 against indifferent |
-| 70/20/10 worker/scout/guard mix | 472 (413) | 7 | 67.6k | 27-53 against the pure trail-layer |
+| 90/10/0 worker/scout mix | - | - | - | 36-44 against the pure trail-layer (`docs/STEALING.md`) |
 | Raider (curiosity 0, devoted) | 476 (447) | 5 | 62.3k | **0-80** against the trail-layer |
 | Guard | 0 | 0 | - | - |
 
@@ -84,8 +86,8 @@ compiler as it was before the `follow trail` optimization (explorer step 3% slow
   a mix of idle ants all lose to the plain trail-layer. The raider loses every game although it never dies (91 ants alive)
   and its raids work: over 5 worlds it took 538 packets from the foe nest and 96% of them reached its own nest. But **food
   at a nest is not safe**: every `food ... and not home ...` rule also picks up food from the *foe's* nest, so the trail-layer
-  took 1,261 packets from the raider's nest, more than twice as many, without trying. Any colony that keeps a big stash
-  is raided by everyone; a raider that pays needs to hold less at home or defend it.
+  took 1,261 packets from the raider's nest, more than twice as many, without trying. `docs/STEALING.md` measures why and
+  what was tried against it (concealing, guarding, sitting on piles): nothing beat the plain trail-layer.
 
 ## Lint (warnings, never blockers)
 

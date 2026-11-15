@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { generateWorld } from '../src/core/gen.ts';
+import { parseMap } from '../src/core/map.ts';
 import { createSim } from '../src/core/sim.ts';
 import { compileRules } from '../src/lang/index.ts';
 import { DEFAULTS, LEVELS, TEMPLATES, parsePersonality, personality, usesMix, usesSociability } from '../src/lang/templates.ts';
@@ -96,20 +97,27 @@ test('boldness: timid flees, indifferent ignores, bold approaches a foe ahead, f
   assert.ok(foes(2).concat(foes(3)).every((l) => /and not carrying/.test(l)));
 });
 
-test('a guard colony stands still and delivers nothing; a trail-layer forages from a cold start', () => {
+test('a guard colony never leaves its nest and delivers nothing; a trail-layer forages from a cold start', () => {
+  const map = generateWorld(2);
   const guard = compileRules(personality({ ...DEFAULTS.guard, curiosity: 0 })).program, idle = compileRules('always -> wait').program;
-  const g = createSim({ map: generateWorld(2), programs: [guard, idle], seed: 2 });
-  const start = Array.from({ length: g.ants }, (_, i) => g.ant(i).pos);
+  const g = createSim({ map, programs: [guard, idle], seed: 2 });
   g.run(3000);
-  assert.deepEqual(Array.from({ length: g.ants }, (_, i) => g.ant(i).pos), start);
+  for (let i = 0; i < g.ants; i++) if (g.ant(i).col === 0) assert.equal(map.hill[g.ant(i).pos], 0, 'a guard stepped off the nest');
   assert.equal(g.score()[0], 0);
   const trail = compileRules(personality(DEFAULTS.trail)).program;
-  const t = createSim({ map: generateWorld(2), programs: [trail, idle], seed: 2 });
+  const t = createSim({ map, programs: [trail, idle], seed: 2 });
   t.run(30000);
   assert.ok(t.score()[0] >= 100, `only ${t.score()[0]} food`);
 });
 
-test('the default trail-layer is ants/trail.rules (so its measurements in docs/RULES.md apply)', () => {
-  const body = (t: string): string => t.split('\n').filter((l) => l.trim() && !l.trim().startsWith('#')).join('\n');
-  assert.equal(body(personality(DEFAULTS.trail)), body(readFileSync(new URL('../ants/trail.rules', import.meta.url), 'utf8')));
+test('a guard sitting on food does not move: nobody else can stand there to take it', () => {
+  const W = 8, wall = '# '.repeat(W).trim();
+  const map = parseMap(`${W}\n4\n${wall}\n# + . . . . . #\n${wall}\n${wall}\n`);
+  const s = createSim({ map, programs: [compileRules(personality({ ...DEFAULTS.guard, curiosity: 2 })).program], seed: 1, wrap: false });
+  const snap = s.snapshot();
+  snap[12 + (1 * W + 1) * 5] = 4; // food on the nest cell the lone guard stands on (u16 little endian)
+  s.restore(snap);
+  s.run(1000);
+  assert.equal(s.ant(0).pos, 1 * W + 1);
+  assert.equal(s.food[1 * W + 1], 4);
 });
