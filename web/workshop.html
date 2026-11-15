@@ -38,6 +38,12 @@
   .fire .bar .a { background: #2563eb; }
   .fire code { font-size: 11px; overflow-wrap: anywhere; }
   .fh { margin: 6px 0 2px; color: var(--fg); }
+  .link { cursor: pointer; text-decoration: underline dotted; }
+  .hot { background: color-mix(in srgb, #facc15 35%, transparent); border-radius: 3px; }
+  #ant { font-size: 12px; color: var(--mut); overflow-wrap: anywhere; }
+  #trace .tr { display: grid; grid-template-columns: 7.5em 1fr; gap: 6px; font-size: 11px; margin: 1px 0; }
+  #trace .tr code { font-size: 11px; overflow-wrap: anywhere; }
+  #trace .tr .rd { color: var(--mut); }
   .pers { margin-top: 4px; }
   .pers > :not(summary) { margin-top: 6px; }
   .pers .hint { font-size: 12px; min-height: 1.3em; }
@@ -97,6 +103,12 @@
     <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="marks" checked> show scents</label>
     <div id="status">Ready.</div>
     <div id="inspect">Click a cell to inspect it.</div>
+    <details id="antbox" open>
+      <summary>Selected ant</summary>
+      <div id="ant">Click an ant to follow it.</div>
+      <p style="font-size:12px;color:var(--mut);margin:4px 0">Its recent rules, newest first (run to record). Click a line to jump to it in the editor.</p>
+      <div id="trace"></div>
+    </details>
     <details id="explain">
       <summary>Explain why (rules brains)</summary>
       <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="explainOn"> count which rule each ant acts in (slower)</label>

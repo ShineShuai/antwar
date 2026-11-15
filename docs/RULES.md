@@ -152,8 +152,17 @@ each ant acts in") makes the Worker attribute every acting ant-round to a rule's
 shares as bars. Counting does not change the match (same state hash) but runs about 3x slower, so it is off by default.
 Share links carry rules text like any other brain.
 
+**Follow one ant.** Click an ant on the board: it gets a yellow ring and the "Selected ant" panel shows where it is, the rule
+it is about to run (test or action) highlighted, and a trace of its recent acting rounds, newest first, consecutive rounds in
+the same rule collapsed (`r1522-1544 x9 search: otherwise explore (action)`). The trace is kept by the Worker (about 400 rounds,
+one entry per round the ant is not resting after a move) and does not change the match. It reads straight off the program
+counter, so it works for assembly and `.ant` brains too (it then names the source line). **Jumping:** clicking a trace row, an
+explain row, the "next:" line, or a lint warning or error with a line number selects that line in the editor; the explain
+row of the followed ant's current rule is highlighted. Reading a trace shows exactly where an ant's rounds go: in
+`trail.rules` a step is four food tests, two rounds of `follow trail` and then `explore`.
+
 ## Not done
 
 Level 3 (the structured script language), skills beyond the trail kit, balanced Raider and Guard archetypes, the Academy
-UI, and rule-level editing aids (highlighting, a rule list you can drag, a per-ant trace). The compiler is the part those
-layers sit on; `compileRules` returns the source map (`ruleAt`) a trace needs.
+UI, and syntax colouring inside the text box (a textarea cannot colour part of its text; the rule rows and the trace do the
+explaining instead). The compiler is the part those layers sit on; `compileRules` returns the source map (`ruleAt`).

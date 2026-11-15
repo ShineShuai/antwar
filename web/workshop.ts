@@ -2,7 +2,7 @@ import { EXAMPLES, STARTER } from './default-ant.ts';
 import { describeCell } from './inspect.ts';
 import { GENERATOR_VERSION } from '../src/core/gen.ts';
 import { decodeShare, encodeShare } from './share.ts';
-import { describeBrain, fireRows } from './brain.ts';
+import { describeBrain, fireRows, lineOfMessage, traceRows, whereIs } from './brain.ts';
 import { mountPersonality } from './personality.ts';
 import type { BrainInfo } from './brain.ts';
 import type { Reply, Request } from './protocol.ts';
@@ -19,7 +19,20 @@ let mapText = '', running = false, busy = false, cycle = 0;
 let geom: { L: Layout; W: number; H: number } | undefined, last: Extract<Reply, { type: 'frame' }> | undefined;
 const marksBox = $<HTMLInputElement>('marks'), inspectBox = $('inspect');
 const baBox = $<HTMLTextAreaElement>('ba'), bbBox = $<HTMLTextAreaElement>('bb');
-const explainBox = $<HTMLInputElement>('explainOn'), firesBox = $('fires');
+const explainBox = $<HTMLInputElement>('explainOn'), firesBox = $('fires'), antBox = $('ant'), traceBox = $('trace');
+let selected: number | null = null, selectedCol = 0; // id and colony of the ant being followed
+let wantTrack: number | null | undefined; // a track request waiting for the Worker to be free (undefined = none)
+const DIRS = ['E', 'SE', 'SW', 'W', 'NW', 'NE'];
+
+/** Select a line of an editor (and scroll it into view): used by trace rows, rule rows and lint messages. */
+function jumpTo(side: number, line: number): void {
+  const box = side ? bbBox : baBox, lines = box.value.split('\n');
+  if (line < 1 || line > lines.length) return;
+  const start = lines.slice(0, line - 1).reduce((n, l) => n + l.length + 1, 0);
+  box.focus();
+  box.setSelectionRange(start, start + lines[line - 1].length);
+  box.scrollTop = Math.max(0, (line - 3) * (parseFloat(getComputedStyle(box).lineHeight) || 15));
+}
 const changed = (restart: boolean): void => { save(); updateNotesSoon(); if (restart) start(); };
 const panels = [mountPersonality($('pa'), baBox, changed), mountPersonality($('pb'), bbBox, changed)];
 const syncPanels = (): void => panels.forEach((x) => x.sync());
@@ -59,15 +72,20 @@ const setRunning = (on: boolean): void => {
 };
 
 /** The note under an editor: size and lint warnings, or the error with its line number. */
-function note(box: HTMLElement, info: BrainInfo): void {
+function note(box: HTMLElement, info: BrainInfo, side: number): void {
   box.replaceChildren();
-  const add = (cls: string, text: string): void => { const d = document.createElement('div'); d.className = cls; d.textContent = text; box.append(d); };
+  const add = (cls: string, text: string): void => {
+    const d = document.createElement('div'), line = lineOfMessage(text);
+    d.className = line ? `${cls} link` : cls; d.textContent = text;
+    if (line) { d.title = `go to line ${line}`; d.onclick = () => jumpTo(side, line); }
+    box.append(d);
+  };
   if (!info.ok) { add('err', info.error); return; }
   add('', info.summary);
   info.warnings.forEach((w) => add('warn', `warning: ${w}`));
 }
 let noteTimer: ReturnType<typeof setTimeout> | undefined;
-const updateNotes = (): void => { note($('na'), describeBrain(baBox.value)); note($('nb'), describeBrain(bbBox.value)); };
+const updateNotes = (): void => { note($('na'), describeBrain(baBox.value), 0); note($('nb'), describeBrain(bbBox.value), 1); };
 const updateNotesSoon = (): void => { clearTimeout(noteTimer); noteTimer = setTimeout(updateNotes, 250); };
 
 function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void {
@@ -79,10 +97,12 @@ function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void 
     head.className = 'fh';
     head.textContent = `Colony ${c ? 'B' : 'A'}: ${f.total} acting ant-rounds counted`;
     firesBox.append(head);
+    const hot = selected !== null && selectedColony() === c ? hereNow()?.rule : undefined;
     for (const row of fireRows(info.rules, f)) {
       const d = document.createElement('div'), bar = document.createElement('div'), t = document.createElement('i'), a = document.createElement('i');
       const pct = document.createElement('span'), code = document.createElement('code');
-      d.className = 'fire'; bar.className = 'bar'; t.className = 't'; a.className = 'a';
+      d.className = `fire${row.rule === hot && row.rule >= 0 ? ' hot' : ''}${row.line ? ' link' : ''}`; bar.className = 'bar'; t.className = 't'; a.className = 'a';
+      if (row.line) { const line = row.line; d.title = `go to line ${line}`; d.onclick = () => jumpTo(c, line); }
       t.style.width = `${row.test * 100}%`; a.style.width = `${row.act * 100}%`;
       pct.textContent = `${((row.test + row.act) * 100).toFixed(1)}%`; code.textContent = row.label;
       bar.append(t, a); d.append(bar, pct, code); firesBox.append(d);
@@ -93,6 +113,8 @@ function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void 
 function start(): void {
   worker?.terminate();
   infos = [describeBrain(baBox.value), describeBrain(bbBox.value)];
+  selected = null; wantTrack = undefined;
+  antBox.textContent = 'Click an ant to follow it.'; traceBox.replaceChildren();
   syncPanels();
   firesBox.replaceChildren();
   updateNotes();
@@ -103,6 +125,47 @@ function start(): void {
     brains: [$<HTMLTextAreaElement>('ba').value, $<HTMLTextAreaElement>('bb').value] });
 }
 
+/** The followed ant in the latest frame: its row (index into ants) or -1 when it is dead or gone. */
+function selectedRow(): number {
+  if (selected === null || !last) return -1;
+  for (let i = 0; i < last.ants.length; i += 6) if (last.ants[i] === selected) return i;
+  return -1;
+}
+const selectedColony = (): number => (selectedRow() < 0 ? -1 : selectedCol);
+function hereNow(): ReturnType<typeof whereIs> | undefined {
+  const i = selectedRow();
+  const info = i < 0 ? undefined : infos[last?.ants[i + 2] ?? 0];
+  return info && last ? whereIs(info, last.ants[i + 5]) : undefined;
+}
+function renderAnt(f: Extract<Reply, { type: 'frame' }>): void {
+  antBox.replaceChildren(); traceBox.replaceChildren();
+  if (selected === null) { antBox.textContent = 'Click an ant to follow it.'; return; }
+  const i = selectedRow();
+  const col = selectedCol;
+  if (i < 0) { antBox.textContent = `ant #${selected} is dead (its last rules are below).`; }
+  else {
+    const info = infos[col], where = hereNow();
+    const cell = f.ants[i + 1];
+    antBox.textContent = `ant #${selected} (${'AB'[col]}) at ${cell % (geom?.W ?? 1)},${Math.floor(cell / (geom?.W ?? 1))}, facing ${DIRS[f.ants[i + 3]]}, carrying ${f.ants[i + 4]}; next: `;
+    if (where && info?.ok) {
+      const b = document.createElement('b'), d = document.createElement('div');
+      b.textContent = `${where.label}${where.part ? ` (${where.part})` : ''}`;
+      d.className = where.line ? 'hot link' : 'hot'; d.append(b);
+      if (where.line) { const line = where.line; d.title = `go to line ${line}`; d.onclick = () => jumpTo(col, line); }
+      antBox.append(d);
+    }
+  }
+  const info = infos[col];
+  if (!info) return;
+  for (const row of traceRows(info, f.trace)) {
+    const d = document.createElement('div'), rd = document.createElement('span'), code = document.createElement('code');
+    d.className = `tr${row.line ? ' link' : ''}`;
+    rd.className = 'rd'; rd.textContent = row.fromRound === row.toRound ? `r${row.fromRound}` : `r${row.fromRound}-${row.toRound}`;
+    code.textContent = `${row.count > 1 ? `×${row.count} ` : ''}${row.label}${row.part ? ` (${row.part})` : ''}`;
+    if (row.line) { const line = row.line; d.title = `go to line ${line}`; d.onclick = () => jumpTo(col, line); }
+    d.append(rd, code); traceBox.append(d);
+  }
+}
 function onMessage(m: Reply): void {
   if (m.type === 'error') { say(m.message, true); setRunning(false); busy = false; return; }
   if (m.type === 'ready') {
@@ -114,11 +177,13 @@ function onMessage(m: Reply): void {
   }
   busy = false; cycle = m.cycle;
   last = m;
-  viewer?.draw(m, { marks: marksBox.checked });
+  viewer?.draw(m, { marks: marksBox.checked, selected });
+  renderAnt(m);
   renderFires(m.fires);
   const [a, b] = m.score, done = cycle >= MATCH;
   say(`Round ${cycle} | A ${a} (${m.alive[0]} ants) | B ${b} (${m.alive[1]} ants)` +
     (done ? ` | ${a === b ? 'draw' : a > b ? 'A wins' : 'B wins'}` : ''));
+  if (wantTrack !== undefined) { const t = wantTrack; wantTrack = undefined; busy = true; send({ type: 'track', ant: t }); return; }
   if (done) setRunning(false); else if (running) requestAnimationFrame(pump);
 }
 
@@ -134,6 +199,15 @@ canvas.onclick = (e) => {
   const r = canvas.getBoundingClientRect();
   const p = cellAt(geom.L, geom.W, geom.H, ((e.clientX - r.left) * canvas.width) / r.width, ((e.clientY - r.top) * canvas.height) / r.height);
   inspectBox.textContent = p < 0 ? '' : describeCell(last, geom.W, geom.H, p);
+  if (p < 0) return;
+  for (let i = 0; i < last.ants.length; i += 6) { // an ant on that cell: follow it
+    if (last.ants[i + 1] !== p) continue;
+    selected = last.ants[i]; selectedCol = last.ants[i + 2];
+    if (busy) wantTrack = selected; else { busy = true; send({ type: 'track', ant: selected }); }
+    viewer?.draw(last, { marks: marksBox.checked, selected });
+    renderAnt(last);
+    break;
+  }
 };
 goBtn.onclick = () => setRunning(!running);
 $('step').onclick = () => { setRunning(false); if (!busy) { busy = true; send({ type: 'run', n: 1, explain: explainBox.checked }); } };

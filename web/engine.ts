@@ -14,10 +14,13 @@ export function createEngine() {
   let compiled: (Compiled | undefined)[] = [];
   let counts: (Fires | null)[] = [];
   let ids: number[][] = [];
+  let tracked: number | null = null;
+  let ring: number[] = []; // [round, pc] pairs of the tracked ant, newest last, at most TRACE_MAX pairs
+  const TRACE_MAX = 400;
   const frame = (s: Sim): Response => {
     const f = s.frame();
     const fires = counts.map((c) => (c ? { test: [...c.test], act: [...c.act], glue: c.glue, total: c.total } : null));
-    return { msg: { type: 'frame', hash: s.hash(), fires, ...f }, transfer: [f.food.buffer, f.marks.buffer, f.ants.buffer] };
+    return { msg: { type: 'frame', hash: s.hash(), fires, trace: [...ring], ...f }, transfer: [f.food.buffer, f.marks.buffer, f.ants.buffer] };
   };
   /** One ant-round of attribution for every colony whose brain is rules: which rule is the ant about to run? */
   const count = (s: Sim): void => {
@@ -33,6 +36,14 @@ export function createEngine() {
       }
     });
   };
+  /** The tracked ant is about to run one instruction this round (it is not resting): note the round and where it is. */
+  const record = (s: Sim): void => {
+    if (tracked === null) return;
+    const a = s.ant(tracked);
+    if (!a.alive || a.rest > 0) return;
+    ring.push(s.cycle + 1, a.pc);
+    if (ring.length > TRACE_MAX * 2) ring = ring.slice(ring.length - TRACE_MAX * 2);
+  };
   return {
     handle(m: Request): Response {
       try {
@@ -44,6 +55,7 @@ export function createEngine() {
             const loaded = m.brains.map((text) => loadAnyBrain(text, rules));
             if (loaded.length === 1) loaded.push(loaded[0]);
             sim = createSim({ map, programs: loaded.map((l) => l.program), seed: m.seed, rules });
+            tracked = null; ring = [];
             compiled = loaded.map((l) => l.compiled);
             counts = compiled.map((c) => (c ? { test: new Array(c.rules.length).fill(0) as number[], act: new Array(c.rules.length).fill(0) as number[], glue: 0, total: 0 } : null));
             const s = sim;
@@ -51,10 +63,17 @@ export function createEngine() {
             const { W, H, rock, hill } = map;
             return { msg: { type: 'ready', W, H, rock: rock.slice(), hill: hill.slice() }, transfer: [] };
           }
+          case 'track':
+            if (!sim) throw new Error('not initialised');
+            if (m.ant !== null && !(Number.isInteger(m.ant) && m.ant >= 0 && m.ant < sim.ants)) throw new Error(`no ant ${m.ant}`);
+            tracked = m.ant; ring = [];
+            return frame(sim);
           case 'run':
             if (!sim) throw new Error('not initialised');
-            if (m.explain && counts.some(Boolean)) for (let r = 0; r < m.n; r++) { count(sim); sim.step(); }
-            else sim.run(m.n);
+            if ((m.explain && counts.some(Boolean)) || tracked !== null) {
+              const explain = !!m.explain && counts.some(Boolean);
+              for (let r = 0; r < m.n; r++) { if (explain) count(sim); record(sim); sim.step(); }
+            } else sim.run(m.n);
             return frame(sim);
           case 'frame':
             if (!sim) throw new Error('not initialised');
