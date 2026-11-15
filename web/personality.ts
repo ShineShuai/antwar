@@ -59,7 +59,8 @@ export function mountPersonality(host: HTMLElement, box: HTMLTextAreaElement, on
     if (!generated) hint.textContent = text(box.value) ? 'Edited by hand (or not generated): the controls are off. "Reset to template" rewrites the text.' : 'Pick a template to generate rules.';
     else hint.textContent = `${TEMPLATE_HELP[p.template]}${!social ? '; no trails, so no sociability' : ''}`;
   };
-  const DEFAULT_MIX: RoleMix = { worker: 70, scout: 20, guard: 10 };
+  // nearly all workers: every share given to scouts or guards measured as a loss (docs/STEALING.md)
+  const DEFAULT_MIX: RoleMix = { worker: 90, scout: 10, guard: 0 };
   const text = (s: string): boolean => s.trim().length > 0;
   const apply = (restart: boolean): void => {
     try {

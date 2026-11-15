@@ -54,3 +54,15 @@ test('eval CLI: JSON summary for a short run', () => {
   assert.equal(j.summary.rounds, 2000);
   assert.equal(j.rows[0].total, 480);
 });
+
+test('eval CLI: theft counters (a stash on a nest cell can be picked up by anyone)', () => {
+  const run = (extra: string[]): { rows: { stole: number; lost: number }[] } => {
+    const r = spawnSync(process.execPath, ['cli/eval.ts', '--ant', 'ants/trail.rules', ...extra, '--seeds', '1', '--rounds', '20000', '--json'], { cwd: root, encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    return JSON.parse(r.stdout) as { rows: { stole: number; lost: number }[] };
+  };
+  const solo = run([]);
+  assert.deepEqual([solo.rows[0].stole, solo.rows[0].lost], [0, 0]);
+  const duel = run(['--vs', 'ants/trail.rules']);
+  assert.ok(duel.rows[0].stole > 0 && duel.rows[0].lost > 0, `${JSON.stringify(duel.rows[0])}`); // in a mirror match both sides take from each other
+});

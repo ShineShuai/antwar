@@ -11,7 +11,7 @@ export const TEMPLATE_NAMES: Record<Template, string> = { forager: 'Forager', tr
 export const TEMPLATE_HELP: Record<Template, string> = {
   forager: 'finds food and carries it home by luck; no trails',
   trail: 'finds food, lays a trail home and a food trail others follow',
-  guard: 'stands at the nest and fights foes that come into view',
+  guard: 'sits on the food stash at the nest so nobody can steal it',
   raider: 'like the trail-layer, and heads for foe nests to take their food',
 };
 /** Slider labels, lowest first. Curiosity is the share of random wandering (1 step in 16, 8, 4, 2). */
@@ -25,7 +25,7 @@ const CHANCE = [0, 16, 8, 4, 2];
 export const DEFAULTS: Record<Template, Personality> = {
   forager: { template: 'forager', curiosity: 1, boldness: 1, sociability: 0 },
   trail: { template: 'trail', curiosity: 0, boldness: 1, sociability: 1 }, // = ants/trail.rules; see docs/RULES.md
-  guard: { template: 'guard', curiosity: 0, boldness: 3, sociability: 0 },
+  guard: { template: 'guard', curiosity: 0, boldness: 1, sociability: 0 },
   raider: { template: 'raider', curiosity: 0, boldness: 2, sociability: 1 },
 };
 export const usesSociability = (t: Template): boolean => t === 'trail' || t === 'raider';
@@ -66,8 +66,19 @@ function trailMoods(prefix: string, o: TrailOpts): string[] {
     '  otherwise roam',
   ];
 }
+/** The guard sits on the stash: food can only be picked up by an ant standing on its cell, so an ant that stays on a nest cell
+ * holding food makes that food unstealable. Until it finds one it walks around inside the nest (it only ever moves onto nest
+ * cells). Boldness decides whether it leaves its post for foes in view. Curiosity: how often it turns at random. */
 const guardMood = (curiosity: number, boldness: number): string[] => [
-  'mood guard', ...foeRules(boldness, false).map((r) => `  ${r}`), ...wanderRule(curiosity).map((r) => `  ${r}`), '  otherwise wait',
+  'mood guard',
+  '  when food here and home here -> wait',
+  ...foeRules(boldness, false).map((r) => `  ${r}`),
+  '  when food ahead and home ahead -> move',
+  '  when food left ahead and home left ahead -> turn left, move',
+  '  when food right ahead and home right ahead -> turn right, move',
+  ...(curiosity ? [`  when 1 in ${CHANCE[curiosity]} -> turn random`] : []),
+  '  when home ahead -> move',
+  '  otherwise turn random',
 ];
 
 const header = (p: Personality): string =>
@@ -92,7 +103,7 @@ export function personality(p: Personality): string {
     out.push(`mix ${[m.worker ? `worker_start ${m.worker}` : '', m.scout ? `scout_start ${m.scout}` : '', m.guard ? `guard ${m.guard}` : ''].filter(Boolean).join(', ')}`);
     if (m.worker) out.push(...trailMoods('worker_', { curiosity: p.curiosity, boldness: p.boldness, follow: social, lay: food, raid: p.template === 'raider' }));
     if (m.scout) out.push(...trailMoods('scout_', { curiosity: 3, boldness: 1, follow: 0, lay: true, raid: false }));
-    if (m.guard) out.push(...guardMood(0, 3));
+    if (m.guard) out.push(...guardMood(0, 1));
   } else if (p.template === 'forager') {
     out.push(
       'mood search', ...foeRules(p.boldness, false).map((r) => `  ${r}`),
