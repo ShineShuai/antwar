@@ -3,15 +3,21 @@
 export class RulesError extends Error {}
 
 export type Where = 'here' | 'ahead' | 'leftahead' | 'rightahead';
-export interface Cond { not: boolean; /** assembly condition, e.g. "food" or "marker 2" */ sense: string; where: Where; text: string }
+export interface Cond {
+  not: boolean; text: string;
+  /** assembly condition, e.g. "food" or "marker 2" (absent for a chance condition) */ sense?: string; where?: Where;
+  /** "1 in N": true with probability 1/N */ chance?: number;
+}
 export type ActionKind =
-  | 'move' | 'pickup' | 'drop' | 'turn' | 'turnaround' | 'turnrandom' | 'mark' | 'unmark' | 'switch'
+  | 'move' | 'pickup' | 'drop' | 'turn' | 'turnaround' | 'turnrandom' | 'mark' | 'unmark' | 'switch' | 'wait'
   | 'step' | 'wander' | 'explore' | 'roam' | 'returnhome' | 'followtrail' | 'laytrail';
 export interface Action { kind: ActionKind; arg?: string | number; text: string }
 export interface Rule { id: number; mood: string; line: number; text: string; conds: Cond[]; actions: Action[]; otherwise: boolean }
 export interface Mood { name: string; line: number; rules: Rule[] }
 export interface Kits { trail: boolean; foodtrail: boolean }
-export interface Ast { kits: Kits; moods: Mood[] }
+/** Role mix: a flip chain at program entry sends each new ant into one of these moods, with these relative weights. */
+export interface Mix { line: number; roles: { mood: string; weight: number }[] }
+export interface Ast { kits: Kits; moods: Mood[]; mix?: Mix }
 
 /** Actions that end the rule's action list (they jump away or are routines that return to the mood). */
 export const TERMINAL: ReadonlySet<ActionKind> = new Set(['switch', 'step', 'wander', 'explore', 'roam', 'returnhome', 'followtrail']);
@@ -22,7 +28,7 @@ export const KIT_MARKERS = { trail: [0, 1, 2], foodtrail: [3] } as const;
 
 const WHERE_WORDS = ['here', 'ahead', 'leftahead', 'rightahead'];
 const WHAT_WORDS = ['food', 'rock', 'foe', 'friend', 'home', 'marker', 'carrying'];
-const ACTION_WORDS = ['move', 'pickup', 'drop', 'turn', 'mark', 'unmark', 'switch', 'step', 'wander', 'explore', 'roam', 'return', 'follow', 'lay'];
+const ACTION_WORDS = ['move', 'pickup', 'drop', 'turn', 'mark', 'unmark', 'switch', 'step', 'wander', 'explore', 'roam', 'return', 'follow', 'lay', 'wait'];
 
 function fail(line: number, msg: string): never { throw new RulesError(`line ${line}: ${msg}`); }
 const distance = (a: string, b: string): number => {
@@ -48,6 +54,9 @@ function parseCond(raw: string, line: number): Cond {
   let not = false;
   if (words[0] === 'not') { not = true; words.shift(); }
   if (!words.length) fail(line, `empty condition near "${text}"`);
+  if (words.length === 3 && (words[0] === '1' || words[0] === 'one') && words[1] === 'in') {
+    return { not, chance: num(words[2], 2, 64, '"1 in N": N', line), text };
+  }
   if (words.join(' ') === 'carrying') return { not, sense: 'friendwithfood', where: 'here', text };
   const where = words.pop() as string;
   if (!WHERE_WORDS.includes(where)) {
@@ -78,6 +87,7 @@ function parseAction(raw: string, line: number): Action {
     case 'wander': return one('wander');
     case 'explore': return one('explore');
     case 'roam': return one('roam');
+    case 'wait': return one('wait');
     case 'turn':
       if (w.length === 2 && (w[1] === 'left' || w[1] === 'right')) return { kind: 'turn', arg: w[1], text };
       if (w.length === 2 && w[1] === 'around') return { kind: 'turnaround', text };
@@ -107,7 +117,7 @@ const ARROW = /\s*(?:->|→)\s*|\s+(?:do|then)\s+/;
 export function parseRules(source: string): Ast {
   const kits: Kits = { trail: false, foodtrail: false };
   const moods: Mood[] = [];
-  let cur: Mood | null = null, nextId = 0;
+  let cur: Mood | null = null, nextId = 0, mix: Mix | undefined;
   source.split('\n').forEach((rawLine, i) => {
     const line = i + 1;
     const text = rawLine.replace(/#.*$/, '').trim();
@@ -129,8 +139,13 @@ export function parseRules(source: string): Ast {
       moods.push(cur);
       return;
     }
+    if (head === 'mix') {
+      if (mix) fail(line, 'there can be only one mix line');
+      mix = parseMix(lower.slice(3).trim(), line);
+      return;
+    }
     if (!['when', 'always', 'otherwise'].includes(head)) {
-      fail(line, `a line must start with when, always, otherwise, mood or kit, not "${head}"${didYouMean(head, ['when', 'always', 'otherwise', 'mood', 'kit'])}`);
+      fail(line, `a line must start with when, always, otherwise, mood, kit or mix, not "${head}"${didYouMean(head, ['when', 'always', 'otherwise', 'mood', 'kit', 'mix'])}`);
     }
     if (!cur) { cur = { name: 'main', line, rules: [] }; moods.push(cur); }
     if (cur.rules.at(-1)?.otherwise) fail(line, `the rules after "otherwise" in mood "${cur.name}" can never run: put "otherwise" last`);
@@ -148,12 +163,30 @@ export function parseRules(source: string): Ast {
     const actions = actionText.split(',').map((a) => parseAction(a, line));
     cur.rules.push({ id: nextId++, mood: cur.name, line, text, conds, actions, otherwise: head === 'otherwise' });
   });
-  const ast: Ast = { kits, moods };
+  const ast: Ast = { kits, moods, mix };
   validate(ast);
   return ast;
 }
 
-function validate({ kits, moods }: Ast): void {
+const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+
+function parseMix(rest: string, line: number): Mix {
+  if (!rest) fail(line, 'a mix line looks like: mix worker 70, scout 20, guard 10');
+  const roles = rest.split(',').map((item) => {
+    const w = item.trim().replace(/%/g, '').split(/\s+/);
+    if (w.length !== 2 || !/^[a-z][a-z0-9_]*$/.test(w[0])) fail(line, `"${item.trim()}": each role is a mood name and a weight, e.g. worker 70`);
+    return { mood: w[0], weight: num(w[1], 1, 100, `the weight of ${w[0]}`, line) };
+  });
+  if (new Set(roles.map((r) => r.mood)).size !== roles.length) fail(line, 'a mood appears twice in the mix');
+  const g = roles.reduce((a, r) => gcd(a, r.weight), 0), total = roles.reduce((a, r) => a + r.weight, 0) / g;
+  if (total > 100) fail(line, `the mix is too fine (${total} parts after dividing by the common factor); use weights that add up to 100 or less`);
+  return { line, roles };
+}
+
+function validate({ kits, moods, mix }: Ast): void {
+  for (const r of mix?.roles ?? []) {
+    if (!moods.some((m) => m.name === r.mood)) fail(mix?.line ?? 1, `the mix names a mood that does not exist: "${r.mood}"`);
+  }
   if (!moods.length) fail(1, 'no rules found; start with something like: always -> wander');
   if (kits.foodtrail && !kits.trail) fail(1, 'kit foodtrail needs kit trail (it follows the trail codes)');
   const names = new Set(moods.map((m) => m.name));
@@ -162,7 +195,7 @@ function validate({ kits, moods }: Ast): void {
     if (!m.rules.length) fail(m.line, `mood "${m.name}" has no rules`);
     for (const r of m.rules) {
       for (const c of r.conds) {
-        const k = /^marker (\d)$/.exec(c.sense);
+        const k = c.sense ? /^marker (\d)$/.exec(c.sense) : null;
         if (k && reserved.has(Number(k[1]))) fail(r.line, `marker ${k[1]} is used by the trail kit; use another marker`);
       }
       r.actions.forEach((a, i) => {
