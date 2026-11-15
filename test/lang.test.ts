@@ -32,7 +32,7 @@ test('parser: plain-English errors carry the line number and a suggestion', () =
   bad('mood a\nmood a\nalways -> move', /defined twice/);
   bad('mood a', /has no rules|no rules found/);
   bad('', /no rules found/);
-  bad('hello world', /must start with when, always, otherwise, mood or kit/);
+  bad('hello world', /must start with when, always, otherwise, mood, kit or mix/);
   bad('kit trail\nwhen marker 1 here -> move', /marker 1 is used by the trail kit/);
   bad('kit trail\nalways -> mark 2', /marker 2 is used by the trail kit/);
   bad('always -> return home', /needs "kit trail"/);
@@ -164,4 +164,54 @@ test('trail.rules forages from a cold start and no carrier freezes (compare ants
     assert.ok(longest * 50 <= 20000, `seed ${seed}: a carrier held food for ${longest * 50} rounds`);
     assert.ok(s.score()[0] >= 150, `seed ${seed}: only ${s.score()[0]} food after 30,000 rounds`);
   }
+});
+
+test('chance condition: "1 in N" is true about one time in N, and not inverts it', () => {
+  // each ant marks a different bit depending on the coin; many seeds, a fixed number of rounds
+  const tally = (src: string): number => {
+    let hits = 0;
+    for (let seed = 1; seed <= 200; seed++) { const s = sim(src, room, seed); s.run(2); hits += s.marks[1 * 6 + 1] & 1; }
+    return hits;
+  };
+  const yes = tally('when 1 in 4 -> mark 0\notherwise -> mark 1');
+  assert.ok(yes >= 30 && yes <= 70, `1 in 4 fired ${yes}/200`);
+  const no = tally('when not 1 in 4 -> mark 0\notherwise -> mark 1');
+  assert.ok(no >= 130 && no <= 170, `not 1 in 4 fired ${no}/200`);
+  bad('when 1 in 1 -> move', /"1 in N": N must be a number from 2 to 64/);
+  bad('when 1 in 99 -> move', /from 2 to 64/);
+});
+
+test('wait: a round that changes nothing (even when carrying)', () => {
+  const s = sim('always -> wait, mark 0', foodAhead);
+  s.run(1);
+  assert.equal(s.marks[1 * 6 + 1], 0); // round 1 was the wait
+  s.run(1);
+  assert.equal(s.marks[1 * 6 + 1], 1);
+  assert.deepEqual([s.ant(0).dir, s.ant(0).has], [0, 0]);
+});
+
+test('mix: a flip chain at entry sends each ant to a role by weight and the role never changes', () => {
+  const src = 'mix a 7, b 2, c 1\nmood a\nalways -> mark 0\nmood b\nalways -> mark 1\nmood c\nalways -> mark 2';
+  const c = compileRules(src);
+  assert.deepEqual(c.warnings.filter((w) => /never entered/.test(w)), []);
+  // every ant stays on its nest cell and marks one bit for its role; many ants, so one world is enough to see the weights
+  const map = generateWorld(4), N = map.W * map.H;
+  const s = createSim({ map, programs: [c.program, c.program], seed: 4 });
+  const bitsOf = (): number[] => Array.from({ length: s.ants }, (_, i) => (s.ant(i).col === 0 ? s.marks[s.ant(i).pos] : 0)).filter((_, i) => s.ant(i).col === 0);
+  s.run(400); // the chain costs at most 10 rounds, then each ant marks its role bit
+  const first = bitsOf();
+  const count = (bit: number): number => first.filter((m) => m === bit).length;
+  assert.equal(count(1) + count(2) + count(4), first.length, 'every ant has exactly one role');
+  assert.ok(count(1) > count(2) && count(2) > count(4), `${count(1)}/${count(2)}/${count(4)}`); // about 70% / 20% / 10%
+  assert.ok(count(4) >= 3 && count(4) <= 25, `${count(4)} of ${first.length} in the smallest role`);
+  s.run(2000);
+  assert.deepEqual(bitsOf(), first, 'an ant never re-rolls its role');
+  void N;
+  bad('mix a 1, a 2\nmood a\nalways -> move', /appears twice/);
+  bad('mix ghost 1\nmood a\nalways -> move', /names a mood that does not exist: "ghost"/);
+  bad('mix a 3, b 98\nmood a\nalways -> move\nmood b\nalways -> move', /too fine \(101 parts/);
+  bad('mix a 1\nmix a 2\nmood a\nalways -> move', /only one mix line/);
+  bad('mix\nmood a\nalways -> move', /a mix line looks like/);
+  assert.ok(compileRules('mix a 50, b 50\nmood a\nalways -> move\nmood b\nalways -> move').program.n > 0);
+  assert.match(compileRules('mix a 1\nmood a\nalways -> move\nmood spare\nalways -> move').warnings.join(), /"spare" is never entered.*not in the mix/);
 });

@@ -38,6 +38,15 @@
   .fire .bar .a { background: #2563eb; }
   .fire code { font-size: 11px; overflow-wrap: anywhere; }
   .fh { margin: 6px 0 2px; color: var(--fg); }
+  .pers { margin-top: 4px; }
+  .pers > :not(summary) { margin-top: 6px; }
+  .pers .hint { font-size: 12px; min-height: 1.3em; }
+  .pers .slide { display: grid; grid-template-columns: 6.5em 1fr 5.5em; gap: 6px; align-items: center; }
+  .pers .slide .val { color: var(--fg); }
+  .pers .off { opacity: .45; }
+  .pers .mix { gap: 4px; }
+  .pers .w { display: grid; gap: 2px; font-size: 11px; }
+  .pers .w input { width: 4.2em; }
 </style>
 <h1 style="font-size:18px;margin:0 0 8px">Tinyminds workshop</h1>
 <main>
@@ -72,11 +81,13 @@
       <div class="row"><label for="ba">Brain A (red)</label><select class="ex" data-for="ba" aria-label="Load an example into A"></select></div>
       <textarea id="ba" spellcheck="false"></textarea>
       <div class="note" id="na"></div>
+      <div id="pa"></div>
     </div>
     <div class="brain">
       <div class="row"><label for="bb">Brain B (blue)</label><select class="ex" data-for="bb" aria-label="Load an example into B"></select></div>
       <textarea id="bb" spellcheck="false"></textarea>
       <div class="note" id="nb"></div>
+      <div id="pb"></div>
     </div>
     <div class="row">
       <button id="rand">Randomize</button><button id="go">Run</button><button id="step">Step</button><button id="reset">Reset</button>

@@ -17,8 +17,12 @@
   `otherwise` is `always` and must be last. Rules before any `mood` line form the mood `main`.
 * Condition: `[not] <what> <where>`; what = `food rock foe friend home`, `foe home`, `marker N`, `foe marker`,
   `foe carrying`, `friend carrying`; where = `here ahead left ahead right ahead`. `carrying` alone means this ant holds food.
-* Actions: `move` `pickup` `drop` `turn left|right|around|random` `mark N` `unmark N` `switch MOOD` and the skills
-  `step` `wander` `explore` (and with kits `return home` `roam` `follow trail` `lay trail`).
+  `1 in N` (N from 2 to 64) is true one time in N (it costs a round, like a sense).
+* Actions: `move` `pickup` `drop` `wait` `turn left|right|around|random` `mark N` `unmark N` `switch MOOD` and the skills
+  `step` `wander` `explore` (and with kits `return home` `roam` `follow trail` `lay trail`). `wait` spends a round and changes nothing.
+* `mix worker 70, scout 20, guard 10` (weights up to 100 parts after dividing out the common factor) replaces "the first mood
+  is the start mood": a flip chain at program entry sends each newborn ant into one of those moods, and nothing ever jumps
+  back to it, so an ant keeps its role for life (ants have no ids, so roles must be random at birth).
 
 ## Semantics (as in the reference)
 
@@ -42,6 +46,45 @@
 * The kit actions are **stateless**: each re-reads the code under the ant, so nothing but the pc is remembered and the
   rules themselves need no copies. The price is about 3 senses per step.
 * Using a reserved marker in your own rules is an error.
+
+## Level 0: personalities (`src/lang/templates.ts`, `node cli/personality.ts`)
+
+A template, three sliders and an optional role mix generate a rules program. The workshop shows them under each editor:
+moving a control rewrites the text; once the text is edited by hand the controls grey out until "Reset to template" (the
+text starts with a `# personality:` line that lets the controls come back, and only while the text is exactly what the
+generator wrote).
+
+* Templates: **Forager** (no trails, carries home by luck), **Trail-layer** (the trail kit, i.e. `ants/trail.rules`),
+  **Guard** (stands still, fights foes in view), **Raider** (trail-layer that also heads for foe nests).
+* Sliders: **Curiosity** = share of random wandering (`when 1 in N -> wander`, N = 16, 8, 4, 2); **Boldness** = timid (flee
+  a foe ahead), indifferent, bold (step toward a foe ahead), fierce (also the sides); carriers never fight; **Sociability** =
+  loner, follower, devoted (`follow trail` after / before the food checks), trail templates only.
+* Role mix (trail and raider): worker = the template, scout = trail-layer with curiosity 3 that lays but never follows
+  trails, guard = the guard; percentages compile to the `mix` flip chain. 911 instructions for a 3-role program.
+
+Measured like everything else (20 worlds, 100,000 rounds, idle opponent; head to head over 80 games, both hills):
+
+| personality | food home, median (min) | worlds with all 480 | rounds to 90% | head to head |
+|---|---|---|---|---|
+| Forager (defaults) | 110 (42) | 0 | - | - |
+| **Trail-layer, curiosity 0 (the default)** | **480 (444)** | **15** | **52,300** | identical to `ants/trail.rules` |
+| curiosity 1 / 2 / 3 / 4 | 480 / 480 / 478 / 438 | 12 / 12 / 6 / 3 | 61.9k / 63.4k / 68.7k / 88.7k | |
+| sociability loner / follower / devoted (curiosity 1) | 461 / 480 / 478 | 5 / 12 / 9 | 76.4k / 61.9k / 57.0k | |
+| boldness fierce (curiosity 1) | 478 (382) | 8 | 65.8k | 33-47 against indifferent |
+| 70/20/10 worker/scout/guard mix | 472 (413) | 7 | 67.6k | 27-53 against the pure trail-layer |
+| Raider (curiosity 0, devoted) | 476 (447) | 5 | 62.3k | **0-80** against the trail-layer |
+| Guard | 0 | 0 | - | - |
+
+* The generator at curiosity 0 reproduces `trail.rules` exactly (same worlds, same numbers), so the template is the
+  hand-tuned ant, not a lookalike.
+* **The sliders are real trade-offs, and monotonic**: more curiosity costs foraging speed (90% of the food at 52k rounds
+  focused, 89k wild); a loner is slower than a follower. On these worlds, with all the food on the map, curiosity never pays.
+* **The other archetypes are not balanced** and were not tuned: the food race rewards speed, so aggression, guards and
+  a mix of idle ants all lose to the plain trail-layer. The raider loses every game although it never dies (91 ants alive)
+  and its raids work: over 5 worlds it took 538 packets from the foe nest and 96% of them reached its own nest. But **food
+  at a nest is not safe**: every `food ... and not home ...` rule also picks up food from the *foe's* nest, so the trail-layer
+  took 1,261 packets from the raider's nest, more than twice as many, without trying. Any colony that keeps a big stash
+  is raided by everyone; a raider that pays needs to hold less at home or defend it.
 
 ## Lint (warnings, never blockers)
 
@@ -85,6 +128,6 @@ Share links carry rules text like any other brain.
 
 ## Not done
 
-Level 0 (templates, sliders, role mix), level 3 (the structured script language), skills beyond the trail kit, the Academy
+Level 3 (the structured script language), skills beyond the trail kit, balanced Raider and Guard archetypes, the Academy
 UI, and rule-level editing aids (highlighting, a rule list you can drag, a per-ant trace). The compiler is the part those
 layers sit on; `compileRules` returns the source map (`ruleAt`) a trace needs.

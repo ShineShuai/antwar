@@ -115,6 +115,7 @@ function emitAction(o: Out, a: Action, kits: Kits, next: string, head: string, m
     case 'move': o.ins(`move else ${next}`); break;
     case 'pickup': o.ins(`pickup else ${next}`); break;
     case 'drop': o.ins('drop'); break;
+    case 'wait': { const w = o.uid(); o.ins(`sense here rock else ${w}`); o.label(w); break; } // a round that changes nothing
     case 'mark': o.ins(`mark ${a.arg}`); break;
     case 'unmark': o.ins(`unmark ${a.arg}`); break;
     case 'laytrail': o.ins('mark 3'); break;
@@ -159,9 +160,27 @@ function emitAction(o: Out, a: Action, kits: Kits, next: string, head: string, m
   }
 }
 
+const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+
+/** Role mix: pick one of W equally likely outcomes (flipzero W, W-1, ... falls through with chance 1/(W-j)) and jump to the
+ * role that owns it. Nothing ever jumps back here, so an ant keeps its role for life. */
+function emitMix(o: Out, mix: NonNullable<Ast['mix']>, moodHead: (m: string) => string): void {
+  const g = mix.roles.reduce((a, r) => gcd(a, r.weight), 0);
+  const roles = [...mix.roles].sort((a, b) => b.weight - a.weight); // biggest first: shortest expected chain
+  const outcomes = roles.flatMap((r) => Array.from({ length: r.weight / g }, () => r.mood));
+  const W = outcomes.length;
+  o.comment(`role mix: ${roles.map((r) => `${r.mood} ${r.weight / g}`).join(', ')} (of ${W})`);
+  const lab = outcomes.map(() => o.uid());
+  outcomes.forEach((mood, j) => {
+    if (j > 0) o.label(lab[j]);
+    if (j < W - 1) { o.ins(`flipzero ${W - j} else ${lab[j + 1]}`); o.ins(`goto ${moodHead(mood)}`); } else o.ins(`goto ${moodHead(mood)}`);
+  });
+}
+
 export function lower(ast: Ast): { lines: string[]; meta: LineMeta[] } {
   const o = new Out();
   const moodHead = (m: string): string => `m_${m}`;
+  if (ast.mix) emitMix(o, ast.mix, moodHead);
   for (const mood of ast.moods) {
     o.comment(`mood ${mood.name}`);
     o.rule = -1; o.part = 'glue';
@@ -172,8 +191,9 @@ export function lower(ast: Ast): { lines: string[]; meta: LineMeta[] } {
       o.comment(r.text);
       o.label(`r_${mood.name}_${i}`);
       for (const c of r.conds) {
-        if (!c.not) o.ins(`sense ${c.where} ${c.sense} else ${next}`);
-        else { const ok = o.uid(); o.ins(`sense ${c.where} ${c.sense} else ${ok}`); o.ins(`goto ${next}`); o.label(ok); }
+        const test = c.chance ? `flipzero ${c.chance}` : `sense ${c.where} ${c.sense}`; // flipzero falls through 1 time in N
+        if (!c.not) o.ins(`${test} else ${next}`);
+        else { const ok = o.uid(); o.ins(`${test} else ${ok}`); o.ins(`goto ${next}`); o.label(ok); }
       }
       o.part = 'action';
       for (const a of r.actions) emitAction(o, a, ast.kits, next, moodHead(mood.name), moodHead);

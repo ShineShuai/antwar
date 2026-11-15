@@ -50,9 +50,11 @@ export function lint(ast: Ast): string[] {
   const out: string[] = [];
   const rules = ast.moods.flatMap((m) => m.rules);
   const targets = new Set(rules.flatMap((r) => r.actions.filter((a) => a.kind === 'switch').map((a) => a.arg as string)));
+  for (const r of ast.mix?.roles ?? []) targets.add(r.mood);
   ast.moods.forEach((m, i) => {
-    if (i > 0 && !targets.has(m.name)) out.push(`line ${m.line}: mood "${m.name}" is never entered: no rule switches to it`);
-    if (ast.moods.length > 1 && !m.rules.some((r) => r.actions.some((a) => a.kind === 'switch'))) {
+    if ((i > 0 || ast.mix) && !targets.has(m.name)) out.push(`line ${m.line}: mood "${m.name}" is never entered: no rule switches to it${ast.mix ? ' and it is not in the mix' : ''}`);
+    const isRole = ast.mix?.roles.some((r) => r.mood === m.name);
+    if (ast.moods.length > 1 && !isRole && !m.rules.some((r) => r.actions.some((a) => a.kind === 'switch'))) {
       out.push(`line ${m.line}: mood "${m.name}" never switches to another mood, so an ant that enters it stays there`);
     }
     m.rules.forEach((r, j) => {
@@ -70,7 +72,7 @@ export function lint(ast: Ast): string[] {
   const written = new Set<number>(), read = new Set<number>();
   for (const r of rules) {
     r.actions.forEach((a) => { if (a.kind === 'mark') written.add(a.arg as number); });
-    r.conds.forEach((c) => { const k = /^marker (\d)$/.exec(c.sense); if (k) read.add(Number(k[1])); });
+    r.conds.forEach((c) => { const k = c.sense ? /^marker (\d)$/.exec(c.sense) : null; if (k) read.add(Number(k[1])); });
   }
   for (const k of written) if (!read.has(k)) out.push(`marker ${k} is written but no rule ever reads it`);
   for (const k of read) if (!written.has(k) && !(ast.kits.trail && k <= 2) && !(ast.kits.foodtrail && k === 3)) out.push(`marker ${k} is read but no rule ever writes it`);

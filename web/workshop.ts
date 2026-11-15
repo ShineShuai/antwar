@@ -3,6 +3,7 @@ import { describeCell } from './inspect.ts';
 import { GENERATOR_VERSION } from '../src/core/gen.ts';
 import { decodeShare, encodeShare } from './share.ts';
 import { describeBrain, fireRows } from './brain.ts';
+import { mountPersonality } from './personality.ts';
 import type { BrainInfo } from './brain.ts';
 import type { Reply, Request } from './protocol.ts';
 import { DARK, LIGHT, cellAt, createViewer, layout } from './viewer.ts';
@@ -19,6 +20,9 @@ let geom: { L: Layout; W: number; H: number } | undefined, last: Extract<Reply, 
 const marksBox = $<HTMLInputElement>('marks'), inspectBox = $('inspect');
 const baBox = $<HTMLTextAreaElement>('ba'), bbBox = $<HTMLTextAreaElement>('bb');
 const explainBox = $<HTMLInputElement>('explainOn'), firesBox = $('fires');
+const changed = (restart: boolean): void => { save(); updateNotesSoon(); if (restart) start(); };
+const panels = [mountPersonality($('pa'), baBox, changed), mountPersonality($('pb'), bbBox, changed)];
+const syncPanels = (): void => panels.forEach((x) => x.sync());
 let infos: BrainInfo[] = []; // the brains as they were when the match was started (rule ids match the Worker's)
 baBox.value = bbBox.value = STARTER;
 
@@ -89,6 +93,7 @@ function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void 
 function start(): void {
   worker?.terminate();
   infos = [describeBrain(baBox.value), describeBrain(bbBox.value)];
+  syncPanels();
   firesBox.replaceChildren();
   updateNotes();
   busy = false; cycle = 0; setRunning(false);
@@ -140,7 +145,7 @@ $('rand').onclick = () => {
   start();
 };
 seedBox.onchange = () => { mapText = ''; save(); start(); };
-baBox.oninput = bbBox.oninput = () => { save(); updateNotesSoon(); }; // a shared link is never written over your saved brains until you edit
+baBox.oninput = bbBox.oninput = () => { save(); updateNotesSoon(); syncPanels(); }; // a shared link is never written over your saved brains until you edit
 $<HTMLInputElement>('world').onchange = async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (file) { mapText = await file.text(); start(); }
