@@ -215,3 +215,45 @@ test('mix: a flip chain at entry sends each ant to a role by weight and the role
   assert.ok(compileRules('mix a 50, b 50\nmood a\nalways -> move\nmood b\nalways -> move').program.n > 0);
   assert.match(compileRules('mix a 1\nmood a\nalways -> move\nmood spare\nalways -> move').warnings.join(), /"spare" is never entered.*not in the mix/);
 });
+
+// follow trail on a corridor whose marks are set by hand (the snapshot has one marks byte per cell when there is one colony)
+function corridor(hillX: number, marks: Record<number, number>, src: string) {
+  const W = 14, wall = '# '.repeat(W).trim();
+  const row = Array.from({ length: W }, (_, x) => (x === 0 || x === W - 1 ? '#' : x === hillX ? '+' : '.')).join(' ');
+  const s = createSim({ map: parseMap(grid(wall, row, wall, wall)), programs: [compileRules(src).program], seed: 1, wrap: false });
+  const snap = s.snapshot();
+  for (const [x, m] of Object.entries(marks)) snap[12 + (1 * W + Number(x)) * 5 + 2] = m;
+  s.restore(snap);
+  return { s, at: (x: number): number => s.marks[1 * W + x], x: (): number => s.ant(0).pos % W };
+}
+const FOOD = 8, code = (x: number): number => 1 << ((x - 1) % 3); // a trail from x=1 outwards: one-hot code = steps mod 3, plus the food-trail bit
+const trail = (from: number, to: number): Record<number, number> => Object.fromEntries(Array.from({ length: to - from + 1 }, (_, i) => [from + i, code(from + i) | FOOD]));
+const KIT = 'kit trail\nkit foodtrail\n';
+
+test('follow trail: walks a food trail outwards to its end, then eats the dead end', () => {
+  const t = corridor(1, trail(1, 8), `${KIT}always -> follow trail`);
+  t.s.run(3000);
+  assert.equal(t.x(), 8);
+  assert.equal(t.at(8) & FOOD, 0, 'the last trail cell was eaten');
+  assert.ok(t.at(7) & FOOD, 'the rest of the trail is untouched');
+});
+
+test('follow trail: a trail that leads toward the nest (decreasing codes) is not followed', () => {
+  const t = corridor(5, trail(1, 8), `${KIT}mood a\nalways -> turn around, switch b\nmood b\nalways -> follow trail`);
+  t.s.run(1500);
+  assert.equal(t.x(), 5);
+  assert.equal(t.at(5) & FOOD, 0, 'standing on a dead end it eats its own cell');
+  assert.ok(t.at(4) & FOOD);
+});
+
+test('follow trail: off the trail it joins a trail cell ahead, but only if that leads away from here', () => {
+  const join = corridor(1, trail(2, 8), `${KIT}always -> follow trail`); // uncoded start cell: any trail cell ahead
+  join.s.run(3000);
+  assert.equal(join.x(), 8);
+  const toward = corridor(1, { 1: 4, 2: 2 | FOOD }, `${KIT}always -> follow trail`); // here code 2, ahead code 1: leads toward the nest
+  toward.s.run(800);
+  assert.equal(toward.x(), 1);
+  const away = corridor(1, { 1: 4, 2: 1 | FOOD }, `${KIT}always -> follow trail`); // here code 2, ahead code 0: leads away
+  away.s.run(800);
+  assert.equal(away.x(), 2);
+});

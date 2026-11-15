@@ -62,7 +62,8 @@ generator wrote).
 * Role mix (trail and raider): worker = the template, scout = trail-layer with curiosity 3 that lays but never follows
   trails, guard = the guard; percentages compile to the `mix` flip chain. 911 instructions for a 3-role program.
 
-Measured like everything else (20 worlds, 100,000 rounds, idle opponent; head to head over 80 games, both hills):
+Measured like everything else (20 worlds, 100,000 rounds, idle opponent; head to head over 80 games, both hills), with the
+compiler as it was before the `follow trail` optimization (explorer step 3% slower; the comparisons between rows hold):
 
 | personality | food home, median (min) | worlds with all 480 | rounds to 90% | head to head |
 |---|---|---|---|---|
@@ -102,20 +103,43 @@ written but never read (or read but never written).
 | reference page flat starter | 73 (27) | 0 | - | 0.97 | 72 |
 | `ants/forager.rules` (level 1, no kit) | 92 (29) | 0 | - | - | - |
 | `ants/trail.asm` (hand mod-3 + food trail) | 480 (461) | 18 / 20 | 17,350 / 49,750 | 0.999 | 0.3 |
-| **`ants/trail.rules` (compiled)** | **480 (444)** | **15 / 20** | **17,600 / 52,300** | 0.996 | 0.6 |
+| **`ants/trail.rules` (compiled)** | **480 (460)** | **14 / 20** | **18,500 / 50,700** | 0.998 | 0.5 |
 
-* **The gap is small**: the compiled program reaches 50% of the food as fast as the hand-written one and 90% about 5%
-  later; it completes 15 worlds against 18. Head to head it wins 26 of 80 games against the hand ant (food is shared, so
-  a few percent of speed decides more than it earns alone).
+* **The gap is small**: the compiled program reaches 50% of the food within 7% of the hand-written one's time and 90% about 2%
+  later (the figures above are after the `follow trail` optimization below; 20 worlds is noisy, about +-5%); it completes 14
+  worlds against 18. Before that optimization it won 26 of 80 games against the hand ant (food is shared, so a few percent
+  of speed decides more than it earns alone).
 * **The level-1 forager** (6 rules, no kit) scores like the reference's starter, which also checks that the semantics
   above match the reference's: a failed `move` falls through to the next rule.
 * One design lesson: the first version of `return home` simply failed when blocked or lost and left the rest to
   `otherwise roam`. Every blocked carrier then wandered off the trail: twice as many stuck carriers (1.2 against 0.6 per world) and 20 wins in 80
   head to head (26 now). The
   skill now retries, sidesteps and feels around itself, so rule authors cannot get it wrong.
-* **Explain why** (`--fire-counts`): in `trail.rules` 30% of all acting rounds go to `follow trail` (it is tried every round
-  by every searching ant and usually fails after sensing), 28% to `explore`, 14% to `return home`; the four food checks
-  cost 6% each. The biggest saving for a rule author is reordering or rationing `follow trail`.
+* **Explain why** (`--fire-counts`): in `trail.rules` 30% of all acting rounds go to `follow trail` (it is tried every step
+  by every searching ant), 23% to `explore`, 17% to `return home`; the four food checks cost 6% each.
+
+### Optimizing `follow trail`
+
+Where its rounds went (3 worlds, 30,000 rounds): about 232k evaluations, half of them *on* a food-trail cell (the nest area
+is dense with trail), each costing a sense of the cell, a read of the cell's code (1-3 senses) and the checks ahead, left and
+right. The reorder: the common off-trail case now costs two senses (is the cell under me on the trail, is one ahead) and only
+a trail cell ahead triggers the code read that checks it leads away from the nest.
+
+| `trail.rules` | follow trail, rounds per explorer step | explorer step | carrier step |
+|---|---|---|---|
+| before | 6.01 | 28.39 | 21.98 |
+| **reordered (shipped)** | **5.10** | **27.50** | 22.08 |
+| also joining from left-ahead / right-ahead | - | 28.68 | 22.05 |
+| hand-written `trail.asm` | - | 25.57 | 21.95 |
+
+* The reorder saves 0.9 rounds per explorer step (3%); the food results are within the noise of 20 worlds (14/20 complete,
+  90% at 50.7k rounds, against 15/20 and 52.3k).
+* Joining a trail from the sides costs more than it finds (12/20 worlds, 90% at 55.4k): rejected.
+* What is left of the 1.9-round gap to the hand-written ant is the stateless design: `step` and `follow trail` each read the
+  code under the ant (about 2 rounds), which the hand ant knows from its pc. Removing it means putting the 3 trail phases in
+  the pc (3 copies of every mood); it was not worth the complexity for about 9%.
+* Tests (`test/lang.test.ts`) pin the behaviour on hand-marked corridors, so a later rewrite can be checked against it:
+  walks outwards and eats the dead end, ignores a trail that leads toward the nest, joins one that leads away.
 
 ## In the workshop
 
