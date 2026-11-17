@@ -29,6 +29,11 @@
   #inspect { color: var(--mut); font-size: 12px; min-height: 2.6em; }
   .note { font-size: 12px; color: var(--mut); min-height: 1.3em; overflow-wrap: anywhere; }
   .note .err { color: var(--err); }
+  #verify { font-size: 12px; min-height: 1.3em; color: var(--mut); }
+  #verify.ok { color: #15803d; }
+  #verify.err { color: var(--err); }
+  @media (prefers-color-scheme: dark) { #verify.ok { color: #4ade80; } }
+  #tl { width: 100%; box-sizing: border-box; padding: 0; }
   .note .warn { color: #a16207; }
   @media (prefers-color-scheme: dark) { .note .warn { color: #fbbf24; } }
   .fire { display: grid; grid-template-columns: 56px 44px 1fr; gap: 6px; align-items: center; font-size: 11px; margin: 2px 0; }
@@ -102,7 +107,9 @@
       <select id="speed"><option>1</option><option selected>10</option><option>100</option><option>1000</option><option>10000</option></select> rounds/frame
     </div>
     <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="marks" checked> show scents</label>
+    <input id="tl" type="range" min="0" max="100000" step="1" value="0" aria-label="Round (drag to seek; arrow keys step, Shift = 100)">
     <div id="status">Ready.</div>
+    <div id="verify"></div>
     <div id="inspect">Click a cell to inspect it.</div>
     <details id="antbox" open>
       <summary>Selected ant</summary>

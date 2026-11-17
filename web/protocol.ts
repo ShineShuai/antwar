@@ -12,6 +12,7 @@ export type Request =
   | { type: 'init'; seed: number; mapText?: string; rules?: RulesId; brains: string[] }
   | { type: 'track'; /** ant id from the frame, or null to stop */ ant: number | null }
   | { type: 'run'; n: number; /** count which rule each acting ant is in (rules brains only; slower) */ explain?: boolean }
+  | { type: 'seek'; /** go to this round, forwards or backwards (restores a keyframe, then re-runs < 2000 rounds) */ round: number }
   | { type: 'frame' };
 
 export type Reply =

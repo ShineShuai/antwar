@@ -18,12 +18,14 @@ Spec: `reference.html`.
 - `src/core/gen.ts`    `generateWorld(seed)`: Classic contest world (spec 3.1); `node cli/gen.ts SEED`
 - `src/core/isa.ts`    the instruction table; `src/core/rules.ts` the rulesets registry: classic, tinyminds and one-flag bundles (carry two, dropfail, scare4, altorder, up to 26 colonies); see `docs/EXTENDING.md`
 - `src/core/seed.ts`   `dailySeed(date)` = hash of the UTC date string (the client supplies the date: `web/clock.ts`)
+- `src/core/replay.ts` `createReplay()` (hash checkpoints every 1,000 rounds, keyframes every 2,000, `seek`), replay descriptor `record()`/`verify()`; `docs/REPLAY.md`
 - `src/core/sim.ts`    `createSim()`, canonical state stream `snapshot()`/`restore()`, `hash()` = FNV-1a of it; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,
   direction/payload). v1: two colonies, no scare rule, no drop on blocked move
 - `web/`               `workshop.html` + `workshop.ts` (canvas viewer), `sim-worker.ts`, `engine.ts`
 - `src/lang/`         rules compiler (levels 1-2, trail kit): `compileRules(text)`; `node cli/rc.ts FILE.rules [--asm] [--fire-counts]`; see `docs/RULES.md`
 - `src/lang/templates.ts` level 0: templates, sliders, role mix -> rules text; `node cli/personality.ts --template trail --mix 70/20/10`; `web/personality.ts` the controls
 - `web/brain.ts`      what the workshop shows under an editor (size, lint, errors), the explain-why rows, and `whereIs`/`traceRows`: a pc pointed back at a rule or source line (click an ant to follow it)
+- `cli/replay.ts`     `record`, `verify`, `seek` replay descriptors (JSON: inputs + hashes)
 - `cli/eval.ts`       `npm run eval -- --ant FILE`: food home, time to 25/50/90%, carrier statistics over generated worlds; `--vs` plays two brains and counts the packets each steals from the other's nest (`docs/STEALING.md`)
 - `ants/`             hand-designed trail ants (generators + generated `.asm`; results in `docs/TRAILS.md`) and the same ants as `.rules`
 - `bench/run.ts`      `npm run bench`: rounds/s and ns per ant-round for four workloads; `--gate 3` compares with `bench/baseline.json` (`--write` refreshes it)
@@ -42,10 +44,9 @@ Module Workers need http(s): use `npm start`, not file://.
 3. Every push to `main` runs `.github/workflows/ci.yml`: tests, `npm run check`, then deploys `dist/`.
 4. Play at `https://<user>.github.io/<repo>/`; the spec is at `.../reference.html`.
 
-All URLs are relative, so a project site works. In the workshop, **Copy link** puts both brains and the seed in the
-URL fragment (never sent to a server); anyone opening it gets the same match. Edits are also kept in the browser's
+All URLs are relative, so a project site works. In the workshop, **Copy link** puts both brains, the seed and the current round's state hash in the
+URL fragment (never sent to a server); anyone opening it gets the same match, re-run to that round and checked against the hash. The slider and arrow keys seek. Edits are also kept in the browser's
 local storage.
 Defaults: Classic rules only in v1, seed 12345 (Randomize button in the workshop).
 
-Not yet: official dump comparison (needs the contest traces), replay/seek,
-rules compiler, lint, skills.
+Not yet: official dump comparison (needs the contest traces), skills beyond the trail kit.
