@@ -1,6 +1,9 @@
 // Share links: the whole setup travels in the URL fragment, #v1.<base64url(deflate-raw(JSON))>.
 // The fragment is never sent to a server; the decoder caps the inflated size so a crafted link cannot exhaust memory.
-export interface Share { seed: number; brains: [string, string]; map?: string; gen?: number }
+import { RULESETS } from '../src/core/rules.ts';
+import type { RulesId } from '../src/core/rules.ts';
+
+export interface Share { seed: number; brains: [string, string]; map?: string; gen?: number; /** absent = classic */ rules?: RulesId }
 
 export const MAX_INFLATED = 1 << 20;
 
@@ -45,7 +48,8 @@ export async function decodeShare(token: string): Promise<Share | null> {
     if (o.v !== 1 || typeof o.seed !== 'number' || !Number.isFinite(o.seed)) return null;
     if (!Array.isArray(brains) || brains.length !== 2 || !brains.every((b) => typeof b === 'string')) return null;
     if (o.map !== undefined && typeof o.map !== 'string') return null;
-    return { seed: o.seed, brains: [brains[0], brains[1]], map: o.map, gen: typeof o.gen === 'number' ? o.gen : undefined };
+    if (o.rules !== undefined && !(typeof o.rules === 'string' && Object.hasOwn(RULESETS, o.rules))) return null;
+    return { seed: o.seed, brains: [brains[0], brains[1]], map: o.map, gen: typeof o.gen === 'number' ? o.gen : undefined, rules: o.rules };
   } catch {
     return null;
   }

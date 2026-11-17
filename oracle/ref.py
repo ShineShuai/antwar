@@ -11,9 +11,18 @@ import struct
 
 MOD30 = 1 << 30
 
-# Rulesets mirror src/core/rules.ts. A flag this oracle does not implement is rejected, never ignored.
-RULESETS = {'classic': dict(cap=1, ext=False, scare=0, dropfail=False, maxcol=2, altorder=False)}
-IMPLEMENTED = {'cap': 1, 'ext': False, 'scare': 0, 'dropfail': False, 'maxcol': 2, 'altorder': False}  # extend with the ruleset
+# Rulesets mirror src/core/rules.ts (scare = scareThreshold, dropfail = dropOnBlocked, maxcol = maxColonies, altorder = altOrder).
+# `ext` only gates the assembler's extra instructions; official .ant programs, the only format this oracle reads, have none.
+CLASSIC = dict(cap=1, ext=False, scare=0, dropfail=False, maxcol=2, altorder=False)
+RULESETS = {
+    'classic': CLASSIC,
+    'tinyminds': dict(cap=2, ext=True, scare=4, dropfail=True, maxcol=26, altorder=True),
+    'cap2': dict(CLASSIC, cap=2),
+    'scare4': dict(CLASSIC, scare=4),
+    'dropfail': dict(CLASSIC, cap=2, dropfail=True),
+    'altorder': dict(CLASSIC, altorder=True),
+    'colonies': dict(CLASSIC, maxcol=26),
+}
 
 
 class Rng:
@@ -99,12 +108,15 @@ class Ant:
 class World:
     def __init__(self, text, programs, seed, wrap, rules=None):
         self.rules = rules or RULESETS['classic']
-        missing = [k for k, v in self.rules.items() if v != IMPLEMENTED[k]]
-        if missing:
-            raise NotImplementedError('ruleset needs features not implemented yet: ' + ', '.join(missing))
+        r = self.rules
+        bad = [k for k, ok in (('cap', r['cap'] in (1, 2)), ('scare', 0 <= r['scare'] <= 4), ('maxcol', 1 <= r['maxcol'] <= 26)) if not ok]
+        if bad:
+            raise NotImplementedError('ruleset values out of range: ' + ', '.join(bad))
         self.w, self.h, self.rock, self.food, self.base = parse_map(text)
         self.wrap, self.progs, self.rng, self.round = wrap, programs, Rng(seed), 0
         self.ncol = len(programs)
+        if not 1 <= self.ncol <= self.rules['maxcol']:
+            raise ValueError('this ruleset allows 1 to %d colonies, got %d' % (self.rules['maxcol'], self.ncol))
         n = self.w * self.h
         self.grid = [None] * n
         self.marks = [[0] * n for _ in range(self.ncol)]
@@ -167,10 +179,16 @@ class World:
 
     def act_if_surrounded(self, p):
         a = None if p is None else self.grid[p]
-        if a is not None and self.enemies_around(p, a.colony) >= 5:
+        if a is None:
+            return
+        n = self.enemies_around(p, a.colony)
+        if n >= 5:
             self.grid[p] = None
             a.alive = False
             self.food[p] = self.food.get(p, 0) + 3 + a.food
+            a.food = 0
+        elif self.rules['scare'] and n == self.rules['scare']:  # scared: drop the food here, survive
+            self.food[p] = self.food.get(p, 0) + a.food
             a.food = 0
 
     def step(self, a):
@@ -209,6 +227,9 @@ class World:
         elif op == 'move':
             q = self.adjacent(p, a.dir)
             if self.obstructed(q) or self.grid[q] is not None:
+                if self.rules['dropfail'] and a.food == 2:  # a blocked mover carrying two sheds one packet here
+                    self.food[p] = self.food.get(p, 0) + 1
+                    a.food = 1
                 a.pc = ins[2]
             else:
                 self.grid[p] = None
@@ -224,7 +245,8 @@ class World:
 
     def run_round(self):
         self.round += 1
-        for a in self.ants:
+        order = reversed(self.ants) if self.rules['altorder'] and self.round % 2 == 0 else self.ants  # altorder: even rounds descending
+        for a in order:
             self.step(a)
 
     def state_bytes(self):
@@ -255,11 +277,12 @@ def main():
     ap.add_argument('--seed', type=int, default=12345)
     ap.add_argument('--every', type=int, default=0)
     ap.add_argument('--no-wrap', action='store_true')
+    ap.add_argument('--rules', default='classic', choices=sorted(RULESETS))
     o = ap.parse_args()
     progs = [parse_ant(open(f).read()) for f in o.ant]
     if len(progs) == 1:
         progs = progs * 2
-    world = World(open(o.map).read(), progs, o.seed, not o.no_wrap)
+    world = World(open(o.map).read(), progs, o.seed, not o.no_wrap, RULESETS[o.rules])
     for r in range(1, o.rounds + 1):
         world.run_round()
         if o.every and r % o.every == 0:

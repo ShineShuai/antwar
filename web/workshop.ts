@@ -1,6 +1,8 @@
 import { EXAMPLES, STARTER } from './default-ant.ts';
 import { describeCell } from './inspect.ts';
 import { GENERATOR_VERSION } from '../src/core/gen.ts';
+import { RULESETS, RULESET_NAMES } from '../src/core/rules.ts';
+import type { RulesId } from '../src/core/rules.ts';
 import { decodeShare, encodeShare } from './share.ts';
 import { describeBrain, fireRows, lineOfMessage, traceRows, whereIs } from './brain.ts';
 import { mountPersonality } from './personality.ts';
@@ -12,7 +14,9 @@ import type { Layout } from './viewer.ts';
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 const MATCH = 100000;
 const canvas = $<HTMLCanvasElement>('view'), ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-const seedBox = $<HTMLInputElement>('seed');
+const seedBox = $<HTMLInputElement>('seed'), rulesBox = $<HTMLSelectElement>('rules');
+for (const id of Object.keys(RULESETS)) rulesBox.add(new Option(RULESET_NAMES[id] ?? id, id));
+const rulesId = (): RulesId => (Object.hasOwn(RULESETS, rulesBox.value) ? rulesBox.value : 'classic') as RulesId;
 const speedBox = $<HTMLSelectElement>('speed'), goBtn = $<HTMLButtonElement>('go'), statusBox = $('status');
 let worker: Worker | undefined, viewer: ReturnType<typeof createViewer> | undefined;
 let mapText = '', running = false, busy = false, cycle = 0;
@@ -42,11 +46,12 @@ baBox.value = bbBox.value = STARTER;
 // Edits survive a reload (per-browser convenience only); a share link, when present, wins over them.
 const KEY = 'tinyminds.workshop.v1';
 const save = (): void => {
-  try { localStorage.setItem(KEY, JSON.stringify({ seed: seedBox.value, a: baBox.value, b: bbBox.value })); } catch { /* storage may be blocked */ }
+  try { localStorage.setItem(KEY, JSON.stringify({ seed: seedBox.value, a: baBox.value, b: bbBox.value, rules: rulesBox.value })); } catch { /* storage may be blocked */ }
 };
 const restore = (): void => {
   try {
-    const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { seed?: string; a?: string; b?: string } | null;
+    const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { seed?: string; a?: string; b?: string; rules?: string } | null;
+    if (typeof s?.rules === 'string' && Object.hasOwn(RULESETS, s.rules)) rulesBox.value = s.rules;
     if (typeof s?.a === 'string' && typeof s.b === 'string') { baBox.value = s.a; bbBox.value = s.b; }
     if (typeof s?.seed === 'string' && s.seed !== '') seedBox.value = s.seed;
   } catch { /* corrupt or blocked storage: keep the defaults */ }
@@ -55,7 +60,7 @@ async function fromHash(): Promise<boolean> {
   if (!location.hash.startsWith('#v1.')) return false;
   const p = await decodeShare(location.hash.slice(4));
   if (!p) { say('That share link is damaged or too large.', true); return false; }
-  seedBox.value = String(p.seed); baBox.value = p.brains[0]; bbBox.value = p.brains[1]; mapText = p.map ?? '';
+  seedBox.value = String(p.seed); baBox.value = p.brains[0]; bbBox.value = p.brains[1]; mapText = p.map ?? ''; rulesBox.value = p.rules ?? 'classic';
   if (p.gen !== undefined && p.gen !== GENERATOR_VERSION) say('Link made with another world generator: the map may differ.', true);
   return true;
 }
@@ -85,7 +90,7 @@ function note(box: HTMLElement, info: BrainInfo, side: number): void {
   info.warnings.forEach((w) => add('warn', `warning: ${w}`));
 }
 let noteTimer: ReturnType<typeof setTimeout> | undefined;
-const updateNotes = (): void => { note($('na'), describeBrain(baBox.value), 0); note($('nb'), describeBrain(bbBox.value), 1); };
+const updateNotes = (): void => { note($('na'), describeBrain(baBox.value, RULESETS[rulesId()]), 0); note($('nb'), describeBrain(bbBox.value, RULESETS[rulesId()]), 1); };
 const updateNotesSoon = (): void => { clearTimeout(noteTimer); noteTimer = setTimeout(updateNotes, 250); };
 
 function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void {
@@ -112,7 +117,7 @@ function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void 
 
 function start(): void {
   worker?.terminate();
-  infos = [describeBrain(baBox.value), describeBrain(bbBox.value)];
+  infos = [describeBrain(baBox.value, RULESETS[rulesId()]), describeBrain(bbBox.value, RULESETS[rulesId()])];
   selected = null; wantTrack = undefined;
   antBox.textContent = 'Click an ant to follow it.'; traceBox.replaceChildren();
   syncPanels();
@@ -121,7 +126,7 @@ function start(): void {
   busy = false; cycle = 0; setRunning(false);
   worker = new Worker(new URL('./sim-worker.js', import.meta.url), { type: 'module' });
   worker.onmessage = (e: MessageEvent<Reply>) => onMessage(e.data);
-  send({ type: 'init', seed: Number(seedBox.value), mapText, rules: 'classic',
+  send({ type: 'init', seed: Number(seedBox.value), mapText, rules: rulesId(),
     brains: [$<HTMLTextAreaElement>('ba').value, $<HTMLTextAreaElement>('bb').value] });
 }
 
@@ -219,6 +224,7 @@ $('rand').onclick = () => {
   start();
 };
 seedBox.onchange = () => { mapText = ''; save(); start(); };
+rulesBox.onchange = () => { save(); start(); };
 baBox.oninput = bbBox.oninput = () => { save(); updateNotesSoon(); syncPanels(); }; // a shared link is never written over your saved brains until you edit
 $<HTMLInputElement>('world').onchange = async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
@@ -237,7 +243,7 @@ document.querySelectorAll<HTMLSelectElement>('select.ex').forEach((sel) => {
 });
 $('share').onclick = async () => {
   const link = `${location.href.split('#')[0]}#v1.${await encodeShare({
-    seed: Number(seedBox.value), brains: [baBox.value, bbBox.value], map: mapText || undefined, gen: GENERATOR_VERSION })}`;
+    seed: Number(seedBox.value), brains: [baBox.value, bbBox.value], map: mapText || undefined, gen: GENERATOR_VERSION, rules: rulesId() === 'classic' ? undefined : rulesId() })}`;
   history.replaceState(null, '', link);
   try { await navigator.clipboard.writeText(link); say(`Link copied (${link.length} characters).`); } catch { say('Link is in the address bar.'); }
 };

@@ -1,7 +1,8 @@
 // Message handler shared by the Worker and the tests: handle(msg) -> { msg, transfer }.
 import { generateWorld } from '../src/core/gen.ts';
 import { parseMap } from '../src/core/map.ts';
-import { CLASSIC, createSim } from '../src/core/sim.ts';
+import { RULESETS } from '../src/core/rules.ts';
+import { createSim } from '../src/core/sim.ts';
 import type { Sim } from '../src/core/sim.ts';
 import { loadAnyBrain, ruleAt } from '../src/lang/index.ts';
 import type { Compiled } from '../src/lang/index.ts';
@@ -49,8 +50,9 @@ export function createEngine() {
       try {
         switch (m.type) {
           case 'init': {
-            if (m.rules !== undefined && m.rules !== 'classic') throw new Error('v1 accepts only the classic ruleset');
-            const rules = CLASSIC;
+            const id = m.rules ?? 'classic';
+            if (!Object.hasOwn(RULESETS, id)) throw new Error(`unknown ruleset "${String(id)}"; try ${Object.keys(RULESETS).join(', ')}`);
+            const rules = RULESETS[id];
             const map = m.mapText ? parseMap(m.mapText) : generateWorld(m.seed);
             const loaded = m.brains.map((text) => loadAnyBrain(text, rules));
             if (loaded.length === 1) loaded.push(loaded[0]);

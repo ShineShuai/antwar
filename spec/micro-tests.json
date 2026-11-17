@@ -872,6 +872,565 @@
     }
    ],
    "wrap": false
+  },
+  {
+   "name": "scare4: exactly 4 enemy neighbours make a carrier drop its food and survive",
+   "spec": "Combat tab, flag scare4: exactly 4 enemies -> the ant drops all carried food and survives (>= 5 still kills). The victim picks up at round 16; the 4th enemy arrives at round 18",
+   "map": "8\n6\n. . . . . . . .\n. . - . . # . .\n. . . + 2 - # .\n. . . - - # . .\n. . . . . . . .\n. . . . . . . .\n",
+   "ants": [
+    "Move 1 0\nPickUp 2 1\nTurn Left 2",
+    "Drop 1\nDrop 2\nDrop 3\nDrop 4\nDrop 5\nDrop 6\nDrop 7\nDrop 8\nDrop 9\nDrop 10\nDrop 11\nDrop 12\nDrop 13\nDrop 14\nDrop 15\nDrop 16\nDrop 17\nMove 18 17\nDrop 18"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 1,
+       "alive": true,
+       "x": 4,
+       "y": 2
+      }
+     ]
+    },
+    {
+     "round": 16,
+     "ants": [
+      {
+       "id": 1,
+       "alive": true,
+       "food": 1,
+       "pc": 2
+      }
+     ],
+     "cells": [
+      {
+       "x": 4,
+       "y": 2,
+       "food": 1
+      }
+     ]
+    },
+    {
+     "round": 18,
+     "ants": [
+      {
+       "id": 1,
+       "alive": true,
+       "food": 0,
+       "x": 4,
+       "y": 2
+      },
+      {
+       "id": 0,
+       "alive": true,
+       "x": 3,
+       "y": 1
+      }
+     ],
+     "cells": [
+      {
+       "x": 4,
+       "y": 2,
+       "food": 2
+      }
+     ]
+    }
+   ],
+   "rules": "scare4",
+   "wrap": false
+  },
+  {
+   "name": "scare off (Classic): four enemies leave a carrier alone, still carrying",
+   "spec": "Combat tab: Classic has no scare rule; only >= 5 kills",
+   "map": "8\n6\n. . . . . . . .\n. . - . . # . .\n. . . + 2 - # .\n. . . - - # . .\n. . . . . . . .\n. . . . . . . .\n",
+   "ants": [
+    "Move 1 0\nPickUp 2 1\nTurn Left 2",
+    "Drop 1\nDrop 2\nDrop 3\nDrop 4\nDrop 5\nDrop 6\nDrop 7\nDrop 8\nDrop 9\nDrop 10\nDrop 11\nDrop 12\nDrop 13\nDrop 14\nDrop 15\nDrop 16\nDrop 17\nMove 18 17\nDrop 18"
+   ],
+   "checks": [
+    {
+     "round": 18,
+     "ants": [
+      {
+       "id": 1,
+       "alive": true,
+       "food": 1,
+       "x": 4,
+       "y": 2
+      }
+     ],
+     "cells": [
+      {
+       "x": 4,
+       "y": 2,
+       "food": 1
+      }
+     ]
+    }
+   ],
+   "wrap": false
+  },
+  {
+   "name": "cap 2: two packets can be carried, a third pickup fails",
+   "spec": "Semantics tab, CAP = 2: PickUp fails when has_food >= CAP",
+   "map": "6\n4\n# # # # # #\n# + 5 # . #\n# # # # # #\n# # # # # #\n",
+   "ants": [
+    "Move 1 0\nPickUp 2 1\nPickUp 3 3\nPickUp 4 5\nDrop 4\nDrop 5"
+   ],
+   "checks": [
+    {
+     "round": 16,
+     "ants": [
+      {
+       "id": 0,
+       "food": 1,
+       "pc": 2
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 4
+      }
+     ]
+    },
+    {
+     "round": 17,
+     "ants": [
+      {
+       "id": 0,
+       "food": 2,
+       "pc": 3
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 3
+      }
+     ]
+    },
+    {
+     "round": 18,
+     "ants": [
+      {
+       "id": 0,
+       "food": 2,
+       "pc": 5
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 3
+      }
+     ]
+    }
+   ],
+   "rules": "cap2",
+   "wrap": false
+  },
+  {
+   "name": "dropfail: a blocked mover carrying two drops one packet here and keeps one",
+   "spec": "Semantics tab, flag dropfail: move failure with has_food == 2 -> food_at[pos] += 1, has_food = 1, then the else branch",
+   "map": "6\n4\n# # # # # #\n# + 5 # . #\n# # # # # #\n# # # # # #\n",
+   "ants": [
+    "Move 1 0\nPickUp 2 1\nPickUp 3 3\nMove 4 5\nDrop 4\nDrop 5"
+   ],
+   "checks": [
+    {
+     "round": 17,
+     "ants": [
+      {
+       "id": 0,
+       "food": 2,
+       "pc": 3
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 3
+      }
+     ]
+    },
+    {
+     "round": 18,
+     "ants": [
+      {
+       "id": 0,
+       "food": 1,
+       "pc": 5,
+       "x": 2,
+       "y": 1
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 4
+      }
+     ]
+    }
+   ],
+   "rules": "dropfail",
+   "wrap": false
+  },
+  {
+   "name": "dropfail: a blocked mover carrying one keeps it",
+   "spec": "Semantics tab, flag dropfail: only has_food == 2 sheds",
+   "map": "6\n4\n# # # # # #\n# + 5 # . #\n# # # # # #\n# # # # # #\n",
+   "ants": [
+    "Move 1 0\nPickUp 2 1\nMove 3 3\nDrop 3"
+   ],
+   "checks": [
+    {
+     "round": 17,
+     "ants": [
+      {
+       "id": 0,
+       "food": 1,
+       "pc": 3
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 4
+      }
+     ]
+    }
+   ],
+   "rules": "dropfail",
+   "wrap": false
+  },
+  {
+   "name": "cap 2 without dropfail: a blocked mover carrying two keeps both",
+   "spec": "Semantics tab: without the dropfail flag a failed move changes nothing but the pc",
+   "map": "6\n4\n# # # # # #\n# + 5 # . #\n# # # # # #\n# # # # # #\n",
+   "ants": [
+    "Move 1 0\nPickUp 2 1\nPickUp 3 3\nMove 4 5\nDrop 4\nDrop 5"
+   ],
+   "checks": [
+    {
+     "round": 18,
+     "ants": [
+      {
+       "id": 0,
+       "food": 2,
+       "pc": 5
+      }
+     ],
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "food": 3
+      }
+     ]
+    }
+   ],
+   "rules": "cap2",
+   "wrap": false
+  },
+  {
+   "name": "Classic order: both ants move at round 4, id 0 acts first and wins the free cell",
+   "spec": "Round order: ascending id every round",
+   "map": "7\n4\n# # # # # # #\n# + . - . . #\n# # # # # # #\n# # # # # # #\n",
+   "ants": [
+    "Drop 1\nDrop 2\nDrop 3\nMove 4 4\nDrop 4",
+    "Turn Left 1\nTurn Left 2\nTurn Left 3\nMove 4 4\nDrop 4"
+   ],
+   "checks": [
+    {
+     "round": 4,
+     "ants": [
+      {
+       "id": 0,
+       "x": 2,
+       "y": 1,
+       "rest": 14
+      },
+      {
+       "id": 1,
+       "x": 3,
+       "y": 1,
+       "rest": 0
+      }
+     ]
+    }
+   ],
+   "wrap": false
+  },
+  {
+   "name": "altorder: even rounds run ants in descending id order, so id 1 wins the free cell at round 4",
+   "spec": "Combat tab, flag altorder (reading: odd rounds ascending, even rounds descending, so no colony always moves first)",
+   "map": "7\n4\n# # # # # # #\n# + . - . . #\n# # # # # # #\n# # # # # # #\n",
+   "ants": [
+    "Drop 1\nDrop 2\nDrop 3\nMove 4 4\nDrop 4",
+    "Turn Left 1\nTurn Left 2\nTurn Left 3\nMove 4 4\nDrop 4"
+   ],
+   "checks": [
+    {
+     "round": 4,
+     "ants": [
+      {
+       "id": 0,
+       "x": 1,
+       "y": 1,
+       "rest": 0
+      },
+      {
+       "id": 1,
+       "x": 2,
+       "y": 1,
+       "rest": 14
+      }
+     ]
+    }
+   ],
+   "rules": "altorder",
+   "wrap": false
+  },
+  {
+   "name": "altorder: odd rounds are ascending: id 0 wins the free cell at round 5",
+   "spec": "Same flag, odd round",
+   "map": "7\n4\n# # # # # # #\n# + . - . . #\n# # # # # # #\n# # # # # # #\n",
+   "ants": [
+    "Drop 1\nDrop 2\nDrop 3\nDrop 4\nMove 5 5\nDrop 5",
+    "Turn Left 1\nTurn Left 2\nTurn Left 3\nDrop 4\nMove 5 5\nDrop 5"
+   ],
+   "checks": [
+    {
+     "round": 5,
+     "ants": [
+      {
+       "id": 0,
+       "x": 2,
+       "y": 1,
+       "rest": 14
+      },
+      {
+       "id": 1,
+       "x": 3,
+       "y": 1,
+       "rest": 0
+      }
+     ]
+    }
+   ],
+   "rules": "altorder",
+   "wrap": false
+  },
+  {
+   "name": "3 colonies: FoeMarker sees the markers of every other colony, from either side",
+   "spec": "Ant tab: foemarker = any marker of any other colony (a..z colonies, maxColonies > 2)",
+   "map": "6\n4\n. . . . . .\n. a b . . .\n. c . . . .\n. . . . . .\n",
+   "ants": [
+    "Mark 2 1\nDrop 1",
+    "Turn Left 1\nTurn Left 2\nTurn Left 3\nSense Ahead 4 5 FoeMarker\nDrop 4\nDrop 5",
+    "Turn Left 1\nSense Ahead 2 3 FoeMarker\nDrop 2\nDrop 3"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "cells": [
+      {
+       "x": 1,
+       "y": 1,
+       "marks": [
+        4,
+        0,
+        0
+       ]
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "ants": [
+      {
+       "id": 2,
+       "pc": 2
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "ants": [
+      {
+       "id": 1,
+       "pc": 4
+      }
+     ]
+    }
+   ],
+   "rules": "colonies",
+   "wrap": false
+  },
+  {
+   "name": "3 colonies: enemies of two different colonies together kill an ant",
+   "spec": "Combat tab: >= 5 enemy neighbours (of any other colony) kill; the layout of the five-neighbour test with two attackers from colony 2",
+   "map": "8\n6\n. . . . . . . .\n. . . . - c # .\n. . . - . + . .\n. . . . c - # .\n. . . . . . . .\n. . . . . . . .\n",
+   "ants": [
+    "Drop 0",
+    "Move 0 0",
+    "Move 0 0"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 3,
+       "alive": false
+      },
+      {
+       "id": 2,
+       "x": 4,
+       "y": 2,
+       "rest": 14
+      },
+      {
+       "id": 0,
+       "alive": true,
+       "x": 4,
+       "y": 1
+      },
+      {
+       "id": 1,
+       "x": 5,
+       "y": 1
+      },
+      {
+       "id": 4,
+       "x": 4,
+       "y": 3
+      },
+      {
+       "id": 5,
+       "x": 5,
+       "y": 3
+      }
+     ],
+     "cells": [
+      {
+       "x": 5,
+       "y": 2,
+       "food": 3
+      }
+     ]
+    }
+   ],
+   "rules": "colonies"
+  },
+  {
+   "name": "3 colonies: FoeHome is any other colony nest, including colony 2",
+   "spec": "Ant tab: foehome = a nest of another colony",
+   "map": "6\n4\n. . . . . .\n. a c . . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "Sense Ahead 1 2 FoeHome\nDrop 1\nDrop 2",
+    "Drop 0",
+    "Drop 0"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 1
+      }
+     ]
+    }
+   ],
+   "rules": "colonies",
+   "wrap": false
+  },
+  {
+   "name": "scare4: three enemy neighbours do nothing to a carrier",
+   "spec": "Combat tab, flag scare4: only exactly 4 foes scare (3 do not); the 3rd enemy arrives at round 18",
+   "map": "8\n6\n. . . . . . . .\n. . - . . # . .\n. . . + 2 - # .\n. . . . - # . .\n. . . . . . . .\n. . . . . . . .\n",
+   "ants": [
+    "Move 1 0\nPickUp 2 1\nTurn Left 2",
+    "Drop 1\nDrop 2\nDrop 3\nDrop 4\nDrop 5\nDrop 6\nDrop 7\nDrop 8\nDrop 9\nDrop 10\nDrop 11\nDrop 12\nDrop 13\nDrop 14\nDrop 15\nDrop 16\nDrop 17\nMove 18 17\nDrop 18"
+   ],
+   "checks": [
+    {
+     "round": 18,
+     "ants": [
+      {
+       "id": 1,
+       "alive": true,
+       "food": 1,
+       "x": 4,
+       "y": 2
+      }
+     ],
+     "cells": [
+      {
+       "x": 4,
+       "y": 2,
+       "food": 1
+      }
+     ]
+    }
+   ],
+   "rules": "scare4",
+   "wrap": false
+  },
+  {
+   "name": "3 colonies: colony 2 markers are foe markers for colonies 0 and 1",
+   "spec": "Ant tab: foemarker = any marker of any other colony; here the marker belongs to the last colony and both neighbours sense it",
+   "map": "6\n4\n. . . . . .\n. a c b . .\n. . . . . .\n. . . . . .\n",
+   "ants": [
+    "Drop 1\nSense Ahead 2 3 FoeMarker\nDrop 2\nDrop 3",
+    "Turn Left 1\nTurn Left 2\nTurn Left 3\nSense Ahead 4 5 FoeMarker\nDrop 4\nDrop 5",
+    "Mark 2 1\nDrop 1"
+   ],
+   "checks": [
+    {
+     "round": 1,
+     "cells": [
+      {
+       "x": 2,
+       "y": 1,
+       "marks": [
+        0,
+        0,
+        4
+       ]
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "ants": [
+      {
+       "id": 0,
+       "pc": 2
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "ants": [
+      {
+       "id": 2,
+       "pc": 4
+      }
+     ]
+    }
+   ],
+   "rules": "colonies",
+   "wrap": false
   }
  ]
 }

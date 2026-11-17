@@ -1,5 +1,6 @@
 // Messages between the page and the simulation Worker.
 import type { Frame } from '../src/core/types.ts';
+import type { RulesId } from '../src/core/rules.ts';
 
 /** Cumulative ant-rounds spent in each rule's test (the senses) and action, by rule id, since the last init. */
 export interface Fires { test: number[]; act: number[]; glue: number; total: number }
@@ -8,7 +9,7 @@ export interface Fires { test: number[]; act: number[]; glue: number; total: num
 export type Trace = number[];
 
 export type Request =
-  | { type: 'init'; seed: number; mapText?: string; rules?: 'classic'; brains: string[] }
+  | { type: 'init'; seed: number; mapText?: string; rules?: RulesId; brains: string[] }
   | { type: 'track'; /** ant id from the frame, or null to stop */ ant: number | null }
   | { type: 'run'; n: number; /** count which rule each acting ant is in (rules brains only; slower) */ explain?: boolean }
   | { type: 'frame' };

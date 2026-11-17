@@ -93,8 +93,15 @@ test('describeCell lists food, scents and ants', () => {
   assert.equal(describeCell({ food, marks, ants }, W, H, 0), 'cell 0,0');
 });
 
-test('engine accepts only the classic ruleset in v1', () => {
+test('engine runs any named ruleset and refuses an unknown one', () => {
   const eng = createEngine();
+  for (const id of ['classic', 'tinyminds', 'scare4', 'dropfail']) {
+    assert.equal(eng.handle({ type: 'init', seed: 1, rules: id as 'classic', brains: [STARTER] }).msg.type, 'ready', id);
+  }
   const bad = eng.handle({ type: 'init', seed: 1, rules: 'tiny' as 'classic', brains: [STARTER] }).msg as Of<'error'>;
-  assert.match(bad.message, /only the classic ruleset/);
+  assert.match(bad.message, /unknown ruleset "tiny"; try classic, tinyminds/);
+  // extended instructions need a ruleset that has them
+  const ext = 'direction 0 else 0\ngoto 0';
+  assert.equal(eng.handle({ type: 'init', seed: 1, rules: 'classic', brains: [ext] }).msg.type, 'error');
+  assert.equal(eng.handle({ type: 'init', seed: 1, rules: 'tinyminds', brains: [ext] }).msg.type, 'ready');
 });

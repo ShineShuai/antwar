@@ -121,9 +121,11 @@ test('daily seed: stable hash of the UTC date, 30-bit, differs per day', async (
   assert.equal(utcDate(new Date('2026-11-10T00:00:00Z')), '2026-11-10');
 });
 
-test('v1 supports at most two colonies', () => {
+test('Classic allows at most two colonies; a ruleset with maxColonies allows more', () => {
   const P = parseIcfp('Drop 0', CLASSIC);
-  assert.throws(() => createSim({ map: strip(10), programs: [P, P, P] }), /one or two colonies/);
+  assert.throws(() => createSim({ map: strip(10), programs: [P, P, P] }), /allows 1 to 2 colonies, got 3/);
+  assert.throws(() => createSim({ map: strip(10), programs: [] }), /allows 1 to 2 colonies, got 0/);
+  assert.doesNotThrow(() => createSim({ map: strip(10), programs: [P, P, P], rules: { ...CLASSIC, maxColonies: 3 } }));
 });
 
 test('canonical state stream: layout, hash, snapshot/restore round trip', async () => {
