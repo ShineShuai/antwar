@@ -15,9 +15,10 @@ Spec: `reference.html`.
 - `src/core/rng.ts`    ICFP 2004 generator (matches the official x0..x99 for s0 = 12345)
 - `src/core/asm.ts`    `assemble()` flat `.asm` with labels (`goto` is a zero-cost edge, resolved at load); `parseIcfp()` official `.ant`; `loadBrain()`
 - `src/core/map.ts`    `parseMap()` / `formatMap()` official world files
-- `src/core/gen.ts`    `generateWorld(seed)`: Classic contest world (spec 3.1); `node cli/gen.ts SEED`
+- `src/core/gen.ts`    `generateWorld(seed)`: Classic contest world (spec 3.1); `node cli/gen.ts SEED [--symmetric]`
 - `src/core/isa.ts`    the instruction table; `src/core/rules.ts` the rulesets registry: classic, tinyminds and one-flag bundles (carry two, dropfail, scare4, altorder, up to 26 colonies); see `docs/EXTENDING.md`
 - `src/core/seed.ts`   `dailySeed(date)` = hash of the UTC date string (the client supplies the date: `web/clock.ts`)
+- `src/core/match.ts`  `playGame()`, `schedule()`, 2/1/0 `standings()`, `pairwise()`, `colourSplit()`; `src/core/gen.ts` also has the point-mirror `SYMMETRIC_WORLD`; `docs/MATCH.md`
 - `src/core/replay.ts` `createReplay()` (hash checkpoints every 1,000 rounds, keyframes every 2,000, `seek`), replay descriptor `record()`/`verify()`; `docs/REPLAY.md`
 - `src/core/sim.ts`    `createSim()`, canonical state stream `snapshot()`/`restore()`, `hash()` = FNV-1a of it; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,
   direction/payload). v1: two colonies, no scare rule, no drop on blocked move
@@ -25,6 +26,7 @@ Spec: `reference.html`.
 - `src/lang/`         rules compiler (levels 1-2, trail kit): `compileRules(text)`; `node cli/rc.ts FILE.rules [--asm] [--fire-counts]`; see `docs/RULES.md`
 - `src/lang/templates.ts` level 0: templates, sliders, role mix -> rules text; `node cli/personality.ts --template trail --mix 70/20/10`; `web/personality.ts` the controls
 - `web/brain.ts`      what the workshop shows under an editor (size, lint, errors), the explain-why rows, and `whereIs`/`traceRows`: a pc pointed back at a rule or source line (click an ant to follow it)
+- `cli/tourney.ts`    `node cli/tourney.ts A B C [--seeds 20] [--symmetric] [--jobs 4]`: round-robin, both colours, 2/1/0, standings with intervals, pairwise matrix
 - `cli/replay.ts`     `record`, `verify`, `seek` replay descriptors (JSON: inputs + hashes)
 - `cli/eval.ts`       `npm run eval -- --ant FILE`: food home, time to 25/50/90%, carrier statistics over generated worlds; `--vs` plays two brains and counts the packets each steals from the other's nest (`docs/STEALING.md`)
 - `ants/`             hand-designed trail ants (generators + generated `.asm`; results in `docs/TRAILS.md`) and the same ants as `.rules`
