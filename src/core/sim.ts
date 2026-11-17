@@ -31,7 +31,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
   const { W, H } = map, N = W * H, ncol = programs.length;
   const missing = unsupported(rules); // VARIATION POINT (all flags): see docs/EXTENDING.md
   if (missing.length) throw new Error(`ruleset needs features not implemented yet: ${missing.join(', ')}`);
-  if (ncol < 1 || ncol > rules.maxColonies) throw new Error('v1 supports one or two colonies'); // VARIATION POINT: maxColonies
+  if (ncol < 1 || ncol > rules.maxColonies) throw new Error(`this ruleset allows 1 to ${rules.maxColonies} colonies, got ${ncol}`); // VARIATION POINT: maxColonies
   if (N > 65535) throw new Error('world too large: cells must fit u16 with 0xFFFF reserved');
   if (wrap && H % 2) throw new Error('wrapped worlds need an even height');
   const rock = Uint8Array.from(map.rock), food = Uint16Array.from(map.food), hill = map.hill;
@@ -102,9 +102,12 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
   function check(c: Cell | -1): void { // check_for_surrounded_ant_at
     if (c === -1) return;
     const a = antAt(c);
-    // VARIATION POINT: scareThreshold (an ant with exactly that many enemy neighbours drops its food and survives)
-    if (a !== -1 && enemies(c, acol[a]) >= 5) {
+    if (a === -1) return;
+    const n = enemies(c, acol[a]);
+    if (n >= 5) {
       occ[c] = -1; alive[a] = 0; give(c, 3 + has[a]); has[a] = 0;
+    } else if (rules.scareThreshold !== 0 && n === rules.scareThreshold && has[a]) { // VARIATION POINT: scareThreshold (0 = off; exactly that many foes: drop the food, survive)
+      give(c, has[a]); has[a] = 0;
     }
   }
   function surround(c: Cell): void {
@@ -129,9 +132,10 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
       case OP.UNMARK: marks[col * N + p] &= ~(1 << a); pc[i] = P.t[s]; break;
       case OP.MOVE: {
         const q = nbr(p, dir[i] as Dir);
-        // VARIATION POINT: dropOnBlocked (a blocked mover carrying two drops one packet here)
-        if (q === -1 || rock[q] || occ[q] >= 0) pc[i] = P.e[s];
-        else {
+        if (q === -1 || rock[q] || occ[q] >= 0) {
+          if (rules.dropOnBlocked && has[i] === 2) { give(p, 1); has[i] = 1; } // VARIATION POINT: dropOnBlocked (a blocked mover carrying two sheds one packet)
+          pc[i] = P.e[s];
+        } else {
           occ[p] = -1; occ[q] = i; apos[i] = q; pc[i] = P.t[s]; wake[i] = cycle + ACT_EVERY;
           surround(q);
         }
@@ -155,8 +159,13 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
   const sim = {
     W, H, ants: n, food, rock, marks,
     get cycle(): number { return cycle; },
-    // VARIATION POINT: altOrder (alternate which colony acts first); Classic: ascending id
-    step(): void { cycle++; for (let i = 0; i < n; i++) stepAnt(i as AntId); },
+    // VARIATION POINT: altOrder. Classic: ascending id every round. With altOrder odd rounds run ascending and even rounds
+    // descending, so no colony always moves first.
+    step(): void {
+      cycle++;
+      if (rules.altOrder && cycle % 2 === 0) for (let i = n - 1; i >= 0; i--) stepAnt(i as AntId);
+      else for (let i = 0; i < n; i++) stepAnt(i as AntId);
+    },
     run(rounds: number): void { for (let r = 0; r < rounds; r++) sim.step(); },
     /** Food on each colony's hill cells (carried food does not count). */
     score: (): number[] => hillCells.map((cs) => cs.reduce((sum, p) => sum + food[p], 0)),

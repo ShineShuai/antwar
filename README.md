@@ -16,7 +16,7 @@ Spec: `reference.html`.
 - `src/core/asm.ts`    `assemble()` flat `.asm` with labels (`goto` is a zero-cost edge, resolved at load); `parseIcfp()` official `.ant`; `loadBrain()`
 - `src/core/map.ts`    `parseMap()` / `formatMap()` official world files
 - `src/core/gen.ts`    `generateWorld(seed)`: Classic contest world (spec 3.1); `node cli/gen.ts SEED`
-- `src/core/isa.ts`    the instruction table; `src/core/rules.ts` the rulesets registry (see `docs/EXTENDING.md`)
+- `src/core/isa.ts`    the instruction table; `src/core/rules.ts` the rulesets registry: classic, tinyminds and one-flag bundles (carry two, dropfail, scare4, altorder, up to 26 colonies); see `docs/EXTENDING.md`
 - `src/core/seed.ts`   `dailySeed(date)` = hash of the UTC date string (the client supplies the date: `web/clock.ts`)
 - `src/core/sim.ts`    `createSim()`, canonical state stream `snapshot()`/`restore()`, `hash()` = FNV-1a of it; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,
   direction/payload). v1: two colonies, no scare rule, no drop on blocked move

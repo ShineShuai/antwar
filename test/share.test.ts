@@ -9,8 +9,8 @@ test('share link round trip: seed, both brains, optional map; URL-safe token', a
   const s = { seed: 191274032, brains: [EXAMPLES[0].text, 'ünïcode ; ✓\nMove 0 0'] as [string, string], map: '4\n4\n.\n', gen: 2 };
   const token = await encodeShare(s);
   assert.match(token, /^[A-Za-z0-9_-]+$/);
-  assert.deepEqual(await decodeShare(token), s);
-  assert.deepEqual(await decodeShare(await encodeShare({ seed: 1, brains: ['a', 'b'] })), { seed: 1, brains: ['a', 'b'], map: undefined, gen: undefined });
+  assert.deepEqual(await decodeShare(token), { ...s, rules: undefined });
+  assert.deepEqual(await decodeShare(await encodeShare({ seed: 1, brains: ['a', 'b'] })), { seed: 1, brains: ['a', 'b'], map: undefined, gen: undefined, rules: undefined });
 });
 
 test('share link decoder rejects garbage, wrong shapes and oversized payloads', async () => {
@@ -33,4 +33,15 @@ test('share link decoder rejects garbage, wrong shapes and oversized payloads', 
 
 test('every built-in example loads as a Classic brain', () => {
   for (const e of EXAMPLES) assert.ok(loadAnyBrain(e.text, CLASSIC).program.n > 0, e.name);
+});
+
+test('share link carries the ruleset when it is not Classic, and refuses an unknown one', async () => {
+  const s = { seed: 5, brains: ['a', 'b'] as [string, string], rules: 'tinyminds' as const };
+  assert.deepEqual(await decodeShare(await encodeShare(s)), { ...s, map: undefined, gen: undefined });
+  const raw = async (o: unknown): Promise<string> => {
+    const out = await new Response(new Blob([new TextEncoder().encode(JSON.stringify(o))]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer();
+    return Buffer.from(out).toString('base64url');
+  };
+  assert.equal(await decodeShare(await raw({ v: 1, seed: 1, brains: ['a', 'b'], rules: 'wizard' })), null);
+  assert.equal(await decodeShare(await raw({ v: 1, seed: 1, brains: ['a', 'b'], rules: 7 })), null);
 });
