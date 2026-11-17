@@ -18,6 +18,7 @@ const seedBox = $<HTMLInputElement>('seed'), rulesBox = $<HTMLSelectElement>('ru
 for (const id of Object.keys(RULESETS)) rulesBox.add(new Option(RULESET_NAMES[id] ?? id, id));
 const rulesId = (): RulesId => (Object.hasOwn(RULESETS, rulesBox.value) ? rulesBox.value : 'classic') as RulesId;
 const speedBox = $<HTMLSelectElement>('speed'), goBtn = $<HTMLButtonElement>('go'), statusBox = $('status');
+const tl = $<HTMLInputElement>('tl'), verifyBox = $('verify');
 let worker: Worker | undefined, viewer: ReturnType<typeof createViewer> | undefined;
 let mapText = '', running = false, busy = false, cycle = 0;
 let geom: { L: Layout; W: number; H: number } | undefined, last: Extract<Reply, { type: 'frame' }> | undefined;
@@ -26,6 +27,12 @@ const baBox = $<HTMLTextAreaElement>('ba'), bbBox = $<HTMLTextAreaElement>('bb')
 const explainBox = $<HTMLInputElement>('explainOn'), firesBox = $('fires'), antBox = $('ant'), traceBox = $('trace');
 let selected: number | null = null, selectedCol = 0; // id and colony of the ant being followed
 let wantTrack: number | null | undefined; // a track request waiting for the Worker to be free (undefined = none)
+let wantSeek: number | undefined; // the newest seek request waiting for the Worker (scrubbing sends many; only the last matters)
+let scrubbing = false;
+let expect: { round: number; hash: number } | null = null; // from a share link: seek there once the match is ready
+let check: { round: number; hash: number } | null = null; // being verified: compared with the frame at that round
+let startedKey = ''; // the inputs of the running match: a link only carries a result while the editors still match them
+const keyNow = (): string => JSON.stringify([baBox.value, bbBox.value, seedBox.value, rulesBox.value, mapText]);
 const DIRS = ['E', 'SE', 'SW', 'W', 'NW', 'NE'];
 
 /** Select a line of an editor (and scroll it into view): used by trace rows, rule rows and lint messages. */
@@ -61,6 +68,7 @@ async function fromHash(): Promise<boolean> {
   const p = await decodeShare(location.hash.slice(4));
   if (!p) { say('That share link is damaged or too large.', true); return false; }
   seedBox.value = String(p.seed); baBox.value = p.brains[0]; bbBox.value = p.brains[1]; mapText = p.map ?? ''; rulesBox.value = p.rules ?? 'classic';
+  expect = p.result ?? null;
   if (p.gen !== undefined && p.gen !== GENERATOR_VERSION) say('Link made with another world generator: the map may differ.', true);
   return true;
 }
@@ -118,7 +126,8 @@ function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void 
 function start(): void {
   worker?.terminate();
   infos = [describeBrain(baBox.value, RULESETS[rulesId()]), describeBrain(bbBox.value, RULESETS[rulesId()])];
-  selected = null; wantTrack = undefined;
+  selected = null; wantTrack = undefined; wantSeek = undefined; check = null;
+  verifyBox.textContent = ''; verifyBox.className = ''; tl.value = '0'; startedKey = keyNow();
   antBox.textContent = 'Click an ant to follow it.'; traceBox.replaceChildren();
   syncPanels();
   firesBox.replaceChildren();
@@ -177,11 +186,20 @@ function onMessage(m: Reply): void {
     const w = Math.max(4, Math.min(10, Math.floor(900 / (m.W + 1)))), L = layout(m.W, m.H, w);
     canvas.width = L.width; canvas.height = L.height; geom = { L, W: m.W, H: m.H };
     viewer = createViewer(ctx, m, L, matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT);
-    send({ type: 'frame' });
+    if (expect && expect.round > 0) { check = expect; busy = true; say(`Re-running to round ${expect.round} to check the link…`); send({ type: 'seek', round: expect.round }); } else send({ type: 'frame' });
+    expect = null;
     return;
   }
   busy = false; cycle = m.cycle;
   last = m;
+  if (!scrubbing) tl.value = String(cycle);
+  if (check && cycle === check.round) {
+    const ok = m.hash === check.hash;
+    verifyBox.className = ok ? 'ok' : 'err';
+    verifyBox.textContent = ok ? `✓ verified locally: the state hash at round ${cycle} matches the link`
+      : `✗ unverified: the link says hash ${check.hash} at round ${cycle}, this run gives ${m.hash} (other version or edited link)`;
+    check = null;
+  }
   viewer?.draw(m, { marks: marksBox.checked, selected });
   renderAnt(m);
   renderFires(m.fires);
@@ -189,6 +207,7 @@ function onMessage(m: Reply): void {
   say(`Round ${cycle} | A ${a} (${m.alive[0]} ants) | B ${b} (${m.alive[1]} ants)` +
     (done ? ` | ${a === b ? 'draw' : a > b ? 'A wins' : 'B wins'}` : ''));
   if (wantTrack !== undefined) { const t = wantTrack; wantTrack = undefined; busy = true; send({ type: 'track', ant: t }); return; }
+  if (wantSeek !== undefined) { const r = wantSeek; wantSeek = undefined; busy = true; send({ type: 'seek', round: r }); return; }
   if (done) setRunning(false); else if (running) requestAnimationFrame(pump);
 }
 
@@ -214,6 +233,24 @@ canvas.onclick = (e) => {
     break;
   }
 };
+/** Jump to a round (clamped to the match): pauses, and queues behind a request in flight. */
+function seekTo(round: number): void {
+  const r = Math.max(0, Math.min(MATCH, Math.trunc(round)));
+  setRunning(false);
+  if (busy) wantSeek = r; else { busy = true; send({ type: 'seek', round: r }); }
+}
+tl.oninput = () => seekTo(Number(tl.value));
+tl.onpointerdown = () => { scrubbing = true; };
+addEventListener('pointerup', () => { scrubbing = false; });
+addEventListener('keydown', (e) => { // reference, client UI: Space play/pause; left/right step 1 round (Shift = 100)
+  const t = e.target;
+  if (e.ctrlKey || e.metaKey || e.altKey || (t instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(t.tagName) && t !== tl)) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    if (t === tl) return; // the slider steps itself and its input event seeks
+    e.preventDefault();
+    seekTo(cycle + (e.key === 'ArrowLeft' ? -1 : 1) * (e.shiftKey ? 100 : 1));
+  } else if (e.key === ' ' && !(t instanceof HTMLElement && t.tagName === 'BUTTON')) { e.preventDefault(); setRunning(!running); }
+});
 goBtn.onclick = () => setRunning(!running);
 $('step').onclick = () => { setRunning(false); if (!busy) { busy = true; send({ type: 'run', n: 1, explain: explainBox.checked }); } };
 $('reset').onclick = start;
@@ -243,7 +280,8 @@ document.querySelectorAll<HTMLSelectElement>('select.ex').forEach((sel) => {
 });
 $('share').onclick = async () => {
   const link = `${location.href.split('#')[0]}#v1.${await encodeShare({
-    seed: Number(seedBox.value), brains: [baBox.value, bbBox.value], map: mapText || undefined, gen: GENERATOR_VERSION, rules: rulesId() === 'classic' ? undefined : rulesId() })}`;
+    seed: Number(seedBox.value), brains: [baBox.value, bbBox.value], map: mapText || undefined, gen: GENERATOR_VERSION, rules: rulesId() === 'classic' ? undefined : rulesId(),
+    result: last && cycle > 0 && startedKey === keyNow() ? { round: cycle, hash: last.hash } : undefined })}`;
   history.replaceState(null, '', link);
   try { await navigator.clipboard.writeText(link); say(`Link copied (${link.length} characters).`); } catch { say('Link is in the address bar.'); }
 };

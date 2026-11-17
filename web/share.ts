@@ -2,8 +2,10 @@
 // The fragment is never sent to a server; the decoder caps the inflated size so a crafted link cannot exhaust memory.
 import { RULESETS } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
+import { MAX_ROUNDS } from '../src/core/replay.ts';
 
-export interface Share { seed: number; brains: [string, string]; map?: string; gen?: number; /** absent = classic */ rules?: RulesId }
+/** `result`: the state hash the sender saw at `round`; the opener re-runs to that round and says whether it matches. */
+export interface Share { seed: number; brains: [string, string]; map?: string; gen?: number; /** absent = classic */ rules?: RulesId; result?: { round: number; hash: number } }
 
 export const MAX_INFLATED = 1 << 20;
 
@@ -49,7 +51,14 @@ export async function decodeShare(token: string): Promise<Share | null> {
     if (!Array.isArray(brains) || brains.length !== 2 || !brains.every((b) => typeof b === 'string')) return null;
     if (o.map !== undefined && typeof o.map !== 'string') return null;
     if (o.rules !== undefined && !(typeof o.rules === 'string' && Object.hasOwn(RULESETS, o.rules))) return null;
-    return { seed: o.seed, brains: [brains[0], brains[1]], map: o.map, gen: typeof o.gen === 'number' ? o.gen : undefined, rules: o.rules };
+    let result: Share['result'];
+    if (o.result !== undefined) {
+      const r = o.result as Partial<NonNullable<Share['result']>> | null;
+      if (typeof r !== 'object' || r === null || !Number.isSafeInteger(r.round) || (r.round as number) < 0 || (r.round as number) > MAX_ROUNDS
+        || !Number.isSafeInteger(r.hash) || (r.hash as number) < 0 || (r.hash as number) > 0xffffffff) return null;
+      result = { round: r.round as number, hash: r.hash as number };
+    }
+    return { seed: o.seed, brains: [brains[0], brains[1]], map: o.map, gen: typeof o.gen === 'number' ? o.gen : undefined, rules: o.rules, ...(result ? { result } : {}) };
   } catch {
     return null;
   }
