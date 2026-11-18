@@ -4,7 +4,8 @@ Deterministic ant-colony simulator in strict TypeScript. Node 22.18+ runs the `.
 directly (type stripping); one `tsc` emit writes unbundled ES modules for the browser to `dist/`. MIT licence.
 Spec: `reference.html`.
 
-    npm install                  # typescript, @types/node
+    npm ci                       # typescript, @types/node (package-lock.json is committed)
+    npm run trace:fetch          # optional: the official ICFP 2004 trace into traces/official/ (docs/TRACE.md); npm test then checks it
     npm test                     # 4 strict typechecks (core/web/worker/node) + lint-core + node --test
     npm run build                # tsc emit (rewriteRelativeImportExtensions) -> dist/ (index.html, reference.html, web/, src/)
     npm run check                # build, then verify every relative URL in dist/ resolves
@@ -19,6 +20,7 @@ Spec: `reference.html`.
 - `src/core/isa.ts`    the instruction table; `src/core/rules.ts` the rulesets registry: classic, tinyminds and one-flag bundles (carry two, dropfail, scare4, altorder, up to 26 colonies); see `docs/EXTENDING.md`
 - `src/core/seed.ts`   `dailySeed(date)` = hash of the UTC date string (the client supplies the date: `web/clock.ts`)
 - `src/core/match.ts`  `playGame()`, `schedule()`, 2/1/0 `standings()`, `pairwise()`, `colourSplit()`; `src/core/gen.ts` also has the point-mirror `SYMMETRIC_WORLD`; `docs/MATCH.md`
+- `src/core/trace.ts`  the official dump format: `frameLines()`, `dumpChunks()` exporter, `parseDump()`, `mergeDumps()`, `compareDump()`; `node cli/trace.ts export|compare`; `docs/TRACE.md`
 - `src/core/replay.ts` `createReplay()` (hash checkpoints every 1,000 rounds, keyframes every 2,000, `seek`), replay descriptor `record()`/`verify()`; `docs/REPLAY.md`
 - `src/core/sim.ts`    `createSim()`, canonical state stream `snapshot()`/`restore()`, `hash()` = FNV-1a of it; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,
   direction/payload). v1: two colonies, no scare rule, no drop on blocked move
@@ -51,4 +53,4 @@ URL fragment (never sent to a server); anyone opening it gets the same match, re
 local storage.
 Defaults: Classic rules only in v1, seed 12345 (Randomize button in the workshop).
 
-Not yet: official dump comparison (needs the contest traces), skills beyond the trail kit.
+Official trace: rounds 0-10,000 of tiny.world x sample.ant match the task's own dump line for line (`docs/TRACE.md`). Not yet: skills beyond the trail kit.
