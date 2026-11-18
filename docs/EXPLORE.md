@@ -83,5 +83,5 @@ authoring levels allow.
 
 ## Not tried
 
-The other constants of the kit were set by hand and never swept: the carrier sidestep (1 in 4), the trail-end eating (1 in 4),
-the roam rule. A frontier-seeking explorer (prefer a cell with no code) was designed but not built.
+The kit's other constants were swept afterwards (`docs/TUNING.md`: the sidestep stays, dead-end eating became "always"), and a
+frontier-seeking explorer (prefer a cell with no code) was tried there and is worse. Not swept: the roam rule.

@@ -57,6 +57,24 @@ Alone, 1 in 2 and 1 in 3 complete slightly more worlds (60/60 against 57/60), bu
 1 in 4, and head to head is what the game scores, so the rule is "always" and it needs no flip: `follow trail` has 3 states
 fewer (239 in all, 382 instructions; it was 242 and 385).
 
+## A frontier-seeking explorer: tried, worse
+
+The idea: an explorer prefers cells nobody has visited. The kit already marks every visited cell (codes 0-2), so before each step the
+explorer senses the cell ahead for a code (up to three senses) and, if there is one, turns at random 1 time in Q before stepping.
+Alone against an idle opponent, seeds 1-20:
+
+| turn when the cell ahead is coded | all 480 | mean rounds to 90% |
+|---|---|---|
+| never (the shipped explorer) | 20/20 | 33.4k |
+| 1 in 4 | 18/20 | 35.9k |
+| 1 in 2 | 19/20 | 41.4k |
+| always (once, then step) | 17/20 | 56.0k |
+
+The more it avoids visited cells, the slower the colony, so it was dropped; it never left the experiment (a temporary knob, not in
+the code). Why was not investigated. Two guesses, both untested: explorers have to walk out through the colony's own coded
+corridor next to the nest, and avoiding it slows them down; and the three senses per step cost about as much as the better coverage
+gains. An avoidance that applies only far from the nest would need a distance the ants do not have.
+
 ## Method and limits
 
 Seeds 1-20 as the sweep, seeds 21-60 held out, head-to-head seeds 1-40 and (to check) 41-80; 100,000 rounds; generated worlds only.
@@ -67,5 +85,5 @@ worlds).
 
 ## Not tried
 
-The roam and wander rules, the rest of the kit's step logic, a frontier-seeking explorer (prefer a cell with no code), and a joint
-sweep of explore, sidestep and eating (the three were tuned one at a time).
+The roam and wander rules, the rest of the kit's step logic, and a joint sweep of explore, sidestep and eating (the three were tuned
+one at a time).
