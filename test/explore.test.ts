@@ -26,7 +26,7 @@ test('"explore 5" is exactly the old default: trail.rules with it differs from t
   const old = TRAIL.replace(/otherwise explore$/m, 'otherwise explore 5');
   assert.notEqual(old, TRAIL);
   assert.equal(code(compileRules(old).asm), code(compileRules(TRAIL).asm).replace('flipzero 64 else', 'flipzero 5 else'));
-  assert.equal(compileRules(old).program.n, compileRules(TRAIL).program.n, '242 states either way');
+  assert.equal(compileRules(old).program.n, compileRules(TRAIL).program.n, 'the same size either way');
 });
 
 test('the turn rate in open country is about 1 in N per step', () => {

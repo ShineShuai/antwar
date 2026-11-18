@@ -26,6 +26,7 @@ Spec: `reference.html`.
   direction/payload). v1: two colonies, no scare rule, no drop on blocked move
 - `web/`               `workshop.html` + `workshop.ts` (canvas viewer), `sim-worker.ts`, `engine.ts`
 - `src/lang/`         rules compiler (levels 1-2, trail kit): `compileRules(text)`; `node cli/rc.ts FILE.rules [--asm | --ant] [--fire-counts]`; see `docs/RULES.md`
+- `docs/TUNING.md`    the kit's other chances (sidestep kept, dead-end eating now always); the shipped ant beats the original 73-0-7
 - `docs/EXPLORE.md`   exploration persistence: `explore N`, the sweep that moved the default from 1-in-5 to 1-in-64
 - `src/lang/script.ts` level 3: the structured script (define/macros, then/else, loop, repeat, choose, labels) -> flat assembly: `compileScript(text)`; `node cli/rc.ts FILE.script [--asm | --ant]`; see `docs/SCRIPT.md`
 - `src/lang/templates.ts` level 0: templates, sliders, role mix -> rules text; `node cli/personality.ts --template trail --mix 70/20/10`; `web/personality.ts` the controls

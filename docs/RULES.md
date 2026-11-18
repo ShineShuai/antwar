@@ -100,9 +100,10 @@ written but never read (or read but never written).
 
 ## Results: the kit through the compiler
 
-*Measured with the original explorer, `explore 5`; the default is now `explore 64` (`docs/EXPLORE.md`: 90% of the food about 25% sooner).*
+*Measured with the original explorer (`explore 5`) and a dead end eaten 1 time in 4; the defaults are now `explore 64` and always
+(`docs/EXPLORE.md`, `docs/TUNING.md`: the trail ant beats the original 73-0-7).*
 
-`ants/trail.rules` (13 rules, 382 instructions, 243 states) against the hand-written `ants/trail.asm` (204 states);
+`ants/trail.rules` (13 rules, 382 instructions, 239 states) against the hand-written `ants/trail.asm` (204 states);
 20 worlds, 100,000 rounds, idle opponent (same protocol as `docs/TRAILS.md`).
 
 | | food home, median (min) | worlds with all 480 | rounds to 50% / 90% | delivered per pickup | stuck carriers per world |
