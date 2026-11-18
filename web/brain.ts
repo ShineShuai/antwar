@@ -2,24 +2,28 @@
 // where a program counter points back into the text.
 import { brainFormat } from '../src/core/asm.ts';
 import { CLASSIC } from '../src/core/rules.ts';
-import { loadAnyBrain, looksLikeRules, ruleAt } from '../src/lang/index.ts';
-import type { Compiled } from '../src/lang/index.ts';
+import { loadAnyBrain, looksLikeRules, looksLikeScript, ruleAt, scriptLineAt } from '../src/lang/index.ts';
+import type { Compiled, ScriptCompiled } from '../src/lang/index.ts';
 import type { Program, Rules } from '../src/core/types.ts';
 import type { Fires, Trace } from './protocol.ts';
 
 export interface RuleRef { id: number; mood: string; text: string; /** 1-based line of the rule in the editor text */ line: number }
 export type BrainInfo =
   | {
-    ok: true; kind: 'rules' | 'asm' | 'ant'; summary: string; warnings: string[]; rules: RuleRef[];
+    ok: true; kind: 'script' | 'rules' | 'asm' | 'ant'; summary: string; warnings: string[]; rules: RuleRef[];
     /** the text this info was made from, and its program (pc -> source line), so a pc can be pointed back at the text */
-    text: string; program: Program; compiled?: Compiled;
+    text: string; program: Program; compiled?: Compiled; script?: ScriptCompiled;
   }
-  | { ok: false; kind: 'rules' | 'asm' | 'ant'; error: string };
+  | { ok: false; kind: 'script' | 'rules' | 'asm' | 'ant'; error: string };
 
 export function describeBrain(text: string, rules: Rules = CLASSIC): BrainInfo {
-  const kind = looksLikeRules(text) ? 'rules' : brainFormat(text);
+  const kind = looksLikeScript(text) ? 'script' : looksLikeRules(text) ? 'rules' : brainFormat(text);
   try {
-    const { program, compiled } = loadAnyBrain(text, rules);
+    const { program, compiled, script } = loadAnyBrain(text, rules);
+    if (script) {
+      return { ok: true, kind, text, program, script, rules: [], warnings: script.warnings,
+        summary: `script: ${script.macros.length} macro${script.macros.length === 1 ? '' : 's'}, starts at "${script.entry}", ${script.instructions} instructions of 2000, ${program.n} states` };
+    }
     if (compiled) {
       return { ok: true, kind, text, program, compiled, rules: compiled.rules.map((r) => ({ id: r.id, mood: r.mood, text: r.text, line: r.line })),
         warnings: compiled.warnings,
@@ -54,8 +58,8 @@ export function whereIs(info: BrainInfo, pc: number): Where {
     const r = info.rules.find((x) => x.id === m.rule);
     return r ? { label: `${r.mood}: ${r.text}`, line: r.line, rule: r.id, part: m.part } : { label: '(kit routine bookkeeping)', line: null, rule: -1, part: 'glue' };
   }
-  const line = info.program.lines[pc] ?? null;
-  const src = line ? (info.text.split('\n')[line - 1] ?? '').replace(/;.*$/, '').trim() : '';
+  const line = (info.script ? scriptLineAt(info.script, pc) : info.program.lines[pc]) || null;
+  const src = line ? (info.text.split('\n')[line - 1] ?? '').replace(info.script ? /(\/\/|#).*$/ : /;.*$/, '').trim() : '';
   return { label: line ? `line ${line}: ${src}` : `state ${pc}`, line, rule: -1, part: '' };
 }
 

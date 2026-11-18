@@ -72,8 +72,8 @@
       <summary>How to play</summary>
       <p>Write one program per colony. Every ant runs its own copy, sees only its own cell and the three cells ahead, and can
         only leave scent marks. After 100,000 rounds the colony with more food on its own nest wins.</p>
-      <p>Brains are official <code>.ant</code> (<code>Sense Ahead 1 3 Food</code>, one state per line) or flat assembly
-        (<code>sense ahead food else 3</code>, labels, <code>goto</code> costs nothing). Pick an example, edit, press Reset.
+      <p>Brains are official <code>.ant</code> (<code>Sense Ahead 1 3 Food</code>, one state per line), flat assembly
+        (<code>sense ahead food else 3</code>, labels, <code>goto</code> costs nothing), rules or a script. Pick an example, edit, press Reset.
         <a href="../reference.html" target="_blank" rel="noopener">Full reference</a>.</p>
     </details>
     <details>
@@ -88,6 +88,16 @@
         unmark N wander explore switch MOOD</code>. If an action fails, the next rule is tried. Add <code>kit trail</code> and
         <code>kit foodtrail</code> for <code>return home</code>, <code>follow trail</code>, <code>lay trail</code>, <code>roam</code>.
         Pick "Trail forager" as an example; the note under the editor shows size and warnings.</p>
+    </details>
+    <details>
+      <summary>Script language (level 3)</summary>
+      <p>Start a brain with <code>define</code> for structured code with macros. A sense takes a <code>then</code> and an
+        <code>else</code>; <code>goto</code> costs nothing; senses and actions cost one round each. The program starts at
+        <code>main</code> (or the last define) and runs again when it ends.</p>
+      <p><code>define wander { choose { case: turn left ; case: turn right ; case: move ; } }</code><br>
+        <code>define main { loop { sense ahead food then { move ; pickup ; } else wander } }</code></p>
+      <p>Also <code>repeat N</code>, <code>exit</code>, <code>flip N</code>, <code>mark N ;</code>, <code>label:</code>, macros with block
+        parameters (<code>define twice b = { b b }</code>). Pick "Starter (script)" as an example.</p>
     </details>
     <div class="brain">
       <div class="row"><label for="ba">Brain A (red)</label><select class="ex" data-for="ba" aria-label="Load an example into A"></select></div>

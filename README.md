@@ -25,7 +25,8 @@ Spec: `reference.html`.
 - `src/core/sim.ts`    `createSim()`, canonical state stream `snapshot()`/`restore()`, `hash()` = FNV-1a of it; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,
   direction/payload). v1: two colonies, no scare rule, no drop on blocked move
 - `web/`               `workshop.html` + `workshop.ts` (canvas viewer), `sim-worker.ts`, `engine.ts`
-- `src/lang/`         rules compiler (levels 1-2, trail kit): `compileRules(text)`; `node cli/rc.ts FILE.rules [--asm] [--fire-counts]`; see `docs/RULES.md`
+- `src/lang/`         rules compiler (levels 1-2, trail kit): `compileRules(text)`; `node cli/rc.ts FILE.rules [--asm | --ant] [--fire-counts]`; see `docs/RULES.md`
+- `src/lang/script.ts` level 3: the structured script (define/macros, then/else, loop, repeat, choose, labels) -> flat assembly: `compileScript(text)`; `node cli/rc.ts FILE.script [--asm | --ant]`; see `docs/SCRIPT.md`
 - `src/lang/templates.ts` level 0: templates, sliders, role mix -> rules text; `node cli/personality.ts --template trail --mix 70/20/10`; `web/personality.ts` the controls
 - `web/brain.ts`      what the workshop shows under an editor (size, lint, errors), the explain-why rows, and `whereIs`/`traceRows`: a pc pointed back at a rule or source line (click an ant to follow it)
 - `cli/tourney.ts`    `node cli/tourney.ts A B C [--seeds 20] [--symmetric] [--jobs 4]`: round-robin, both colours, 2/1/0, standings with intervals, pairwise matrix
@@ -53,4 +54,4 @@ URL fragment (never sent to a server); anyone opening it gets the same match, re
 local storage.
 Defaults: Classic rules only in v1, seed 12345 (Randomize button in the workshop).
 
-Official trace: rounds 0-10,000 of tiny.world x sample.ant match the task's own dump line for line (`docs/TRACE.md`). Not yet: skills beyond the trail kit.
+Official trace: rounds 0-10,000 of tiny.world x sample.ant match the task's own dump line for line (`docs/TRACE.md`). Level 3 (the structured script) is in `docs/SCRIPT.md`. Not yet: skills beyond the trail kit, the Academy UI.
