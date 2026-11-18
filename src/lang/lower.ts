@@ -94,7 +94,7 @@ function emitReturnHome(o: Out, kits: Kits, next: string, head: string): void {
 
 /** follow trail: step along the food trail, outwards. Off the trail (the common case) it costs two senses: is a trail
  * cell ahead? Only then does it read the code under the ant to check the trail leads away from the nest. On the trail it
- * looks ahead, left and right for the continuation, and eats a dead end 1 time in 4. Fails (next rule) when there is none. */
+ * looks ahead, left and right for the continuation, and eats a dead end every time (docs/TUNING.md). Fails (next rule) when there is none. */
 function emitFollowTrail(o: Out, next: string, head: string): void {
   const off = o.uid(), MT = o.uid(), Y = o.uid(), YM = o.uid();
   const c = [o.uid(), o.uid(), o.uid()], none = o.uid(), d = [o.uid(), o.uid(), o.uid()], dnone = o.uid();
@@ -105,7 +105,7 @@ function emitFollowTrail(o: Out, next: string, head: string): void {
     o.label(c[p]); o.ins(`sense ahead marker 3 else ${TL}`); o.ins(`sense ahead marker ${nx(p)} else ${TL}`); o.ins(`goto ${MT}`);
     o.label(TL); o.ins(`sense leftahead marker 3 else ${TR}`); o.ins(`sense leftahead marker ${nx(p)} else ${TR}`); o.ins('turn left'); o.ins(`goto ${MT}`);
     o.label(TR); o.ins(`sense rightahead marker 3 else ${E}`); o.ins(`sense rightahead marker ${nx(p)} else ${E}`); o.ins('turn right'); o.ins(`goto ${MT}`);
-    o.label(E); o.ins(`flipzero 4 else ${next}`); o.ins('unmark 3'); o.ins(`goto ${next}`); // trail end: eat it 1 time in 4
+    o.label(E); o.ins('unmark 3'); o.ins(`goto ${next}`); // trail end: eat it (always: measured against 1 in 2, 3, 4, 8, 16 and never)
   }
   o.label(none); o.ins(`sense ahead marker 3 else ${next}`); o.ins(`goto ${MT}`); // on the trail but no code: any trail cell ahead
   o.label(off); o.ins(`sense ahead marker 3 else ${next}`); // off the trail: a trail cell ahead to join?

@@ -6,8 +6,9 @@ on; a blocked step turns at random. It was set to N = 5 when the trail work foun
 from 16 to 256**: the colony reaches 90% of the food about 25% sooner, completes more worlds, and wins 55-25 head to head.
 
 `explore N` (N from 2 to 64) sets it; plain `explore` is now `explore 64` (`EXPLORE_DEFAULT` in `src/lang/parse.ts`).
-**`explore 5` compiles to exactly the old program** (checked: same instructions), so every earlier measurement in these docs can
-be reproduced by writing it.
+**`explore 5` compiled to exactly the old program** when this was introduced (checked: same instructions). The dead-end eating
+was changed after it (`docs/TUNING.md`), so earlier measurements are reproduced by `explore 5` only together with the commit
+before that change.
 
 ## Method
 

@@ -59,7 +59,7 @@ ant, measured, before a Trails level is promised. This is that experiment, for t
   explorer adopts the code under it or writes its own (first writer wins); a carrier steps to the neighbour with code-1.
 * Breadcrumb: markers 0-2 hold the direction back to the parent + 1 (0 = uncoded), marker 3 the food trail.
 * Both: carriers mark every cell they walk; an empty ant on or beside a food-trail cell that continues outwards follows
-  it; a trail end is eaten 1 time in 4; food on a nest cell is never picked up (it is a delivered packet).
+  it; a trail end is eaten (1 time in 4 when this was written, every time since `docs/TUNING.md`); food on a nest cell is never picked up (it is a delivered packet).
 
 ## Go / no-go
 
