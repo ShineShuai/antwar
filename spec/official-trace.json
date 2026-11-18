@@ -1,0 +1,22 @@
+{
+  "about": "ICFP 2004 task section 2.13: tiny.world x sample.ant (both colours), seed 12345, state after every round 0..10000. Not committed; scripts/fetch-trace.ts downloads and checks these hashes.",
+  "source": "https://github.com/schani/icfp-2004",
+  "commit": "13bf79dbba355ac68f8739dbfd472f9884edcf03",
+  "dir": "data",
+  "seed": 12345,
+  "rounds": 10000,
+  "sha256": {
+    "tiny.world": "f1b5277788d80ed54a6d562866a8157fc46e4448d4eb39f9f7188567a8610fc0",
+    "sample.ant": "16f32377aa0034d766c3e228832fa89239866b2d83ae1109940c7ed41a925bb8",
+    "dump.0-1000.gz": "c0314c1eda7518ceea9d549fbbdd3bb839a4065c9f9caf313ea7b7a50324e914",
+    "dump.1000-2000.gz": "8f32a149b4781687698dd5c0b193929e2d48a5aa45f186120936bd9ed9d20180",
+    "dump.2000-3000.gz": "07853ad60d47d92b790e771ee3507bc906efd5a6713dfa19ebb69c613173176a",
+    "dump.3000-4000.gz": "9aaa0f5cdfee82f2c3e28641b0deab5fa66ec047d0c33f7fe6daca3614705f34",
+    "dump.4000-5000.gz": "27ab1b27a97f6d1a7b496734334c5886a65918ecd0f48add6d281c2a8b520e65",
+    "dump.5000-6000.gz": "0338159cc4de239658aed4b1e0e34095169f443ea3e2cd68934b62d334b87588",
+    "dump.6000-7000.gz": "6ede3719977f6234046767f01765aaf6fa25837f44f3953556e260aa8db06442",
+    "dump.7000-8000.gz": "57d3574af3478033015ec226b468c2e891e789a0da101d8266094162d3b119bb",
+    "dump.8000-9000.gz": "53d13bffb78c24b2171335a2688c3fa597624e7d41dbb037ade5d5db5749caff",
+    "dump.9000-10000.gz": "9479a9bbdee4d83a9c5fe45ea5f818f68318b490742dee4eec87d8e8b8c7dba0"
+  }
+}

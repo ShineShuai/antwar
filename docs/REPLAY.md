@@ -55,5 +55,4 @@ Without `--map` the world is generated from the seed and the descriptor records 
 
 ## Not done
 
-Descriptor export/import in the workshop UI, keyframe thinning for 26 colonies on 200x200 (about 60 MB at 100,000 rounds),
-the official-trace exporter.
+Descriptor export/import in the workshop UI, keyframe thinning for 26 colonies on 200x200 (about 60 MB at 100,000 rounds).

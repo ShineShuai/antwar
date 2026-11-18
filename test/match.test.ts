@@ -66,10 +66,11 @@ test('symmetric worlds: contest elements as mirrored pairs; the classic generato
   assert.throws(() => generateWorld(1, { ...SYMMETRIC_WORLD, rocks: 9 }), /even/);
   assert.throws(() => generateWorld(1, { ...SYMMETRIC_WORLD, blobs: 7 }), /even/);
   assert.throws(() => generateWorld(1, { ...SYMMETRIC_WORLD, H: 99 }), /even/);
-  // output of the contest generator for fixed seeds must not move (GENERATOR_VERSION stays 2)
+  // output of the contest generator for fixed seeds must not move (GENERATOR_VERSION stays 2); these hash the text, so they
+  // moved once when formatMap's leading space went from even to odd rows (the worlds are identical)
   const enc = new TextEncoder();
   assert.deepEqual([1, 2, 3, 7, 12345, 99999].map((s) => fnv1a(enc.encode(formatMap(generateWorld(s, CLASSIC_WORLD))))),
-    [2215342543, 37632660, 1749811377, 2258273898, 1142123897, 2447802834]);
+    [2713063197, 3251088190, 1135346377, 2471877558, 976522501, 3859611524]);
 });
 
 test('isSymmetric rejects each kind of asymmetry', () => {

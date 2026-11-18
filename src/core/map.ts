@@ -30,7 +30,7 @@ export function parseMap(text: string): WorldMap {
   return map;
 }
 
-/** Inverse of parseMap in the official layout (even rows get a leading space). */
+/** Inverse of parseMap in the official layout: odd rows are shifted right, so they get the leading space (tiny.world). */
 export function formatMap({ W, H, rock, food, hill }: WorldMap): string {
   const rows = [String(W), String(H)];
   for (let y = 0; y < H; y++) {
@@ -40,7 +40,7 @@ export function formatMap({ W, H, rock, food, hill }: WorldMap): string {
       cells.push(rock[p] ? '#' : hill[p] >= 0 ? '+-'[hill[p]] ?? String.fromCharCode(97 + hill[p])
         : food[p] ? String(food[p]) : '.');
     }
-    rows.push((y % 2 === 0 ? ' ' : '') + cells.join(' '));
+    rows.push((y % 2 === 1 ? ' ' : '') + cells.join(' '));
   }
   return rows.join('\n') + '\n';
 }
