@@ -31,8 +31,9 @@
 * If an action fails (`move` blocked, `pickup` with nothing to take, a skill that cannot act) evaluation continues with the
   **next rule**; what the rule already did persists (a `turn` before a blocked `move` stays turned).
 * `step` `wander` `explore` `roam` `return home` `follow trail` `switch` end the rule and must be its last action.
-* `wander` is the reference's skill (1/3 left, 1/3 right, 1/3 step). `explore` is a persistent walk (turn 1 step in 5):
-  see `docs/TRAILS.md`, exploration quality is the biggest lever.
+* `wander` is the reference's skill (1/3 left, 1/3 right, 1/3 step). `explore` is a persistent walk: it turns 1 step in 64
+  (`explore N` sets it, N from 2 to 64; `explore 5` was the original). Exploration quality is the biggest lever: `docs/EXPLORE.md`,
+  `docs/TRAILS.md`.
 
 ## The trail kit
 
@@ -48,6 +49,8 @@
 * Using a reserved marker in your own rules is an error.
 
 ## Level 0: personalities (`src/lang/templates.ts`, `node cli/personality.ts`)
+
+*The table below was measured with `explore 5`; with the new default every personality that explores forages faster (`docs/EXPLORE.md`).*
 
 A template, three sliders and an optional role mix generate a rules program. The workshop shows them under each editor:
 moving a control rewrites the text; once the text is edited by hand the controls grey out until "Reset to template" (the
@@ -96,6 +99,8 @@ never switches away, a program that never picks up or never drops food, a `retur
 written but never read (or read but never written).
 
 ## Results: the kit through the compiler
+
+*Measured with the original explorer, `explore 5`; the default is now `explore 64` (`docs/EXPLORE.md`: 90% of the food about 25% sooner).*
 
 `ants/trail.rules` (13 rules, 382 instructions, 243 states) against the hand-written `ants/trail.asm` (204 states);
 20 worlds, 100,000 rounds, idle opponent (same protocol as `docs/TRAILS.md`).

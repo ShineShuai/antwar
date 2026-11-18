@@ -4,7 +4,8 @@ A pick-up works on any cell that holds food, a nest included, and any ant can st
 delivers is a stash that anyone can take, one packet per visit to its cell. `node cli/eval.ts --vs OTHER` counts it:
 `stole` = packets this colony picked up on the other colony's nest cells, `lost` = the other way round.
 
-Everything below: the colony under test against the default trail-layer ("T", `ants/trail.rules`), 80 games (40 worlds, both
+Everything below: the colony under test against the default trail-layer ("T", `ants/trail.rules` **as it was when measured:
+its explorer turned 1 step in 5, i.e. `explore 5`; the default is now `explore 64`, `docs/EXPLORE.md`**), 80 games (40 worlds, both
 hills), 100,000 rounds. W-D-L is for the colony under test; food is the median nest food at the end; stole / lost are medians
 per game. 480 packets exist on a world.
 

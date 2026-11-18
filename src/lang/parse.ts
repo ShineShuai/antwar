@@ -23,6 +23,8 @@ export interface Ast { kits: Kits; moods: Mood[]; mix?: Mix }
 export const TERMINAL: ReadonlySet<ActionKind> = new Set(['switch', 'step', 'wander', 'explore', 'roam', 'returnhome', 'followtrail']);
 /** Actions that can fail; a failed action continues with the next rule. */
 export const FALLIBLE: ReadonlySet<ActionKind> = new Set(['move', 'pickup', 'step', 'returnhome', 'followtrail']);
+/** `explore` turns 1 step in this many: the middle of the plateau measured in docs/EXPLORE.md (a power of two: the chance is exact). */
+export const EXPLORE_DEFAULT = 64;
 /** Markers reserved by the trail kit (the code) and the food trail. */
 export const KIT_MARKERS = { trail: [0, 1, 2], foodtrail: [3] } as const;
 
@@ -85,7 +87,11 @@ function parseAction(raw: string, line: number): Action {
     case 'pickup': return one('pickup');
     case 'drop': return one('drop');
     case 'wander': return one('wander');
-    case 'explore': return one('explore');
+    case 'explore': { // persistent walk; "explore N" turns about 1 step in N (default EXPLORE_DEFAULT, docs/EXPLORE.md)
+      if (w.length === 1) return { kind: 'explore', arg: EXPLORE_DEFAULT, text };
+      if (w.length === 2) return { kind: 'explore', arg: num(w[1], 2, 64, '"explore N": N', line), text };
+      return fail(line, `"${text}": explore, or explore N (turn about 1 step in N, N from 2 to 64)`);
+    }
     case 'roam': return one('roam');
     case 'wait': return one('wait');
     case 'turn':
