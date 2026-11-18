@@ -141,9 +141,9 @@ function emitAction(o: Out, a: Action, kits: Kits, next: string, head: string, m
     }
     case 'switch': o.ins(`goto ${moodHead(a.arg as string)}`); break;
     case 'step': emitMove(o, kits, next, head); break;
-    case 'explore': { // persistent random walk: turn 1 step in 5 (flipzero falls through with chance 1/5), else straight on
+    case 'explore': { // persistent random walk: turn 1 step in N (flipzero falls through with chance 1/N), else straight on
       const go = o.uid(), blocked = o.uid();
-      o.ins(`flipzero 5 else ${go}`); randomTurn(o, go);
+      o.ins(`flipzero ${a.arg as number} else ${go}`); randomTurn(o, go);
       o.label(go); emitMove(o, kits, blocked, head);
       o.label(blocked); randomTurn(o, head); o.ins(`goto ${head}`);
       break;

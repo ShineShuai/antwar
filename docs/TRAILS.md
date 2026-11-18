@@ -49,6 +49,8 @@ ant, measured, before a Trails level is promised. This is that experiment, for t
    * *Blocked carriers sidestep* one time in four. Otherwise clusters of carriers and explorers near the nest freeze.
 4. **Exploration quality is the biggest lever.** Turning 1 step in 5 instead of 4 in 5 took breadcrumb + food trail from
    a median 415 food (some worlds unfinished) to all 480 on all worlds, and the 50% time from 26k to 15k rounds.
+   (Later: 1 in 5 was not the optimum; 1 in 16 to 1 in 256 is about 25% faster to 90%: `docs/EXPLORE.md`. The tables here
+   were measured with the 1 in 5 explorer.)
 5. Cost, measured (old explorer): 22.5 rounds per carrier step and 28.8 per explorer step; 15 of them are the move's rest.
 
 ## The protocols (`ants/gen-trail.ts` mod-3, `ants/gen-crumb.ts` breadcrumb)
