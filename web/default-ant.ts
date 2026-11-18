@@ -81,9 +81,37 @@ mood return
   otherwise roam
 `;
 
+/** The script example: exactly ants/starter.script (test/script.test.ts keeps them in step). */
+export const STARTER_SCRIPT = `// The task's 16-state example ant as a structured script: the same behaviour, round for round.
+// Level 3 (docs/SCRIPT.md): "sense ... then ... else ...", loops, macros, labels. A goto costs nothing; senses and actions cost a round.
+
+define wander {                  // one in 3 turn left, one in 2 of the rest turn right, else walk
+  w: choose {
+    case: turn left ;
+    case: turn right ;
+    case: move else goto w ;     // blocked: roll again
+  }
+}
+
+define main {                    // the program starts at "main" (or at the last define)
+  loop {
+    top: sense ahead food
+      then {
+        move else goto top ;     // step onto the food ...
+        pickup else goto top ;   // ... and take it
+        back: sense ahead home   // carrying: walk back, wandering, until the nest is ahead
+          then { move else goto back ; drop ; }
+          else { wander goto back ; }
+      }
+      else wander ;
+  }
+}
+`;
+
 export const EXAMPLES: readonly { name: string; text: string }[] = [
   { name: 'Starter (official .ant)', text: STARTER },
   { name: 'Starter (flat asm)', text: STARTER_ASM },
+  { name: 'Starter (script, level 3)', text: STARTER_SCRIPT },
   { name: 'Forager (rules, no trails)', text: FORAGER_RULES },
   { name: 'Trail forager (rules, trail kit)', text: TRAIL_RULES },
   { name: 'Charger (always moves)', text: 'Move 0 1\nTurn Left 0\n' },

@@ -163,6 +163,6 @@ row of the followed ant's current rule is highlighted. Reading a trace shows exa
 
 ## Not done
 
-Level 3 (the structured script language), skills beyond the trail kit, balanced Raider and Guard archetypes, the Academy
+Skills beyond the trail kit (level 3 is in `docs/SCRIPT.md`), balanced Raider and Guard archetypes, the Academy
 UI, and syntax colouring inside the text box (a textarea cannot colour part of its text; the rule rows and the trace do the
 explaining instead). The compiler is the part those layers sit on; `compileRules` returns the source map (`ruleAt`).

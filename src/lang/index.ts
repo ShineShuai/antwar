@@ -6,8 +6,12 @@ import { lower } from './lower.ts';
 import type { LineMeta } from './lower.ts';
 import { RulesError, parseRules } from './parse.ts';
 import type { Ast } from './parse.ts';
+import { compileScript, looksLikeScript } from './script.ts';
+import type { ScriptCompiled } from './script.ts';
 
 export { RulesError } from './parse.ts';
+export { ScriptError, compileScript, looksLikeScript, scriptLineAt } from './script.ts';
+export type { ScriptCompiled } from './script.ts';
 export type { LineMeta } from './lower.ts';
 
 export interface RuleInfo { id: number; mood: string; line: number; text: string }
@@ -88,8 +92,9 @@ export function looksLikeRules(text: string): boolean {
   return false;
 }
 
-/** Load a brain in any of the three formats: rules, flat assembly, official .ant. `compiled` is set for rules. */
-export function loadAnyBrain(text: string, rules: Rules = CLASSIC): { program: Program; compiled?: Compiled } {
+/** Load a brain in any of the four formats: script, rules, flat assembly, official .ant. `compiled` is set for rules, `script` for scripts. */
+export function loadAnyBrain(text: string, rules: Rules = CLASSIC): { program: Program; compiled?: Compiled; script?: ScriptCompiled } {
+  if (looksLikeScript(text)) { const script = compileScript(text, rules); return { program: script.program, script }; }
   if (looksLikeRules(text)) { const compiled = compileRules(text, rules); return { program: compiled.program, compiled }; }
   return { program: loadBrain(text, rules) };
 }

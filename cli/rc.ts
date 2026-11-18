@@ -1,22 +1,35 @@
 #!/usr/bin/env node
-// Rules compiler: node cli/rc.ts FILE.rules [--asm] [--fire-counts [--seeds 3] [--rounds 20000]]
-// Prints size and lint warnings; --asm prints the flat assembly; --fire-counts runs the program on generated worlds
-// (opponent idle) and shows which rule each ant-round is spent in: the sensing of its test, or its action.
+// Rules and script compiler: node cli/rc.ts FILE.rules|FILE.script [--asm | --ant] [--fire-counts [--seeds 3] [--rounds 20000]]
+// Prints size and lint warnings; --asm prints the flat assembly, --ant the official .ant text; --fire-counts runs the program on generated worlds
+// (opponent idle) and shows which rule each ant-round is spent in: the sensing of its test, or its action (rules only).
+// A script (first word "define", docs/SCRIPT.md) prints its size and warnings; --asm prints what it lowers to.
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
+import { toIcfp } from '../src/core/asm.ts';
 import { generateWorld } from '../src/core/gen.ts';
 import { createSim } from '../src/core/sim.ts';
-import { RulesError, compileRules, ruleAt } from '../src/lang/index.ts';
+import { RulesError, compileRules, compileScript, looksLikeScript, ruleAt } from '../src/lang/index.ts';
 
 const { values: o, positionals } = parseArgs({ allowPositionals: true, options: {
-  asm: { type: 'boolean', default: false }, 'fire-counts': { type: 'boolean', default: false },
+  asm: { type: 'boolean', default: false }, ant: { type: 'boolean', default: false }, 'fire-counts': { type: 'boolean', default: false },
   seeds: { type: 'string', default: '3' }, rounds: { type: 'string', default: '20000' },
 } });
-if (positionals.length !== 1) { console.error('usage: rc.ts FILE.rules [--asm] [--fire-counts [--seeds N] [--rounds R]]'); process.exit(2); }
+if (positionals.length !== 1) { console.error('usage: rc.ts FILE.rules|FILE.script [--asm | --ant] [--fire-counts [--seeds N] [--rounds R]]'); process.exit(2); }
 
 try {
-  const c = compileRules(readFileSync(positionals[0], 'utf8'));
+  const text = readFileSync(positionals[0], 'utf8');
+  if (looksLikeScript(text)) {
+    const sc = compileScript(text);
+    if (o.asm) { process.stdout.write(sc.asm); process.exit(0); }
+    if (o.ant) { process.stdout.write(toIcfp(sc.program)); process.exit(0); }
+    if (o['fire-counts']) { console.error('--fire-counts is for rules programs'); process.exit(2); }
+    console.log(`${positionals[0]}: ${sc.macros.length} macro(s), starts at "${sc.entry}" -> ${sc.instructions} instructions of 2000, ${sc.program.n} states`);
+    sc.warnings.forEach((w) => console.log(`warning: ${w}`));
+    process.exit(0);
+  }
+  const c = compileRules(text);
   if (o.asm) { process.stdout.write(c.asm); process.exit(0); }
+  if (o.ant) { process.stdout.write(toIcfp(c.program)); process.exit(0); }
   console.log(`${positionals[0]}: ${c.rules.length} rules in ${c.moods.length} mood(s) -> ${c.instructions} instructions of 2000, ${c.program.n} states`);
   c.warnings.forEach((w) => console.log(`warning: ${w}`));
   if (o['fire-counts']) {

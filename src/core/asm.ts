@@ -169,6 +169,37 @@ export function parseIcfp(text: string, rules: Rules): Program {
   return makeProgram(list);
 }
 
+const ANT_COND = ['Friend', 'Foe', 'FriendWithFood', 'FoeWithFood', 'Food', 'Rock'];
+const ANT_COND_AFTER = new Map([[12, 'FoeMarker'], [13, 'Home'], [14, 'FoeHome']]);
+const ANT_DIR = ['Here', 'Ahead', 'LeftAhead', 'RightAhead'];
+
+/** Inverse of parseIcfp: a program as official ICFP 2004 .ant text (one state per line, explicit successors). Programs that use
+ * senseany/senseall with several conditions or the extended direction/payload senses have no .ant form and are refused. */
+export function toIcfp(P: Program): string {
+  const out: string[] = [];
+  for (let i = 0; i < P.n; i++) {
+    const t = P.t[i], e = P.e[i], a = P.a[i];
+    switch (P.op[i]) {
+      case OP.SENSE: {
+        const bit = 31 - Math.clz32(P.b[i]);
+        if (P.b[i] !== 1 << bit) fail(0, `state ${i}: a sense of several conditions has no .ant form`);
+        const cond = bit < 6 ? ANT_COND[bit] : bit < 12 ? `Marker ${bit - 6}` : ANT_COND_AFTER.get(bit) as string;
+        out.push(`Sense ${ANT_DIR[a]} ${t} ${e} ${cond}`);
+        break;
+      }
+      case OP.MARK: out.push(`Mark ${a} ${t}`); break;
+      case OP.UNMARK: out.push(`Unmark ${a} ${t}`); break;
+      case OP.PICKUP: out.push(`PickUp ${t} ${e}`); break;
+      case OP.DROP: out.push(`Drop ${t}`); break;
+      case OP.MOVE: out.push(`Move ${t} ${e}`); break;
+      case OP.TURN: out.push(`Turn ${a ? 'Right' : 'Left'} ${t}`); break;
+      case OP.FLIP: out.push(`Flip ${a} ${t} ${e}`); break;
+      default: fail(0, `state ${i}: this instruction has no .ant form`);
+    }
+  }
+  return `${out.join('\n')}\n`;
+}
+
 /** Flat .asm has `else`, labels or goto; official .ant has none. */
 export function brainFormat(text: string): 'asm' | 'ant' {
   const code = text.replace(/;.*$/gm, '');
