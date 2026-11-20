@@ -75,6 +75,42 @@ the code). Why was not investigated. Two guesses, both untested: explorers have 
 corridor next to the nest, and avoiding it slows them down; and the three senses per step cost about as much as the better coverage
 gains. An avoidance that applies only far from the nest would need a distance the ants do not have.
 
+## Stuck carriers: a head-on knot; the fix gains nothing in games
+
+`docs/EXPLORE.md` noted two worlds (seeds 16 and 17) where one carrier held its food for 91k rounds, and that it was not diagnosed.
+With the kit as shipped, tracked every round, alone against an idle opponent, 100,000 rounds:
+
+* Seeds 16 and 17 no longer do it: their longest holds are 4,553 and 8,257 rounds. Over seeds 1-60 the median world's longest hold is
+  about 8k rounds (the longest hold that ended in a delivery: 23.5k, seed 14), and at the end of the game no carrier is still holding
+  after 5,000 rounds, except in three worlds.
+* **Five carriers are held to the end, in three worlds:** seed 48 (one carrier, 63k rounds when the game ends), seed 52 (two, 88k),
+  seed 58 (two, 75k). They are what the `stuck` column of `cli/eval.ts` counts.
+
+**Cause.** A knot in a one-cell corridor. In seed 52 two carriers walking home stand at (47,43) and (48,43), and a searching ant at
+(48,42) walks the other way along the food trail: each wants a cell another holds. All three stopped at about round 15,500 and have
+not moved since. A blocked carrier retries, and 1 time in 4 it sidesteps, but a sidestep turns only to the two directions next to
+its own, and for every one of the five stuck carriers both are rock or another ant (in seed 48 the idle foe's ants). The searcher
+steps off the lane the same way (turn left or right, then move), and the next `follow trail` turns it back to face the carriers. Nothing
+in the program ever turns an ant around, so nobody backs out.
+
+**Fix tried.** A blocked carrier turns around, instead of left or right, 1 time in N of its sidesteps (so 1 in 4N blocked rounds), or a
+blocked follower does (1 time in 3 of its steps off the lane). Seeds 1-60 alone; head to head against the shipped ant, 80 games
+(40 seeds, both hills):
+
+| variant | stuck carriers (worlds) | all 480 | mean rounds to 90% | head to head |
+|---|---|---|---|---|
+| shipped | 5 (3) | 57/60 | 34.9k | |
+| carrier turns around, 1 in 3 | 0 | 60/60 | 34.5k | 34-0-46 |
+| carrier turns around, 1 in 8 | 0 | 60/60 | 36.4k | 40-0-40; seeds 41-80, one hill order only: 15-1-24 |
+| follower turns around, 1 in 3 | 0 | 60/60 | 38.4k | not run |
+| both, 1 in 3 | 0 | 60/60 | 39.6k | not run |
+
+The knot is real and the fix removes it, but it does not win games: 34-46 and 40-40 are inside the noise, and the follower version
+explores more slowly. A stuck carrier costs one ant of 91 in 3 worlds of 60, too little to show in 80 games. Not adopted; the kit is
+unchanged. Not tried: the fix in the Keeper (its stuck count in a mirror match is about 9 per game, `docs/STEALING.md`; whether it is
+the same knot was not checked), and followers with a smaller turn-around chance (only 1 in 3 was tried). The variants were temporary knobs in
+`lower.ts`, not committed.
+
 ## Method and limits
 
 Seeds 1-20 as the sweep, seeds 21-60 held out, head-to-head seeds 1-40 and (to check) 41-80; 100,000 rounds; generated worlds only.

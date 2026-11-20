@@ -75,7 +75,8 @@ authoring levels allow.
 * **Carrier holds are rarer but longer.** The longest time one carrier holds food (sampled every 50 rounds, seeds 1-20): median
   22.9k rounds with N = 5 against 8.6k with N = 64, but two worlds (seeds 16 and 17) keep one carrier for 91k rounds, where the
   old explorer's worst case was 54k. The 30,000-round "no carrier freezes" test (seeds 1-3) still passes. A permanently stuck
-  carrier costs one ant of 91; it was not diagnosed.
+  carrier costs one ant of 91; diagnosed in `docs/TUNING.md` (a head-on knot in a one-cell corridor; seeds 16 and 17 no longer
+  hold a carrier that long with the current kit).
 * **Generated worlds only.** They resemble the contest's, but the official worlds were not tried.
 * **Hand-written ants were not retuned.** The numbers in `docs/TRAILS.md`, the personality and compiled-versus-hand tables in
   `docs/RULES.md`, and `docs/STEALING.md` were measured with the old explorer (`explore 5`); the comparison of the compiled ant with
