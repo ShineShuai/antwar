@@ -94,7 +94,33 @@ thing changed; 80 games, both hills, seeds 1-40:
 Nothing beats the Keeper by more than noise except the stronger settle chance: **1 in 10 beats 1 in 15 by 102-0-58 over 160
 games** and is tied with it against T (57-23 on the fresh seeds against 59-21), so the Keeper settles 1 time in 10. The dose-response is
 again a cliff, now between 1 in 7 and 1 in 5. At 1 in 10 about a third of the ants (30 of 91 in idle-opponent games) end up sitting.
-Not run: 3 free deliveries with 1 in 15, 2 with 1 in 20, and combinations of the changes above.
+The remaining corners (3 free deliveries with 1 in 15, 2 with 1 in 20, wander, roam) are in the next section.
+
+### Corners of the sweep: against the Keeper as shipped
+
+The settings the joint check left open, each playing the shipped Keeper (explore 64, dead end always eaten, sidestep 1 in 4, 2 free
+deliveries, settle 1 in 10); 80 games, both hills, seeds 1-40 unless noted. Variants are generated rules text, not compiler changes.
+
+| change | W-D-L | food (it vs Keeper) | stole | lost | stuck carriers per game |
+|---|---|---|---|---|---|
+| 3 free deliveries, settle 1 in 15 | 24-1-55 | 236 vs 281 | 181 | 232 | 1.8 |
+| 2 free deliveries, settle 1 in 20 | 21-1-58 | 228 vs 275 | 177 | 229 | 2.3 |
+| curiosity 1 (`when 1 in 16 -> wander` while searching) | 30-1-49 | 245 vs 273 | 167 | 179 | 9.4 |
+| `otherwise wander` for `otherwise roam` in the return moods | 47-0-33; seeds 41-80: 40-0-40 | 264 vs 246; 261 vs 253 | 181; 174 | 168; 171 | 15.5; 12.3 |
+| (the Keeper against itself, first hill only, 40 games) | 21-1-18 | 266 vs 260 | 176 | 185 | 9.1 |
+
+1. **The Keeper's dose stays.** Both weaker doses lose clearly (24-55, 21-58), although against the plain trail-layer 3 free with 1 in
+   15 was as good as the Keeper (62-18 against 61-19). With 102-58 for 1 in 10 over 2 free with 1 in 15, 1 in 10 now beats
+   every weaker dose it was played against (1 in 15 and 1 in 20 head to head; 1 in 15 against 1 in 20 was not).
+2. **Wandering while searching probably hurts** (30-49; noise is about 4.5 wins): a Keeper that wanders 1 step in 16 loses to one that does not.
+3. **`wander` as the carrier's fallback is no gain.** It won 47-33 on seeds 1-40 and tied 40-40 on 41-80: 87-0-73 over 160 games (261 against
+   251 food), which is inside the noise (+7 wins over a coin flip, about 1.1 standard deviations). Not adopted.
+4. **Stuck carriers** (holding food for more than 5,000 rounds at the end) are 9 per game for the Keeper and 2 for the weaker doses.
+   The fallback `wander` raises them to 12-16 without losing games. Whether sitters jam the carriers' way to the nest was not tested, and the
+   Keeper figure is one 40-game mirror run.
+
+Not run: combinations (each single change above and in the joint check is inside the noise, so a combination cannot be told apart from the
+Keeper in 80 games), curiosity 2 and up (curiosity 1 already loses), and any other fallback for a lost carrier than `wander`.
 
 ### A raider squad inside the Keeper colony: tried, worse
 
