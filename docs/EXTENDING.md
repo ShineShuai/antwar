@@ -45,14 +45,16 @@ random programs (`test/crosscheck.test.ts`; each flag must change a good share o
 | `cap` 2 | `cap2`, `dropfail`, `tinyminds` | an ant carries up to 2 packets | Python oracle, reference demo (CAP), micro-tests |
 | `dropOnBlocked` | `dropfail`, `tinyminds` | a blocked mover carrying exactly 2 drops 1 packet here and keeps 1 | Python oracle, reference demo (DF), micro-tests |
 | `scareThreshold` 4 | `scare4`, `tinyminds` | an ant with exactly 4 foe neighbours drops its food and survives (5 still kills) | Python oracle, reference demo (SC), micro-tests incl. 3 foes / threshold 3 |
-| `altOrder` | `altorder`, `tinyminds` | odd rounds run ants in ascending id order, even rounds descending | Python oracle, micro-tests only |
-| `maxColonies` up to 26 | `colonies`, `tinyminds` | more than two colonies (hills a..z) | Python oracle, micro-tests only |
-| `ext` | `tinyminds` | direction / payload / senseany / senseall instructions | unit tests (the oracle reads official `.ant` only) |
+| `altOrder` | `altorder`, `tinyminds` | odd rounds run ants in ascending id order, even rounds descending | Python oracle, reference demo (AO), micro-tests |
+| `maxColonies` up to 26 | `colonies`, `tinyminds` | more than two colonies (hills a..z) | Python oracle, reference demo (3 colonies, marks and foemarker), micro-tests |
+| `ext` | `tinyminds` | direction / payload / senseany / senseall instructions | reference demo (direction and payload), unit tests (the oracle reads official `.ant` only) |
 
 **Decision for the owner of the reference:** the reference says only that `altorder` "would alternate" who acts first. The reading
 implemented is *alternate the direction of the id order each round* (round 1 ascending as in Classic). If you mean something else
 (for instance alternate which colony goes first), change `step()` in sim.ts and `run_round` in oracle/ref.py and the three
-`altorder` micro-tests. The demo in `reference.html` has no altorder, so nothing but the Python oracle checks it.
+`altorder` micro-tests. The reading is now written into the reference (the Rulesets card and "Order bias") and the demo in `reference.html`
+implements it independently (`test/refdemo.test.ts` compares it with the core round by round), so the implementations agree on it; they would
+agree on a wrong reading too, so it stays the owner's decision.
 `unsupported()` now only rejects values outside the spec: `cap` not 1 or 2, `scareThreshold` not 0..4, `maxColonies` not 1..26.
 
 The workshop's **Rules** menu runs any of these ids (both colonies, saved and shared); `node cli/run.ts --rules ID` and
