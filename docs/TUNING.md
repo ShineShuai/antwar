@@ -85,5 +85,5 @@ worlds).
 
 ## Not tried
 
-The roam and wander rules, the rest of the kit's step logic, and a joint sweep of explore, sidestep and eating (the three were tuned
-one at a time).
+The roam and wander rules and the rest of the kit's step logic. The joint check of explore, sidestep, eating and the Keeper's dose
+is in `docs/STEALING.md` (nothing moved except the dose).

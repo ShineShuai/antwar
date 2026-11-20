@@ -11,7 +11,7 @@ export const TEMPLATE_NAMES: Record<Template, string> = { forager: 'Forager', tr
 export const TEMPLATE_HELP: Record<Template, string> = {
   forager: 'finds food and carries it home by luck; no trails',
   trail: 'finds food, lays a trail home and a food trail others follow',
-  keeper: 'like the trail-layer, but after its first two deliveries a carrier settles on its pile 1 time in 15, so nobody can take it (docs/STEALING.md)',
+  keeper: 'like the trail-layer, but after its first two deliveries a carrier settles on its pile 1 time in 10, so nobody can take it (docs/STEALING.md)',
   guard: 'sits on the food stash at the nest so nobody can steal it',
   raider: 'like the trail-layer, and heads for foe nests to take their food',
 };
@@ -34,7 +34,7 @@ export const usesSociability = (t: Template): boolean => t === 'trail' || t === 
 export const usesMix = (t: Template): boolean => t === 'trail' || t === 'raider';
 /** A keeper's carrier, after its first KEEP_AFTER deliveries, settles on its pile after each delivery with chance 1 in KEEP and
  * stays there for good (measured: docs/STEALING.md). */
-export const KEEP = 15;
+export const KEEP = 10;
 export const KEEP_AFTER = 2;
 
 const foeRules = (boldness: number, carrier: boolean): string[] => {

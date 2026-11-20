@@ -7,7 +7,7 @@ delivers is a stash that anyone can take, one packet per visit to its cell. `nod
 The study was run twice. **Round 1** (below, "Against the original trail ant") used the trail-layer as it was before the retuning of
 `docs/EXPLORE.md` and `docs/TUNING.md` (explorer turning 1 step in 5, dead end eaten 1 time in 4). **Round 2** repeats it against
 the retuned `ants/trail.rules` ("T"), and **one conclusion of round 1 did not survive**: against the faster ant a light dose of
-pile-sitting wins, and a version that starts sitting late wins more: that is the Keeper template.
+pile-sitting wins, and a version that starts sitting late wins more, and a joint check settled its dose: that is the Keeper template.
 
 Both rounds: the colony under test against T, 80 games (40 worlds, both hills), 100,000 rounds unless noted. W-D-L is for the
 colony under test; food is the median nest food at the end; stole / lost are medians per game. 480 packets exist on a world.
@@ -41,8 +41,8 @@ What round 2 says:
    1 in 40 win (54-26 to 57-23 on seeds 1-40, 52-28 to 58-21 on fresh seeds 41-80), 1 in 64 fades to a coin flip. The Keeper takes 1 in
    30: pooled over 160 games it is 109-0-51 against T (1 in 20 is 115-1-44, closer to the cliff). Starting late is better still
    (next section).
-3. **Where the sitters are.** About a fifth of the keepers sit by round 100,000 (15-21 of 91 for the Keeper, 8-23 for 1 in 30
-   immediate, in idle-opponent games; the
+3. **Where the sitters are.** About a third of the keepers sit by round 100,000 (30 of 91 for the Keeper at 1 in 10, 15-21 at 1 in 15,
+   8-23 for 1 in 30 immediate, in idle-opponent games; the
    delivery count per ant is what sets it, and stolen packets are delivered again). The cliff is where the sitters outnumber the
    foragers the colony still needs.
 4. **Why it helps now and did not before is not shown.** One guess: the retuned ant finishes foraging by about round 35,000, so most of
@@ -62,16 +62,39 @@ with chance 1 in N). Against T, seeds 1-40 (80 games):
 | 1, 1 in 30 | 51-0-29 | 271 vs 219 | 390 | 351 |
 | 1, 1 in 15 | 51-0-29 | 293 vs 238 | 270 | 217 |
 | 2, 1 in 30 | 54-0-26 | 269 vs 220 | 407 | 372 |
-| **2, 1 in 15 (the Keeper)** | **62-0-18**; seeds 41-80: **59-0-21** | 296 vs 223 | 319 | 257 |
-| 2, 1 in 10 | 61-0-19 | 280 vs 236 | 257 | 200 |
+| 2, 1 in 15 (the first delayed Keeper) | **62-0-18**; seeds 41-80: **59-0-21** | 296 vs 223 | 319 | 257 |
+| **2, 1 in 10 (the Keeper now)** | 61-0-19; seeds 41-80: 57-0-23 | 280 vs 236 | 257 | 200 |
 | 3, 1 in 15 | 62-0-18 | 279 vs 213 | 360 | 321 |
 | 3, 1 in 10 | 62-0-18 | 281 vs 225 | 308 | 257 |
 
 With a delay of two or three deliveries the colony tolerates a much stronger settle chance (1 in 10-15, where the immediate version
-fell off a cliff at 1 in 12), and that is worth about 5 more wins in 80 than the immediate 1 in 30. The Keeper (2 free deliveries, then 1 in
-15) beats T 121-0-39 over 160 games, and the immediate 1 in 30 colony 54-0-26 head to head. It costs states: 689 and 1,111
-instructions (K = 3 is 913 and 1,471; K = 5 no longer fits the 2,000 limit). The step from K = 0 to K = 1 did not help (51-29), so the gain
-is not smooth in K; noise in 80 games is about 4.5 wins.
+fell off a cliff at 1 in 12), and that is worth about 5 more wins in 80 than the immediate 1 in 30. Against T the delayed doses are
+tied (2 free deliveries then 1 in 15: 121-0-39 over 160 games; 1 in 10: 118-0-42). It costs states: 689 and 1,111 instructions
+(K = 3 is 913 and 1,471; K = 5 no longer fits the 2,000 limit). The step from K = 0 to K = 1 did not help (51-29), so the gain is not
+smooth in K; noise in 80 games is about 4.5 wins.
+
+### Joint check: one change at a time against the Keeper
+
+The explore, eating and sidestep settings were each tuned before the Keeper existed, and the Keeper's dose with them off. Each
+alternative below plays the Keeper (explore 64, dead end always eaten, sidestep 1 in 4, 2 free deliveries, 1 in 15) with one
+thing changed; 80 games, both hills, seeds 1-40:
+
+| change | W-D-L | food (it vs Keeper) |
+|---|---|---|
+| explore 1 in 32 | 41-0-39 | 253 vs 254 |
+| explore 1 in 16 | 35-0-45 | 237 vs 264 |
+| dead end eaten 1 time in 2 | 43-0-37 | 258 vs 255 |
+| sidestep 1 in 2 | 44-0-36 | 259 vs 242 |
+| sidestep 1 in 8 | 40-1-39 | 255 vs 253 |
+| **settle 1 in 10** | **52-0-28**; seeds 41-80: **50-0-30** | 280 vs 241 |
+| settle 1 in 7 | 47-0-33 | 262 vs 247 |
+| settle 1 in 5 | 30-0-50 | 238 vs 266 |
+| 3 free deliveries, settle 1 in 10 | 37-0-43 | 255 vs 262 |
+
+Nothing beats the Keeper by more than noise except the stronger settle chance: **1 in 10 beats 1 in 15 by 102-0-58 over 160
+games** and is tied with it against T (57-23 on the fresh seeds against 59-21), so the Keeper settles 1 time in 10. The dose-response is
+again a cliff, now between 1 in 7 and 1 in 5. At 1 in 10 about a third of the ants (30 of 91 in idle-opponent games) end up sitting.
+Not run: 3 free deliveries with 1 in 15, 2 with 1 in 20, and combinations of the changes above.
 
 Limits: generated worlds only; the doses were picked among several on the first 40 seeds and the Keeper's was confirmed on seeds 41-80;
 the head-to-head results of different doses come from one family of runs.

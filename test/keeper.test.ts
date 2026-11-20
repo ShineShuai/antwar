@@ -20,7 +20,7 @@ const moods = (text: string): Map<string, string[]> => {
 };
 
 test('the keeper is the trail-layer with its deliveries counted: two free ones, then a settle step after each', () => {
-  assert.deepEqual([KEEP, KEEP_AFTER], [15, 2]);
+  assert.deepEqual([KEEP, KEEP_AFTER], [10, 2]);
   assert.deepEqual(TEMPLATES, ['forager', 'trail', 'keeper', 'guard', 'raider']);
   const k = moods(personality(DEFAULTS.keeper)), t = moods(personality(DEFAULTS.trail));
   assert.deepEqual([...moods(TRAIL).keys()], ['start', 'search', 'return'], 'the trail-layer is ants/trail.rules');
@@ -32,7 +32,7 @@ test('the keeper is the trail-layer with its deliveries counted: two free ones, 
     const drop = i < 2 ? `  when home here -> drop, turn random, switch search${i + 1}` : '  when home here -> drop, switch settle';
     assert.deepEqual(k.get(`return${i}`), (t.get('return') as string[]).map((l) => (l.includes('-> drop,') ? drop : l)), `return${i}`);
   }
-  assert.deepEqual(k.get('settle'), ['  when 1 in 15 -> switch sit', '  always -> turn random, switch search2']);
+  assert.deepEqual(k.get('settle'), ['  when 1 in 10 -> switch sit', '  always -> turn random, switch search2']);
   assert.deepEqual(k.get('sit'), ['  always -> wait']);
   const c = compileRules(personality(DEFAULTS.keeper));
   assert.deepEqual([c.warnings, c.program.n, c.instructions], [[], 689, 1111]);
@@ -46,7 +46,7 @@ test('lint: a mood that only waits is a deliberate rest, any other mood that nev
   assert.match(lint('mood a\nalways -> switch b\nmood b\nalways -> wait, move').join(), /mood "b" never switches/);
 });
 
-test('after a long game a fifth of the keepers sit on their piles (15-21 of 91 measured); a trail-layer has none', () => {
+test('after a long game a third of the keepers sit on their piles (30 of 91 measured); a trail-layer has none', () => {
   const sitters = (prog: typeof keeper, seed: number): number => {
     const s = createSim({ map: generateWorld(seed), programs: [prog, idle], seed });
     s.run(100000);
@@ -61,12 +61,12 @@ test('after a long game a fifth of the keepers sit on their piles (15-21 of 91 m
   };
   for (const seed of [1, 2]) {
     const n = sitters(keeper, seed);
-    assert.ok(n >= 8 && n <= 40, `seed ${seed}: ${n} sitters of 91`);
+    assert.ok(n >= 20 && n <= 45, `seed ${seed}: ${n} sitters of 91`);
     assert.equal(sitters(trail, seed), 0);
   }
 });
 
-test('the keeper comes out ahead of the plain trail-layer in 12 games (7-5, 13% more food here; the evidence is 121-0-39 over 160 in docs/STEALING.md)', () => {
+test('the keeper comes out ahead of the plain trail-layer in 12 games (10-2, 23% more food here; the evidence is 118-0-42 over 160 in docs/STEALING.md)', () => {
   let wins = 0, losses = 0, mine = 0, theirs = 0;
   for (let seed = 1; seed <= 6; seed++) {
     for (const swap of [false, true]) {
@@ -77,5 +77,5 @@ test('the keeper comes out ahead of the plain trail-layer in 12 games (7-5, 13% 
       if (k > t) wins++; else if (k < t) losses++;
     }
   }
-  assert.ok(wins >= losses && mine > theirs * 1.05, `${wins} wins, ${losses} losses, food ${mine} against ${theirs}`);
+  assert.ok(wins >= losses + 4 && mine > theirs * 1.1, `${wins} wins, ${losses} losses, food ${mine} against ${theirs}`);
 });
