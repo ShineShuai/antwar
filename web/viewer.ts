@@ -75,15 +75,15 @@ export function createViewer(ctx: Ctx, { W, H, rock, hill }: Pick<WorldMap, 'W' 
         ctx.fillRect(cx - s / 2, cy - s / 2, s, s);
       }
       if (opts.marks) {
-        const N = W * H, s = L.w * 0.16;
-        for (let c = 0; c < marks.length / N; c++) {
+        const N = W * H, s = L.w * 0.16, n = marks.length / N;
+        for (let c = 0; c < n; c++) {
           ctx.fillStyle = colors.mark[c] ?? colors.mark[0];
           for (let p = 0; p < N; p++) {
             const m = marks[c * N + p];
             if (!m || rock[p]) continue;
             const [cx, cy] = center(L, p % W, (p / W) | 0);
             for (let k = 0; k < 6; k++) {
-              if ((m >> k) & 1) ctx.fillRect(cx + (k - 2.5) * L.w * 0.17 - s / 2, cy + (c ? 1 : -1) * L.h * 0.22 - s / 2, s, s);
+              if ((m >> k) & 1) ctx.fillRect(cx + (k - 2.5) * L.w * 0.17 - s / 2, cy + (c - (n - 1) / 2) * ((0.44 * L.h) / Math.max(1, n - 1)) - s / 2, s, s); // each colony's scents on its own line: two sit at the old +/-0.22
             }
           }
         }

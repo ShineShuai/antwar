@@ -172,6 +172,17 @@ explain row, the "next:" line, or a lint warning or error with a line number sel
 row of the followed ant's current rule is highlighted. Reading a trace shows exactly where an ant's rounds go: in
 `trail.rules` a step is four food tests, two rounds of `follow trail` and then `explore`.
 
+**More than two colonies.** The colonies of a match are the hills of its map: a generated world has two, a **world file** with hills
+`a`, `b`, `c`... brings one editor per hill (Brain C (green), Brain D (amber), ... up to 26, each with its note, examples menu and
+personality controls), and the **Example world** menu loads a generated 3, 4, 6 or 8 colony world (`web/colonies.ts`; the hills
+are alike but the world is not exactly symmetric, so it is not a fair-match generator). Rules switches to "Classic + up to 26
+colonies" by itself when the map needs it (Tinyminds already allows 26); Randomize or a new seed goes back to two colonies. Each
+colony has its own colour and scent line on the board; the status line lists every score and, at round 100,000, says who has the
+most food or who is tied (the reference defines no ranking rule for more than two). Share links carry all brains. Added colonies
+start as the starter ant, and last session's brains for C.. come back when the map does. Checked by `test/colonies.test.ts`
+and, once by hand, by running the real page in jsdom (with an in-process Worker and a stub canvas) through 3, 6 and 4 colonies
+and back to 2: that run is not part of the test suite and no browser was used.
+
 ## Not done
 
 Skills beyond the trail kit (level 3 is in `docs/SCRIPT.md`), balanced Raider and Guard archetypes, the Academy

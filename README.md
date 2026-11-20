@@ -24,7 +24,7 @@ Spec: `reference.html`.
 - `src/core/replay.ts` `createReplay()` (hash checkpoints every 1,000 rounds, keyframes every 2,000, `seek`), replay descriptor `record()`/`verify()`; `docs/REPLAY.md`
 - `src/core/sim.ts`    `createSim()`, canonical state stream `snapshot()`/`restore()`, `hash()` = FNV-1a of it; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,
   direction/payload). v1: two colonies, no scare rule, no drop on blocked move
-- `web/`               `workshop.html` + `workshop.ts` (canvas viewer), `sim-worker.ts`, `engine.ts`
+- `web/`               `workshop.html` + `workshop.ts` (canvas viewer), `sim-worker.ts`, `engine.ts`, `colonies.ts` (2 to 26 colonies: labels, colours, status line, example worlds)
 - `src/lang/`         rules compiler (levels 1-2, trail kit): `compileRules(text)`; `node cli/rc.ts FILE.rules [--asm | --ant] [--fire-counts]`; see `docs/RULES.md`
 - `docs/STEALING.md`  nest stealing, measured twice (against the original and the retuned trail ant); the Keeper template
 - `docs/TUNING.md`    the kit's other chances (sidestep kept, dead-end eating now always); the shipped ant beats the original 73-0-7

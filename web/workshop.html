@@ -67,11 +67,14 @@
       <label>Seed <input id="seed" type="number" value="12345"></label>
       <label>Rules <select id="rules"></select></label>
       <label>World file <input id="world" type="file"></label>
+      <label>Example world <select id="exworld"></select></label>
     </div>
+    <div class="note" id="colnote"></div>
     <details>
       <summary>How to play</summary>
       <p>Write one program per colony. Every ant runs its own copy, sees only its own cell and the three cells ahead, and can
-        only leave scent marks. After 100,000 rounds the colony with more food on its own nest wins.</p>
+        only leave scent marks. After 100,000 rounds the colony with more food on its own nest wins. A world file with more hills
+        (letters <code>a</code> to <code>z</code>) brings more colonies, one brain each; Rules switches to &ldquo;up to 26 colonies&rdquo; by itself.</p>
       <p>Brains are official <code>.ant</code> (<code>Sense Ahead 1 3 Food</code>, one state per line), flat assembly
         (<code>sense ahead food else 3</code>, labels, <code>goto</code> costs nothing), rules or a script. Pick an example, edit, press Reset.
         <a href="../reference.html" target="_blank" rel="noopener">Full reference</a>.</p>
@@ -111,6 +114,7 @@
       <div class="note" id="nb"></div>
       <div id="pb"></div>
     </div>
+    <div id="more"></div>
     <div class="row">
       <button id="rand">Randomize</button><button id="go">Run</button><button id="step">Step</button><button id="reset">Reset</button>
       <button id="share">Copy link</button>
