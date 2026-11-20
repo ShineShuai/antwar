@@ -148,7 +148,9 @@ a trail cell ahead triggers the code read that checks it leads away from the nes
 * Joining a trail from the sides costs more than it finds (12/20 worlds, 90% at 55.4k): rejected.
 * What is left of the 1.9-round gap to the hand-written ant is the stateless design: `step` and `follow trail` each read the
   code under the ant (about 2 rounds), which the hand ant knows from its pc. Removing it means putting the 3 trail phases in
-  the pc (3 copies of every mood); it was not worth the complexity for about 9%.
+  the pc (3 copies of every mood); it was not worth the complexity for about 9% per step. **Decided against, for good:** the food
+  gap to the hand ant was about 2% at 90% of the food, and the Keeper (1,111 instructions) times three is about 3,300, past the
+  2,000-instruction limit, so the gain would be unreachable for the best ant anyway.
 * Tests (`test/lang.test.ts`) pin the behaviour on hand-marked corridors, so a later rewrite can be checked against it:
   walks outwards and eats the dead end, ignores a trail that leads toward the nest, joins one that leads away.
 

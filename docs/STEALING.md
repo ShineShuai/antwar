@@ -96,6 +96,21 @@ games** and is tied with it against T (57-23 on the fresh seeds against 59-21), 
 again a cliff, now between 1 in 7 and 1 in 5. At 1 in 10 about a third of the ants (30 of 91 in idle-opponent games) end up sitting.
 Not run: 3 free deliveries with 1 in 15, 2 with 1 in 20, and combinations of the changes above.
 
+### A raider squad inside the Keeper colony: tried, worse
+
+The Raider template as a whole loses (6-74 against T), but what about a few dedicated raiders among Keeper workers? Each new ant
+becomes a raider with chance 1 in P (a trail-layer that also heads for foe nests, `when foe home ahead -> step` and the two
+sides) and a Keeper worker otherwise. Against the Keeper, seeds 1-40 (80 games):
+
+| raiders | W-D-L | food (it vs Keeper) | stole | lost |
+|---|---|---|---|---|
+| 5% (1 in 20) | 34-0-46 | 255 vs 266 | 182 | 189 |
+| 10% (1 in 10) | 25-0-55 | 241 vs 287 | 180 | 196 |
+
+The more raiders, the worse; they take no more than a Keeper colony takes anyway (about 180 each way) and cost the foragers they
+were. Dropped; the programs were 990 states and 1,605 instructions. Not tried: raiders that stay at the foe's nest rather than
+return (camping), which is the same idea with a different end and has the same cost per ant.
+
 Limits: generated worlds only; the doses were picked among several on the first 40 seeds and the Keeper's was confirmed on seeds 41-80;
 the head-to-head results of different doses come from one family of runs.
 
@@ -143,5 +158,5 @@ The raider row is from 5 worlds (means), the others from 80 games.
 
 Killing thieves (an ant dies with 5 foes around it; a stash guard would need a squad), a clock to steal late or to start sitting late
 (counting deliveries in the state is a clock of sorts, and it helped; a chain of random timers could approximate a real one),
-camping next to the foe's piles to take each packet the moment its carrier leaves, making the first delivery cells unattractive to
+camping next to the foe's piles to take each packet the moment its carrier leaves (a raider squad that returns was tried and is worse), making the first delivery cells unattractive to
 explorers, a delay K beyond 3 (needs a smaller program), and a joint sweep of the sitting dose with the explore and eating settings.
