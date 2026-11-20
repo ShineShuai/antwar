@@ -59,7 +59,8 @@ generator wrote).
 
 * Templates: **Forager** (no trails, carries home by luck), **Trail-layer** (the trail kit, i.e. `ants/trail.rules`),
   **Guard** (walks around inside the nest and sits on food, so nobody can stand there to take it; bold or fierce guards also leave
-  their post for foes in view), **Raider** (trail-layer that also heads for foe nests).
+  their post for foes in view), **Raider** (trail-layer that also heads for foe nests), **Keeper** (trail-layer whose carriers settle on their pile
+  after a delivery, 1 time in 30, and stay: the one archetype that beats the plain trail-layer, `docs/STEALING.md`).
 * Sliders: **Curiosity** = share of random wandering (`when 1 in N -> wander`, N = 16, 8, 4, 2); **Boldness** = timid (flee
   a foe ahead), indifferent, bold (step toward a foe ahead), fierce (also the sides); carriers never fight; **Sociability** =
   loner, follower, devoted (`follow trail` after / before the food checks), trail templates only.
@@ -90,12 +91,13 @@ compiler as it was before the `follow trail` optimization (explorer step 3% slow
   and its raids work: over 5 worlds it took 538 packets from the foe nest and 96% of them reached its own nest. But **food
   at a nest is not safe**: every `food ... and not home ...` rule also picks up food from the *foe's* nest, so the trail-layer
   took 1,261 packets from the raider's nest, more than twice as many, without trying. `docs/STEALING.md` measures why and
-  what was tried against it (concealing, guarding, sitting on piles): nothing beat the plain trail-layer.
+  what was tried against it (concealing, guarding, sitting on piles): against the original ant nothing beat the plain trail-layer;
+  against the retuned one (`docs/TUNING.md`) a light dose of sitting does (the Keeper), the rest still loses.
 
 ## Lint (warnings, never blockers)
 
 shadowed rules (an unconditional rule that cannot fail hides the ones below it), a mood nothing switches to, a mood that
-never switches away, a program that never picks up or never drops food, a `return home` mood without a nest check, scent
+never switches away (a mood that only waits is a deliberate rest and is not reported), a program that never picks up or never drops food, a `return home` mood without a nest check, scent
 written but never read (or read but never written).
 
 ## Results: the kit through the compiler
