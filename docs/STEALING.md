@@ -7,7 +7,7 @@ delivers is a stash that anyone can take, one packet per visit to its cell. `nod
 The study was run twice. **Round 1** (below, "Against the original trail ant") used the trail-layer as it was before the retuning of
 `docs/EXPLORE.md` and `docs/TUNING.md` (explorer turning 1 step in 5, dead end eaten 1 time in 4). **Round 2** repeats it against
 the retuned `ants/trail.rules` ("T"), and **one conclusion of round 1 did not survive**: against the faster ant a light dose of
-pile-sitting wins, and that is the Keeper template.
+pile-sitting wins, and a version that starts sitting late wins more: that is the Keeper template.
 
 Both rounds: the colony under test against T, 80 games (40 worlds, both hills), 100,000 rounds unless noted. W-D-L is for the
 colony under test; food is the median nest food at the end; stole / lost are medians per game. 480 packets exist on a world.
@@ -25,13 +25,13 @@ colony under test; food is the median nest food at the end; stole / lost are med
 | 1 in 12 | 31-0-49 | 250 vs 274 | 171 | 112 |
 | 1 in 15 | 54-0-26 | 284 vs 243 | 242 | 167 |
 | 1 in 20 | **57-0-23**; seeds 41-80: **58-1-21** | 282 vs 239 | 288 | 228 |
-| **1 in 30 (the Keeper)** | **57-0-23**; seeds 41-80: **52-0-28** | 287 vs 218 | 354 | 311 |
+| 1 in 30 | **57-0-23**; seeds 41-80: **52-0-28** | 287 vs 218 | 354 | 311 |
 | 1 in 40 | 45-1-34; seeds 41-80: 54-0-26 | 256 vs 238 | 393 | 369 |
 | 1 in 64 | 44-0-36 | 262 vs 221 | 450 | 429 |
 
 "Sits" means: after the delivery the carrier stays on its pile for good (a mood that only waits), with the stated chance per
-delivery; the others get on with foraging. The rows are the keeper-style variants generated from `ants/trail.rules`; 1 in 30 is
-exactly the `keeper` template.
+delivery; the others get on with foraging. The rows are variants generated from `ants/trail.rules`. The next table starts the
+sitting late, and that version is the `keeper` template.
 
 What round 2 says:
 
@@ -39,8 +39,10 @@ What round 2 says:
    mirror match (333 before). Not stealing is still ruinous (0-80). A stash still cannot be hidden.
 2. **Light sitting works; heavy sitting still loses.** A dose-response with a cliff: 1 in 10 and 1 in 12 lose (15-65, 31-49), 1 in 15 to
    1 in 40 win (54-26 to 57-23 on seeds 1-40, 52-28 to 58-21 on fresh seeds 41-80), 1 in 64 fades to a coin flip. The Keeper takes 1 in
-   30: pooled over 160 games it is **109-0-51** against T (1 in 20 is 115-1-44, closer to the cliff).
-3. **Where the sitters are.** About a fifth of the keepers sit by round 100,000 (8-23 of 91 in idle-opponent games; the
+   30: pooled over 160 games it is 109-0-51 against T (1 in 20 is 115-1-44, closer to the cliff). Starting late is better still
+   (next section).
+3. **Where the sitters are.** About a fifth of the keepers sit by round 100,000 (15-21 of 91 for the Keeper, 8-23 for 1 in 30
+   immediate, in idle-opponent games; the
    delivery count per ant is what sets it, and stolen packets are delivered again). The cliff is where the sitters outnumber the
    foragers the colony still needs.
 4. **Why it helps now and did not before is not shown.** One guess: the retuned ant finishes foraging by about round 35,000, so most of
@@ -48,8 +50,31 @@ What round 2 says:
    lost forager. It was not tested.
 5. **Guards, scouts and raiders still do not beat T**, as in round 1 (10% guards are now level with T instead of clearly worse).
 
-Limits: generated worlds only; the dose (30) was picked among several on the same first 40 seeds and confirmed on seeds 41-80 for
-30, 20 and 40; the head-to-head results of different doses come from one family of runs.
+### Starting late (the Keeper)
+
+Ants have no clock, but the program counter can count: the state carries the number of deliveries so far (one search/return pair of
+moods per free delivery), and only after K free deliveries does each delivery end in the settle step (stay on the pile for good
+with chance 1 in N). Against T, seeds 1-40 (80 games):
+
+| K free deliveries, then 1 in N | W-D-L | food (it vs T) | stole | lost |
+|---|---|---|---|---|
+| 0, 1 in 30 (the earlier version) | 57-0-23 | 287 vs 218 | 354 | 311 |
+| 1, 1 in 30 | 51-0-29 | 271 vs 219 | 390 | 351 |
+| 1, 1 in 15 | 51-0-29 | 293 vs 238 | 270 | 217 |
+| 2, 1 in 30 | 54-0-26 | 269 vs 220 | 407 | 372 |
+| **2, 1 in 15 (the Keeper)** | **62-0-18**; seeds 41-80: **59-0-21** | 296 vs 223 | 319 | 257 |
+| 2, 1 in 10 | 61-0-19 | 280 vs 236 | 257 | 200 |
+| 3, 1 in 15 | 62-0-18 | 279 vs 213 | 360 | 321 |
+| 3, 1 in 10 | 62-0-18 | 281 vs 225 | 308 | 257 |
+
+With a delay of two or three deliveries the colony tolerates a much stronger settle chance (1 in 10-15, where the immediate version
+fell off a cliff at 1 in 12), and that is worth about 5 more wins in 80 than the immediate 1 in 30. The Keeper (2 free deliveries, then 1 in
+15) beats T 121-0-39 over 160 games, and the immediate 1 in 30 colony 54-0-26 head to head. It costs states: 689 and 1,111
+instructions (K = 3 is 913 and 1,471; K = 5 no longer fits the 2,000 limit). The step from K = 0 to K = 1 did not help (51-29), so the gain
+is not smooth in K; noise in 80 games is about 4.5 wins.
+
+Limits: generated worlds only; the doses were picked among several on the first 40 seeds and the Keeper's was confirmed on seeds 41-80;
+the head-to-head results of different doses come from one family of runs.
 
 ## Round 1: against the original trail ant
 
@@ -94,6 +119,6 @@ The raider row is from 5 worlds (means), the others from 80 games.
 ## Not tried
 
 Killing thieves (an ant dies with 5 foes around it; a stash guard would need a squad), a clock to steal late or to start sitting late
-(ants have no clock; a chain of random timers could approximate one: round 2 suggests the sitters' value comes late in the game),
+(counting deliveries in the state is a clock of sorts, and it helped; a chain of random timers could approximate a real one),
 camping next to the foe's piles to take each packet the moment its carrier leaves, making the first delivery cells unattractive to
-explorers, and a joint sweep of the sitting dose with the explore and eating settings.
+explorers, a delay K beyond 3 (needs a smaller program), and a joint sweep of the sitting dose with the explore and eating settings.

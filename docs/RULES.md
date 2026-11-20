@@ -59,8 +59,9 @@ generator wrote).
 
 * Templates: **Forager** (no trails, carries home by luck), **Trail-layer** (the trail kit, i.e. `ants/trail.rules`),
   **Guard** (walks around inside the nest and sits on food, so nobody can stand there to take it; bold or fierce guards also leave
-  their post for foes in view), **Raider** (trail-layer that also heads for foe nests), **Keeper** (trail-layer whose carriers settle on their pile
-  after a delivery, 1 time in 30, and stay: the one archetype that beats the plain trail-layer, `docs/STEALING.md`).
+  their post for foes in view), **Raider** (trail-layer that also heads for foe nests), **Keeper** (trail-layer whose carriers, after two free
+  deliveries, settle on their pile 1 time in 15 after each delivery and stay: 689 states; the one archetype that beats the plain
+  trail-layer, `docs/STEALING.md`).
 * Sliders: **Curiosity** = share of random wandering (`when 1 in N -> wander`, N = 16, 8, 4, 2); **Boldness** = timid (flee
   a foe ahead), indifferent, bold (step toward a foe ahead), fierce (also the sides); carriers never fight; **Sociability** =
   loner, follower, devoted (`follow trail` after / before the food checks), trail templates only.

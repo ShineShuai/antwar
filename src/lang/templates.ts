@@ -11,7 +11,7 @@ export const TEMPLATE_NAMES: Record<Template, string> = { forager: 'Forager', tr
 export const TEMPLATE_HELP: Record<Template, string> = {
   forager: 'finds food and carries it home by luck; no trails',
   trail: 'finds food, lays a trail home and a food trail others follow',
-  keeper: 'like the trail-layer, but about 1 carrier in 30 stays on its pile after dropping, so nobody can take it (docs/STEALING.md)',
+  keeper: 'like the trail-layer, but after its first two deliveries a carrier settles on its pile 1 time in 15, so nobody can take it (docs/STEALING.md)',
   guard: 'sits on the food stash at the nest so nobody can steal it',
   raider: 'like the trail-layer, and heads for foe nests to take their food',
 };
@@ -32,8 +32,10 @@ export const DEFAULTS: Record<Template, Personality> = {
 };
 export const usesSociability = (t: Template): boolean => t === 'trail' || t === 'raider' || t === 'keeper';
 export const usesMix = (t: Template): boolean => t === 'trail' || t === 'raider';
-/** A keeper's carrier settles on its pile after a delivery with chance 1 in KEEP and stays there for good (measured: docs/STEALING.md). */
-export const KEEP = 30;
+/** A keeper's carrier, after its first KEEP_AFTER deliveries, settles on its pile after each delivery with chance 1 in KEEP and
+ * stays there for good (measured: docs/STEALING.md). */
+export const KEEP = 15;
+export const KEEP_AFTER = 2;
 
 const foeRules = (boldness: number, carrier: boolean): string[] => {
   const nc = carrier ? ' and not carrying' : ''; // ants that carry food avoid fights
@@ -46,30 +48,38 @@ const foeRules = (boldness: number, carrier: boolean): string[] => {
 const wanderRule = (curiosity: number): string[] => (curiosity ? [`when 1 in ${CHANCE[curiosity]} -> wander`] : []);
 
 interface TrailOpts { curiosity: number; boldness: number; follow: number; lay: boolean; raid: boolean; keep?: number }
+/** The search and return moods of the trail-layer. With `keep` the ant counts its deliveries in its state: moods search0/return0,
+ * search1/return1, ... one pair per free delivery (KEEP_AFTER), and after the last pair each delivery ends in `settle`, where it
+ * stays on its pile for good with chance 1 in `keep` (docs/STEALING.md). Without `keep` there is one pair, as in ants/trail.rules. */
 function trailMoods(prefix: string, o: TrailOpts): string[] {
-  const S = `${prefix}search`, R = `${prefix}return`;
-  return [
-    `mood ${prefix}start`, `  always -> turn random, switch ${S}`,
-    `mood ${S}`,
-    ...(o.follow === 2 ? ['  always -> follow trail'] : []),
-    ...foeRules(o.boldness, true).map((r) => `  ${r}`),
-    ...(o.raid ? ['  when foe home ahead -> step', '  when foe home left ahead -> turn left, step', '  when foe home right ahead -> turn right, step'] : []),
-    `  when food here and not home here -> pickup, ${o.lay ? 'lay trail, ' : ''}turn around, switch ${R}`,
-    '  when food ahead and not home ahead -> step',
-    '  when food left ahead and not home left ahead -> turn left, step',
-    '  when food right ahead and not home right ahead -> turn right, step',
-    ...(o.follow === 1 ? ['  always -> follow trail'] : []),
-    ...wanderRule(o.curiosity).map((r) => `  ${r}`),
-    '  otherwise explore',
-    `mood ${R}`,
-    o.keep ? `  when home here -> drop, switch ${prefix}settle` : `  when home here -> drop, turn random, switch ${S}`,
-    '  always -> return home',
-    '  when home ahead -> move',
-    '  when home left ahead -> turn left, move',
-    '  when home right ahead -> turn right, move',
-    '  otherwise roam',
-    ...(o.keep ? [`mood ${prefix}settle`, `  when 1 in ${o.keep} -> switch ${prefix}sit`, `  always -> turn random, switch ${S}`, `mood ${prefix}sit`, '  always -> wait'] : []),
-  ];
+  const phases = o.keep ? KEEP_AFTER + 1 : 1;
+  const S = (i: number): string => (phases > 1 ? `${prefix}search${i}` : `${prefix}search`), R = (i: number): string => (phases > 1 ? `${prefix}return${i}` : `${prefix}return`);
+  const out = [`mood ${prefix}start`, `  always -> turn random, switch ${S(0)}`];
+  for (let i = 0; i < phases; i++) {
+    out.push(
+      `mood ${S(i)}`,
+      ...(o.follow === 2 ? ['  always -> follow trail'] : []),
+      ...foeRules(o.boldness, true).map((r) => `  ${r}`),
+      ...(o.raid ? ['  when foe home ahead -> step', '  when foe home left ahead -> turn left, step', '  when foe home right ahead -> turn right, step'] : []),
+      `  when food here and not home here -> pickup, ${o.lay ? 'lay trail, ' : ''}turn around, switch ${R(i)}`,
+      '  when food ahead and not home ahead -> step',
+      '  when food left ahead and not home left ahead -> turn left, step',
+      '  when food right ahead and not home right ahead -> turn right, step',
+      ...(o.follow === 1 ? ['  always -> follow trail'] : []),
+      ...wanderRule(o.curiosity).map((r) => `  ${r}`),
+      '  otherwise explore',
+      `mood ${R(i)}`,
+      !o.keep ? `  when home here -> drop, turn random, switch ${S(0)}`
+        : i < phases - 1 ? `  when home here -> drop, turn random, switch ${S(i + 1)}` : `  when home here -> drop, switch ${prefix}settle`,
+      '  always -> return home',
+      '  when home ahead -> move',
+      '  when home left ahead -> turn left, move',
+      '  when home right ahead -> turn right, move',
+      '  otherwise roam',
+    );
+  }
+  if (o.keep) out.push(`mood ${prefix}settle`, `  when 1 in ${o.keep} -> switch ${prefix}sit`, `  always -> turn random, switch ${S(phases - 1)}`, `mood ${prefix}sit`, '  always -> wait');
+  return out;
 }
 /** The guard sits on the stash: food can only be picked up by an ant standing on its cell, so an ant that stays on a nest cell
  * holding food makes that food unstealable. Until it finds one it walks around inside the nest (it only ever moves onto nest
