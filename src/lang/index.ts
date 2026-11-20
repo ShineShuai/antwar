@@ -58,7 +58,8 @@ export function lint(ast: Ast): string[] {
   ast.moods.forEach((m, i) => {
     if ((i > 0 || ast.mix) && !targets.has(m.name)) out.push(`line ${m.line}: mood "${m.name}" is never entered: no rule switches to it${ast.mix ? ' and it is not in the mix' : ''}`);
     const isRole = ast.mix?.roles.some((r) => r.mood === m.name);
-    if (ast.moods.length > 1 && !isRole && !m.rules.some((r) => r.actions.some((a) => a.kind === 'switch'))) {
+    const rests = m.rules.length > 0 && m.rules.every((r) => r.actions.every((a) => a.kind === 'wait')); // a mood that only waits is a deliberate rest
+    if (ast.moods.length > 1 && !isRole && !rests && !m.rules.some((r) => r.actions.some((a) => a.kind === 'switch'))) {
       out.push(`line ${m.line}: mood "${m.name}" never switches to another mood, so an ant that enters it stays there`);
     }
     m.rules.forEach((r, j) => {

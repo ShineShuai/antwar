@@ -31,7 +31,7 @@ test('every template with every slider position compiles; only a guard-only prog
       }
     }
   }
-  assert.equal(n, 4 * 5 * 4 * 3);
+  assert.equal(n, 5 * 5 * 4 * 3);
 });
 
 test('role mixes compile for the templates that have them; weights are reduced and bounded', () => {
@@ -57,7 +57,7 @@ test('role mixes compile for the templates that have them; weights are reduced a
 });
 
 test('sociability and the role mix only exist where the template has a trail', () => {
-  assert.deepEqual(TEMPLATES.filter(usesSociability), ['trail', 'raider']);
+  assert.deepEqual(TEMPLATES.filter(usesSociability), ['trail', 'keeper', 'raider']);
   assert.deepEqual(TEMPLATES.filter(usesMix), ['trail', 'raider']);
   // the forager and guard text does not depend on a sociability value
   for (const t of ['forager', 'guard'] as const) {

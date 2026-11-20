@@ -1,16 +1,17 @@
 // Level 0 of the reference's Easy authoring: pick a personality. A template plus three sliders and an optional role mix
 // generate a rules program (src/lang/parse.ts). Sliders are one-way generators: the text carries a header that lets an editor
 // restore the controls, but only while the text is still exactly what the generator wrote (parsePersonality).
-export type Template = 'forager' | 'trail' | 'guard' | 'raider';
+export type Template = 'forager' | 'trail' | 'keeper' | 'guard' | 'raider';
 /** Percent of newly born ants in each role (any non-negative weights; the compiler reduces them). */
 export interface RoleMix { worker: number; scout: number; guard: number }
 export interface Personality { template: Template; curiosity: number; boldness: number; sociability: number; mix?: RoleMix }
 
-export const TEMPLATES: readonly Template[] = ['forager', 'trail', 'guard', 'raider'];
-export const TEMPLATE_NAMES: Record<Template, string> = { forager: 'Forager', trail: 'Trail-layer', guard: 'Guard', raider: 'Raider' };
+export const TEMPLATES: readonly Template[] = ['forager', 'trail', 'keeper', 'guard', 'raider'];
+export const TEMPLATE_NAMES: Record<Template, string> = { forager: 'Forager', trail: 'Trail-layer', keeper: 'Keeper', guard: 'Guard', raider: 'Raider' };
 export const TEMPLATE_HELP: Record<Template, string> = {
   forager: 'finds food and carries it home by luck; no trails',
   trail: 'finds food, lays a trail home and a food trail others follow',
+  keeper: 'like the trail-layer, but about 1 carrier in 30 stays on its pile after dropping, so nobody can take it (docs/STEALING.md)',
   guard: 'sits on the food stash at the nest so nobody can steal it',
   raider: 'like the trail-layer, and heads for foe nests to take their food',
 };
@@ -25,11 +26,14 @@ const CHANCE = [0, 16, 8, 4, 2];
 export const DEFAULTS: Record<Template, Personality> = {
   forager: { template: 'forager', curiosity: 1, boldness: 1, sociability: 0 },
   trail: { template: 'trail', curiosity: 0, boldness: 1, sociability: 1 }, // = ants/trail.rules; see docs/RULES.md
+  keeper: { template: 'keeper', curiosity: 0, boldness: 1, sociability: 1 },
   guard: { template: 'guard', curiosity: 0, boldness: 1, sociability: 0 },
   raider: { template: 'raider', curiosity: 0, boldness: 2, sociability: 1 },
 };
-export const usesSociability = (t: Template): boolean => t === 'trail' || t === 'raider';
-export const usesMix = usesSociability;
+export const usesSociability = (t: Template): boolean => t === 'trail' || t === 'raider' || t === 'keeper';
+export const usesMix = (t: Template): boolean => t === 'trail' || t === 'raider';
+/** A keeper's carrier settles on its pile after a delivery with chance 1 in KEEP and stays there for good (measured: docs/STEALING.md). */
+export const KEEP = 30;
 
 const foeRules = (boldness: number, carrier: boolean): string[] => {
   const nc = carrier ? ' and not carrying' : ''; // ants that carry food avoid fights
@@ -41,7 +45,7 @@ const foeRules = (boldness: number, carrier: boolean): string[] => {
 };
 const wanderRule = (curiosity: number): string[] => (curiosity ? [`when 1 in ${CHANCE[curiosity]} -> wander`] : []);
 
-interface TrailOpts { curiosity: number; boldness: number; follow: number; lay: boolean; raid: boolean }
+interface TrailOpts { curiosity: number; boldness: number; follow: number; lay: boolean; raid: boolean; keep?: number }
 function trailMoods(prefix: string, o: TrailOpts): string[] {
   const S = `${prefix}search`, R = `${prefix}return`;
   return [
@@ -58,12 +62,13 @@ function trailMoods(prefix: string, o: TrailOpts): string[] {
     ...wanderRule(o.curiosity).map((r) => `  ${r}`),
     '  otherwise explore',
     `mood ${R}`,
-    `  when home here -> drop, turn random, switch ${S}`,
+    o.keep ? `  when home here -> drop, switch ${prefix}settle` : `  when home here -> drop, turn random, switch ${S}`,
     '  always -> return home',
     '  when home ahead -> move',
     '  when home left ahead -> turn left, move',
     '  when home right ahead -> turn right, move',
     '  otherwise roam',
+    ...(o.keep ? [`mood ${prefix}settle`, `  when 1 in ${o.keep} -> switch ${prefix}sit`, `  always -> turn random, switch ${S}`, `mood ${prefix}sit`, '  always -> wait'] : []),
   ];
 }
 /** The guard sits on the stash: food can only be picked up by an ant standing on its cell, so an ant that stays on a nest cell
@@ -115,7 +120,7 @@ export function personality(p: Personality): string {
     out.push(...guardMood(p.curiosity, p.boldness));
   } else {
     out.push('kit trail', ...(social ? ['kit foodtrail'] : []));
-    out.push(...trailMoods('', { curiosity: p.curiosity, boldness: p.boldness, follow: social, lay: social >= 1, raid: p.template === 'raider' }));
+    out.push(...trailMoods('', { curiosity: p.curiosity, boldness: p.boldness, follow: social, lay: social >= 1, raid: p.template === 'raider', keep: p.template === 'keeper' ? KEEP : 0 }));
   }
   return `${out.join('\n')}\n`;
 }
