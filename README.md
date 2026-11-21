@@ -19,7 +19,7 @@ Spec: `reference.html`.
 - `src/core/gen.ts`    `generateWorld(seed)`: Classic contest world (spec 3.1); `node cli/gen.ts SEED [--symmetric]`
 - `src/core/isa.ts`    the instruction table; `src/core/rules.ts` the rulesets registry: classic, tinyminds and one-flag bundles (carry two, dropfail, scare4, altorder, up to 26 colonies); see `docs/EXTENDING.md`
 - `src/core/seed.ts`   `dailySeed(date)` = hash of the UTC date string (the client supplies the date: `web/clock.ts`)
-- `src/core/match.ts`  `playGame()`, `schedule()`, 2/1/0 `standings()`, `pairwise()`, `colourSplit()`; `src/core/gen.ts` also has the point-mirror `SYMMETRIC_WORLD`; `docs/MATCH.md`
+- `src/core/match.ts`  `playGame()`, `schedule()`, 2/1/0 `standings()`, `pairwise()`, `colourSplit()`; `src/core/gen.ts` also has the point-mirror `SYMMETRIC_WORLD` and `generateFairWorld(n, seed)` (fair worlds for 3 to 25 colonies, `isFair`, `node cli/gen.ts SEED --colonies N`); `docs/MATCH.md`
 - `src/core/trace.ts`  the official dump format: `frameLines()`, `dumpChunks()` exporter, `parseDump()`, `mergeDumps()`, `compareDump()`; `node cli/trace.ts export|compare`; `docs/TRACE.md`
 - `src/core/replay.ts` `createReplay()` (hash checkpoints every 1,000 rounds, keyframes every 2,000, `seek`), replay descriptor `record()`/`verify()`; `docs/REPLAY.md`
 - `src/core/sim.ts`    `createSim()`, canonical state stream `snapshot()`/`restore()`, `hash()` = FNV-1a of it; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,

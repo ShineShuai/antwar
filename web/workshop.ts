@@ -1,7 +1,7 @@
 import { EXAMPLES, STARTER } from './default-ant.ts';
 import { describeCell } from './inspect.ts';
-import { GENERATOR_VERSION } from '../src/core/gen.ts';
-import { parseMap } from '../src/core/map.ts';
+import { GENERATOR_VERSION, generateFairWorld } from '../src/core/gen.ts';
+import { formatMap, parseMap } from '../src/core/map.ts';
 import { RULESETS, RULESET_NAMES } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import { decodeShare, encodeShare } from './share.ts';
@@ -318,7 +318,15 @@ document.querySelectorAll<HTMLSelectElement>('select.ex').forEach(fillExamples);
 const exWorld = $<HTMLSelectElement>('exworld');
 exWorld.add(new Option('example world…', ''));
 for (const n of [3, 4, 6, 8]) exWorld.add(new Option(`${n} colonies`, String(n)));
-exWorld.onchange = () => { if (exWorld.value) { mapText = exampleWorld(Number(exWorld.value)); exWorld.value = ''; start(); } };
+// fair worlds: the same place for every colony (docs/MATCH.md); the seed box picks the world, wrapped, no rock border
+for (const n of [3, 4, 6, 8]) exWorld.add(new Option(`${n} colonies, fair (seed)`, `fair${n}`));
+exWorld.onchange = () => {
+  const v = exWorld.value;
+  if (!v) return;
+  mapText = v.startsWith('fair') ? formatMap(generateFairWorld(Number(v.slice(4)), Number.isInteger(Number(seedBox.value)) ? Number(seedBox.value) : 1)) : exampleWorld(Number(v));
+  exWorld.value = '';
+  start();
+};
 $('share').onclick = async () => {
   const link = `${location.href.split('#')[0]}#v1.${await encodeShare({
     seed: Number(seedBox.value), brains: boxes.map((b) => b.value), map: mapText || undefined, gen: GENERATOR_VERSION, rules: rulesId() === 'classic' ? undefined : rulesId(),

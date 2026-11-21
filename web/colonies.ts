@@ -50,7 +50,7 @@ export function statusLine(cycle: number, score: readonly number[], alive: reado
 
 /** A world for 2 to 26 colonies, as `.world` text: rock border, one hill per colony on a ring, food between the hills, a clump of
  * rock between each pair, and food in the middle. The colonies start alike (hills of 23 to 27 cells), but the ring is drawn on hexes,
- * so it is similar, not exactly symmetric: not a fair-match generator. */
+ * so it is similar, not exactly symmetric: not a fair-match generator (`generateFairWorld`, src/core/gen.ts, is; docs/MATCH.md). */
 export function exampleWorld(n: number): string {
   if (!Number.isInteger(n) || n < 2 || n > MAX_COLONIES) throw new RangeError(`colonies must be 2 to ${MAX_COLONIES}`);
   const S = Math.min(198, 28 + 4 * n + (n > 8 ? 4 * n : 0)), cx = (S - 1) / 2, cy = (S - 1) / 2, R = S * 0.32;
