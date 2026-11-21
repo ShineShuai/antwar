@@ -49,14 +49,17 @@ test('palette: the contest colours for A and B, then one distinct hue per colony
   assert.notDeepEqual(paletteFor(5, false).ant, paletteFor(5, true).ant);
 });
 
-test('status line: the contest wording for two colonies, "most food" for more (no ranking rule is defined)', () => {
+test('status line: the contest wording for two colonies, the ranking (more food first, equal food shares a place) for more', () => {
   assert.equal(statusLine(10, [3, 4], [91, 90], 100000), 'Round 10 | A 3 (91 ants) | B 4 (90 ants)');
   assert.equal(statusLine(100000, [3, 4], [91, 90], 100000), 'Round 100000 | A 3 (91 ants) | B 4 (90 ants) | B wins');
   assert.equal(statusLine(100000, [4, 3], [1, 2], 100000).endsWith('| A wins'), true);
   assert.equal(statusLine(100000, [4, 4], [1, 2], 100000).endsWith('| draw'), true);
   assert.equal(statusLine(5, [1, 2, 3], [10, 9, 8], 100000), 'Round 5 | A 1 (10 ants) | B 2 (9 ants) | C 3 (8 ants)');
-  assert.equal(statusLine(100000, [1, 7, 3], [1, 1, 1], 100000).endsWith('| most food: B'), true);
-  assert.equal(statusLine(100000, [7, 1, 7], [1, 1, 1], 100000).endsWith('| tied for most food: A, C'), true);
+  assert.equal(statusLine(100000, [1, 7, 3], [1, 1, 1], 100000), 'Round 100000 | A 1 (1 ants) | B 7 (1 ants) | C 3 (1 ants) | ranking B > C > A');
+  assert.equal(statusLine(100000, [7, 1, 7], [1, 1, 1], 100000).endsWith('| ranking A = C > B'), true);
+  assert.equal(statusLine(100000, [5, 5, 5], [1, 1, 1], 100000).endsWith('| ranking A = B = C'), true);
+  assert.equal(statusLine(100000, [2, 9, 4, 9, 0], [1, 1, 1, 1, 1], 100000).endsWith('| ranking B = D > C > A > E'), true);
+  assert.equal(statusLine(99999, [1, 7, 3], [1, 1, 1], 100000).includes('ranking'), false, 'only at the end of the match')
 });
 
 test('example worlds: valid, one hill each of about the same size, food reachable, deterministic, sizes within the 200 limit', () => {

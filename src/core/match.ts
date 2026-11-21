@@ -1,14 +1,15 @@
 // Match layer: every pair plays every world twice, once per colour; a game is worth 2 (more nest food), 1 (equal) or 0
 // points (reference, Matches tab). Integers only; statistics with fractions live in cli/tourney.ts. See docs/MATCH.md.
 import { CLASSIC_WORLD, SYMMETRIC_WORLD, generateWorld } from './gen.ts';
+import { points } from './ranking.ts';
 import { CLASSIC, createSim } from './sim.ts';
 import type { Program, Rules, WorldMap } from './types.ts';
 
 /** A match is exactly this long (Classic). */
 export const MATCH_ROUNDS = 100000;
 
-/** Points for one game from the nest food of a colony and of its opponent. */
-export const points = (mine: number, theirs: number): number => (mine > theirs ? 2 : mine === theirs ? 1 : 0);
+/** Points for one game from the nest food of a colony and of its opponent (for more than two colonies: `colonyResult`). */
+export { points };
 
 /** The world of a seed: the contest generator, or its point-mirror symmetric variant for ranked matches. */
 export const worldFor = (seed: number, symmetric: boolean): WorldMap => generateWorld(seed, symmetric ? SYMMETRIC_WORLD : CLASSIC_WORLD);

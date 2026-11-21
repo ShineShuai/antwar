@@ -1,5 +1,6 @@
 // More than two colonies in the workshop: labels, colours, the status line, the ruleset a map needs, bundled example worlds.
 // Pure functions (no DOM): test/colonies.test.ts.
+import { colonyResult } from '../src/core/ranking.ts';
 import { RULESETS } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import { DARK, LIGHT } from './viewer.ts';
@@ -38,14 +39,13 @@ export function paletteFor(n: number, dark: boolean): Palette {
   return { ...base, hill, ant, mark };
 }
 
-/** The line under the board. Two colonies keep the contest wording; more have no ranking rule, so it says who has the most food. */
+/** The line under the board. Two colonies keep the contest wording; more show the ranking of docs/MATCH.md: by food, equal food shares a place (A > C = D > B). */
 export function statusLine(cycle: number, score: readonly number[], alive: readonly number[], match: number): string {
   let t = `Round ${cycle} | ${score.map((s, c) => `${letter(c)} ${s} (${alive[c]} ants)`).join(' | ')}`;
   if (cycle < match) return t;
   if (score.length === 2) return `${t} | ${score[0] === score[1] ? 'draw' : score[0] > score[1] ? 'A wins' : 'B wins'}`;
-  const top = Math.max(...score), lead = score.flatMap((s, c) => (s === top ? [letter(c)] : []));
-  t += lead.length === 1 ? ` | most food: ${lead[0]}` : ` | tied for most food: ${lead.join(', ')}`;
-  return t;
+  const { rank } = colonyResult(score), places = [...new Set(rank)].sort((x, y) => x - y);
+  return `${t} | ranking ${places.map((r) => rank.flatMap((x, c) => (x === r ? [letter(c)] : [])).join(' = ')).join(' > ')}`;
 }
 
 /** A world for 2 to 26 colonies, as `.world` text: rock border, one hill per colony on a ring, food between the hills, a clump of

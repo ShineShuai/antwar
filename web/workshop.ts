@@ -170,7 +170,7 @@ function start(): void {
   const rid = rulesFor(rulesId(), want);
   colNote.textContent = '';
   if (rid !== rulesId()) { rulesBox.value = rid; colNote.textContent = `This map has ${want} colonies: Rules switched to "${RULESET_NAMES[rid]}".`; }
-  else if (want > 2) colNote.textContent = `${want} colonies, one brain each. There is no ranking rule for more than two: the board shows who has the most food.`;
+  else if (want > 2) colNote.textContent = `${want} colonies, one brain each. Ranking: more food ranks higher, and a colony scores 2 points for each colony it out-scores and 1 for each tie (docs/MATCH.md).`;
   setColonies(want);
   infos = boxes.map((b) => describeBrain(b.value, RULESETS[rulesId()]));
   selected = null; wantTrack = undefined; wantSeek = undefined; check = null;
