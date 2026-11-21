@@ -55,6 +55,7 @@ implemented is *alternate the direction of the id order each round* (round 1 asc
 `altorder` micro-tests. The reading is now written into the reference (the Rulesets card and "Order bias") and the demo in `reference.html`
 implements it independently (`test/refdemo.test.ts` compares it with the core round by round), so the implementations agree on it; they would
 agree on a wrong reading too, so it stays the owner's decision.
+Measured effect (`docs/MATCH.md`, 500 symmetric seeds, the Keeper on both hills): first colony 52.5% of decided games in Classic order, 51.1% with `altorder`; neither is distinguishable from 50% at this size.
 `unsupported()` now only rejects values outside the spec: `cap` not 1 or 2, `scareThreshold` not 0..4, `maxColonies` not 1..26.
 
 The workshop's **Rules** menu runs any of these ids (both colonies, saved and shared); `node cli/run.ts --rules ID` and

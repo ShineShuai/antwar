@@ -20,6 +20,21 @@ tori). Hill 1 is hill 0's twin; 5 + 5 rocks and 4 + 4 food blobs are placed as p
 `isSymmetric(map)` validates any world. The contest generator's output is unchanged (pinned in `test/match.test.ts`).
 Ants still start facing east and ids still run row-major, so the terrain is fair, the move order is not (hence both colours).
 
+## Order bias, measured (Classic and `altorder`)
+
+One brain on both hills of 500 symmetric worlds (seeds 1-500, 100,000 rounds, one game per seed). The brain is the Keeper
+(`personality(DEFAULTS.keeper)`, 689 states), the strongest probe at hand because its colonies meet at the nests all game.
+
+| order | first hill wins | second hill wins | draws | first's share of decided games (95% interval) | mean nest food, first / second |
+|---|---|---|---|---|---|
+| Classic | 262 | 237 | 1 | 52.5% (48.1-56.9) | 262.4 / 258.5 |
+| `altorder` | 254 | 243 | 3 | 51.1% (46.7-55.5) | 261.8 / 261.1 |
+
+Neither differs from 50% (z = 1.1 and 0.5), so **no bias was found in either order, and the test does not show that `altorder` removes
+one**: a Classic bias would have to be larger than about 4.4 points to show at this size, and a first run of 20 seeds (6-13-1 for the second hill)
+was noise. To see a 1-point bias you need about 10,000 seeds (0.9 s per game here, so about 2.5 hours on one core).
+Not measured: other brains (the plain trail-layer, the raider), other worlds than the symmetric generator.
+
 ## Tournament CLI
 
     node cli/tourney.ts A.ant B.rules C.asm ... [--seeds 20] [--from 1] [--rounds 100000] [--rules classic]
