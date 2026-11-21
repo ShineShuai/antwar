@@ -31,6 +31,7 @@ Spec: `reference.html`.
 - `docs/EXPLORE.md`   exploration persistence: `explore N`, the sweep that moved the default from 1-in-5 to 1-in-64
 - `src/lang/script.ts` level 3: the structured script (define/macros, then/else, loop, repeat, choose, labels) -> flat assembly: `compileScript(text)`; `node cli/rc.ts FILE.script [--asm | --ant]`; see `docs/SCRIPT.md`
 - `src/lang/templates.ts` level 0: templates, sliders, role mix -> rules text; `node cli/personality.ts --template trail --mix 70/20/10`; `web/personality.ts` the controls
+- `src/lang/highlight.ts` syntax colours for the brain editors: `tokenize(text)` / `segments(text)` for rules, scripts and assembly (flat .asm and official .ant share one tokenizer); `web/highlight.ts` lays them under the textarea (Chrome tested)
 - `web/brain.ts`      what the workshop shows under an editor (size, lint, errors), the explain-why rows, and `whereIs`/`traceRows`: a pc pointed back at a rule or source line (click an ant to follow it)
 - `cli/tourney.ts`    `node cli/tourney.ts A B C [--seeds 20] [--symmetric] [--jobs 4]`: round-robin, both colours, 2/1/0, standings with intervals, pairwise matrix
 - `cli/replay.ts`     `record`, `verify`, `seek` replay descriptors (JSON: inputs + hashes)

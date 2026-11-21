@@ -6,6 +6,7 @@ import { RULESETS, RULESET_NAMES } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import { decodeShare, encodeShare } from './share.ts';
 import { describeBrain, fireRows, lineOfMessage, traceRows, whereIs } from './brain.ts';
+import { mountHighlight } from './highlight.ts';
 import { mountPersonality } from './personality.ts';
 import type { BrainInfo } from './brain.ts';
 import type { Reply, Request } from './protocol.ts';
@@ -77,7 +78,7 @@ function setColonies(n: number): void {
     ta.spellcheck = false; ta.value = savedMore[c - 2] ?? STARTER;
     nt.className = 'note'; nt.id = `n${c}`; pn.id = `p${c}`;
     row.append(lab, sel); wrap.append(row, ta, nt, pn); moreHost.append(wrap);
-    fillExamples(sel); bindBox(ta);
+    fillExamples(sel); bindBox(ta); mountHighlight(ta);
     boxes.push(ta); noteEls.push(nt); panels.push(mountPersonality(pn, ta, changed));
   }
 }
@@ -308,6 +309,7 @@ $('rand').onclick = () => {
 seedBox.onchange = () => { mapText = ''; save(); start(); };
 rulesBox.onchange = () => { save(); start(); };
 boxes.forEach(bindBox);
+boxes.forEach(mountHighlight);
 $<HTMLInputElement>('world').onchange = async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (file) { mapText = await file.text(); start(); }

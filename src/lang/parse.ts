@@ -28,9 +28,9 @@ export const EXPLORE_DEFAULT = 64;
 /** Markers reserved by the trail kit (the code) and the food trail. */
 export const KIT_MARKERS = { trail: [0, 1, 2], foodtrail: [3] } as const;
 
-const WHERE_WORDS = ['here', 'ahead', 'leftahead', 'rightahead'];
-const WHAT_WORDS = ['food', 'rock', 'foe', 'friend', 'home', 'marker', 'carrying'];
-const ACTION_WORDS = ['move', 'pickup', 'drop', 'turn', 'mark', 'unmark', 'switch', 'step', 'wander', 'explore', 'roam', 'return', 'follow', 'lay', 'wait'];
+export const WHERE_WORDS = ['here', 'ahead', 'leftahead', 'rightahead'];
+export const WHAT_WORDS = ['food', 'rock', 'foe', 'friend', 'home', 'marker', 'carrying'];
+export const ACTION_WORDS = ['move', 'pickup', 'drop', 'turn', 'mark', 'unmark', 'switch', 'step', 'wander', 'explore', 'roam', 'return', 'follow', 'lay', 'wait'];
 
 function fail(line: number, msg: string): never { throw new RulesError(`line ${line}: ${msg}`); }
 const distance = (a: string, b: string): number => {

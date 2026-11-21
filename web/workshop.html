@@ -19,6 +19,27 @@
   a { color: inherit; }
   textarea { width: 100%; height: 140px; box-sizing: border-box; font: 12px ui-monospace, monospace;
     background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; }
+  /* Syntax highlighting (web/highlight.ts): the transparent textarea lies over a <pre> that paints the same text in colours. */
+  :root { --t-kw: #7c3aed; --t-act: #0369a1; --t-sense: #15803d; --t-arg: #b45309; --t-num: #be185d; --t-lab: #9a3412; --t-ref: #0f766e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --t-kw: #c4b5fd; --t-act: #7dd3fc; --t-sense: #86efac; --t-arg: #fcd34d; --t-num: #f9a8d4; --t-lab: #fdba74; --t-ref: #5eead4; }
+  }
+  .hl { position: relative; }
+  .hl pre, .hl textarea { margin: 0; padding: 6px; border: 1px solid var(--line); border-radius: 6px; box-sizing: border-box;
+    font: 12px/1.4 ui-monospace, monospace; font-variant-ligatures: none; letter-spacing: 0; tab-size: 8;
+    white-space: pre; overflow-wrap: normal; word-break: normal; }
+  .hl pre { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: var(--card); color: var(--fg); }
+  .hl textarea { position: relative; display: block; resize: vertical; overflow: auto; background: transparent; color: transparent; caret-color: var(--fg); }
+  .hl textarea::selection { background: rgba(99, 102, 241, .35); color: transparent; }
+  .t-comment { color: var(--mut); font-style: italic; }
+  .t-punct { color: var(--mut); }
+  .t-keyword { color: var(--t-kw); font-weight: 600; }
+  .t-action { color: var(--t-act); }
+  .t-sense { color: var(--t-sense); }
+  .t-arg { color: var(--t-arg); }
+  .t-number { color: var(--t-num); }
+  .t-label { color: var(--t-lab); font-weight: 600; }
+  .t-ref { color: var(--t-ref); }
   label { display: grid; gap: 2px; color: var(--mut); }
   .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   input, select, button { font: inherit; padding: 4px 8px; background: var(--card); color: var(--fg);
