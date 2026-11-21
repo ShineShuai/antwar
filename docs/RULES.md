@@ -52,7 +52,7 @@
 
 *The table below was measured with `explore 5`; with the new default every personality that explores forages faster (`docs/EXPLORE.md`).*
 
-A template, three sliders and an optional role mix generate a rules program. The workshop shows them under each editor:
+A template, three sliders (a fourth for the Keeper) and an optional role mix generate a rules program. The workshop shows them under each editor:
 moving a control rewrites the text; once the text is edited by hand the controls grey out until "Reset to template" (the
 text starts with a `# personality:` line that lets the controls come back, and only while the text is exactly what the
 generator wrote).
@@ -64,7 +64,11 @@ generator wrote).
   trail-layer, `docs/STEALING.md`).
 * Sliders: **Curiosity** = share of random wandering (`when 1 in N -> wander`, N = 16, 8, 4, 2); **Boldness** = timid (flee
   a foe ahead), indifferent, bold (step toward a foe ahead), fierce (also the sides); carriers never fight; **Sociability** =
-  loner, follower, devoted (`follow trail` after / before the food checks), trail templates only.
+  loner, follower, devoted (`follow trail` after / before the food checks), trail templates only; **Settling** (Keeper only) =
+  how readily a carrier settles after a delivery, rarely / seldom / sometimes / often = 1 time in 20, 15, 10, 7. The default is
+  sometimes, and its text is the same as before the slider existed (the `# personality:` line only carries `settling=N` when
+  it is not the default). Against the shipped Keeper (`docs/STEALING.md`) 1 in 15 loses 58-102 and 1 in 20 loses 21-58, and the cliff
+  lies between 1 in 7 and 1 in 5. Sitters at the end of a game on seed 1, rarely to often: 13, 18, 30, 30 of 91.
 * Role mix (trail and raider): worker = the template, scout = trail-layer with curiosity 3 that lays but never follows
   trails, guard = the guard; percentages compile to the `mix` flip chain (801 instructions for 70/20/10). The control starts at
   90/10/0 because every share given to guards or scouts measured as a loss (`docs/STEALING.md`).

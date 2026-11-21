@@ -4,14 +4,15 @@
 export type Template = 'forager' | 'trail' | 'keeper' | 'guard' | 'raider';
 /** Percent of newly born ants in each role (any non-negative weights; the compiler reduces them). */
 export interface RoleMix { worker: number; scout: number; guard: number }
-export interface Personality { template: Template; curiosity: number; boldness: number; sociability: number; mix?: RoleMix }
+/** `settling` (keeper only) indexes LEVELS.settling and SETTLE; left out it means SETTLE_DEFAULT. */
+export interface Personality { template: Template; curiosity: number; boldness: number; sociability: number; settling?: number; mix?: RoleMix }
 
 export const TEMPLATES: readonly Template[] = ['forager', 'trail', 'keeper', 'guard', 'raider'];
 export const TEMPLATE_NAMES: Record<Template, string> = { forager: 'Forager', trail: 'Trail-layer', keeper: 'Keeper', guard: 'Guard', raider: 'Raider' };
 export const TEMPLATE_HELP: Record<Template, string> = {
   forager: 'finds food and carries it home by luck; no trails',
   trail: 'finds food, lays a trail home and a food trail others follow',
-  keeper: 'like the trail-layer, but after its first two deliveries a carrier settles on its pile 1 time in 10, so nobody can take it (docs/STEALING.md)',
+  keeper: 'like the trail-layer, but after its first two deliveries a carrier settles on its pile (settling: 1 time in 10 by default), so nobody can take it (docs/STEALING.md)',
   guard: 'sits on the food stash at the nest so nobody can steal it',
   raider: 'like the trail-layer, and heads for foe nests to take their food',
 };
@@ -20,6 +21,7 @@ export const LEVELS = {
   curiosity: ['focused', 'steady', 'curious', 'restless', 'wild'],
   boldness: ['timid', 'indifferent', 'bold', 'fierce'],
   sociability: ['loner', 'follower', 'devoted'],
+  settling: ['rarely', 'seldom', 'sometimes', 'often'], // keeper only: how readily a carrier settles on its pile, see SETTLE
 } as const;
 const CHANCE = [0, 16, 8, 4, 2];
 
@@ -32,9 +34,13 @@ export const DEFAULTS: Record<Template, Personality> = {
 };
 export const usesSociability = (t: Template): boolean => t === 'trail' || t === 'raider' || t === 'keeper';
 export const usesMix = (t: Template): boolean => t === 'trail' || t === 'raider';
+/** The settling slider: a keeper's carrier settles after a delivery with chance 1 in SETTLE[level]. Against the shipped keeper, 1 in 15
+ * loses 58-102 and 1 in 20 loses 21-58, and the cliff lies between 1 in 7 and 1 in 5 (docs/STEALING.md). */
+export const SETTLE = [20, 15, 10, 7] as const;
+export const SETTLE_DEFAULT = 2;
 /** A keeper's carrier, after its first KEEP_AFTER deliveries, settles on its pile after each delivery with chance 1 in KEEP and
  * stays there for good (measured: docs/STEALING.md). */
-export const KEEP = 10;
+export const KEEP = SETTLE[SETTLE_DEFAULT];
 export const KEEP_AFTER = 2;
 
 const foeRules = (boldness: number, carrier: boolean): string[] => {
@@ -98,6 +104,7 @@ const guardMood = (curiosity: number, boldness: number): string[] => [
 
 const header = (p: Personality): string =>
   `# personality: template=${p.template} curiosity=${p.curiosity} boldness=${p.boldness} sociability=${p.sociability}` +
+  (p.settling !== undefined && p.settling !== SETTLE_DEFAULT ? ` settling=${p.settling}` : '') + // the default is left out: older texts stay valid
   (p.mix ? ` mix=${p.mix.worker}/${p.mix.scout}/${p.mix.guard}` : '');
 
 /** The rules text for a personality. Throws RangeError for values the controls cannot produce. */
@@ -107,6 +114,10 @@ export function personality(p: Personality): string {
     if (!Number.isInteger(v) || v < 0 || v >= LEVELS[name].length) throw new RangeError(`${name} must be 0..${LEVELS[name].length - 1}`);
   };
   range('curiosity', p.curiosity); range('boldness', p.boldness); range('sociability', p.sociability);
+  if (p.settling !== undefined) {
+    if (p.template !== 'keeper') throw new RangeError(`the ${p.template} template has no settling`);
+    range('settling', p.settling);
+  }
   const out = [header(p), '# Generated: edit it freely, the sliders then grey out until you reset to the template.'];
   const social = usesSociability(p.template) ? p.sociability : 0;
   if (p.mix) {
@@ -130,16 +141,17 @@ export function personality(p: Personality): string {
     out.push(...guardMood(p.curiosity, p.boldness));
   } else {
     out.push('kit trail', ...(social ? ['kit foodtrail'] : []));
-    out.push(...trailMoods('', { curiosity: p.curiosity, boldness: p.boldness, follow: social, lay: social >= 1, raid: p.template === 'raider', keep: p.template === 'keeper' ? KEEP : 0 }));
+    out.push(...trailMoods('', { curiosity: p.curiosity, boldness: p.boldness, follow: social, lay: social >= 1, raid: p.template === 'raider', keep: p.template === 'keeper' ? SETTLE[p.settling ?? SETTLE_DEFAULT] : 0 }));
   }
   return `${out.join('\n')}\n`;
 }
 
 /** The controls behind a text, or null once the text is not exactly what the generator writes (hand edited). */
 export function parsePersonality(text: string): Personality | null {
-  const m = /^# personality: template=(\w+) curiosity=(\d+) boldness=(\d+) sociability=(\d+)(?: mix=(\d+)\/(\d+)\/(\d+))?\n/.exec(text);
+  const m = /^# personality: template=(\w+) curiosity=(\d+) boldness=(\d+) sociability=(\d+)(?: settling=(\d+))?(?: mix=(\d+)\/(\d+)\/(\d+))?\n/.exec(text);
   if (!m) return null;
   const p: Personality = { template: m[1] as Template, curiosity: Number(m[2]), boldness: Number(m[3]), sociability: Number(m[4]) };
-  if (m[5] !== undefined) p.mix = { worker: Number(m[5]), scout: Number(m[6]), guard: Number(m[7]) };
+  if (m[5] !== undefined) p.settling = Number(m[5]);
+  if (m[6] !== undefined) p.mix = { worker: Number(m[6]), scout: Number(m[7]), guard: Number(m[8]) };
   try { return personality(p) === text ? p : null; } catch { return null; }
 }

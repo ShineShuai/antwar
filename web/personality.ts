@@ -1,7 +1,7 @@
 // Level 0 controls under a brain editor: template, three sliders, role mix. They are one-way generators: moving a control
 // rewrites the editor's text; once the text is edited by hand (it no longer equals what the generator writes) the controls
 // grey out until "Reset to template".
-import { DEFAULTS, LEVELS, TEMPLATES, TEMPLATE_HELP, TEMPLATE_NAMES, parsePersonality, personality, usesMix, usesSociability } from '../src/lang/templates.ts';
+import { DEFAULTS, LEVELS, SETTLE, SETTLE_DEFAULT, TEMPLATES, TEMPLATE_HELP, TEMPLATE_NAMES, parsePersonality, personality, usesMix, usesSociability } from '../src/lang/templates.ts';
 import type { Personality, RoleMix } from '../src/lang/templates.ts';
 
 export interface PersonalityPanel { /** Re-read the editor's text (call after the text was changed from outside). */ sync(): void }
@@ -13,6 +13,9 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''):
   return e;
 };
 
+type Slider = 'curiosity' | 'boldness' | 'sociability' | 'settling';
+const level = (p: Personality, name: Slider): number => (name === 'settling' ? p.settling ?? SETTLE_DEFAULT : p[name]);
+
 export function mountPersonality(host: HTMLElement, box: HTMLTextAreaElement, onChange: (restart: boolean) => void): PersonalityPanel {
   let p: Personality = { ...DEFAULTS.trail };
   let generated = false;
@@ -22,7 +25,7 @@ export function mountPersonality(host: HTMLElement, box: HTMLTextAreaElement, on
   TEMPLATES.forEach((t) => tpl.add(new Option(TEMPLATE_NAMES[t], t)));
   const reset = el('button', '', 'Reset to template');
   const hint = el('div', 'hint');
-  const sliders = (['curiosity', 'boldness', 'sociability'] as const).map((name) => {
+  const sliders = (['curiosity', 'boldness', 'sociability', 'settling'] as const).map((name) => {
     const row = el('label', 'slide', name[0].toUpperCase() + name.slice(1));
     const range = el('input'), value = el('span', 'val');
     range.type = 'range'; range.min = '0'; range.max = String(LEVELS[name].length - 1); range.step = '1';
@@ -47,9 +50,10 @@ export function mountPersonality(host: HTMLElement, box: HTMLTextAreaElement, on
     const social = usesSociability(p.template), mixable = usesMix(p.template);
     tpl.value = generated ? p.template : '';
     for (const s of sliders) {
-      s.range.value = String(p[s.name]);
-      s.value.textContent = LEVELS[s.name][p[s.name]];
-      s.range.disabled = !generated || (s.name === 'sociability' && !social);
+      const v = level(p, s.name);
+      s.range.value = String(v);
+      s.value.textContent = LEVELS[s.name][v] + (s.name === 'settling' ? ` (1 in ${SETTLE[v]})` : '');
+      s.range.disabled = !generated || (s.name === 'sociability' && !social) || (s.name === 'settling' && p.template !== 'keeper');
       s.row.classList.toggle('off', s.range.disabled);
     }
     mixOn.checked = !!p.mix; mixOn.disabled = !generated || !mixable;

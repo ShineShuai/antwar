@@ -5,7 +5,7 @@ import { generateWorld } from '../src/core/gen.ts';
 import { parseMap } from '../src/core/map.ts';
 import { createSim } from '../src/core/sim.ts';
 import { compileRules } from '../src/lang/index.ts';
-import { DEFAULTS, LEVELS, TEMPLATES, parsePersonality, personality, usesMix, usesSociability } from '../src/lang/templates.ts';
+import { DEFAULTS, LEVELS, SETTLE, SETTLE_DEFAULT, TEMPLATES, parsePersonality, personality, usesMix, usesSociability } from '../src/lang/templates.ts';
 import type { Personality, RoleMix } from '../src/lang/templates.ts';
 
 const NONFORAGING = /never picks up food|never drops food/;
@@ -86,6 +86,35 @@ test('curiosity is the share of random wandering: one rule "1 in N" with N = 16,
   const rule = (c: number): string | undefined => personality({ ...DEFAULTS.trail, curiosity: c }).split('\n').find((l) => /when 1 in/.test(l));
   assert.equal(rule(0), undefined);
   assert.deepEqual([1, 2, 3, 4].map((c) => /1 in (\d+)/.exec(rule(c) ?? '')?.[1]), ['16', '8', '4', '2']);
+});
+
+test('keeper settling: four levels give 1 in 20, 15, 10 and 7; the default changes nothing; the other templates have none', () => {
+  const chance = (settling: number): string | undefined => /when 1 in (\d+) -> switch sit/.exec(personality({ ...DEFAULTS.keeper, settling }))?.[1];
+  assert.deepEqual(LEVELS.settling.map((_, s) => chance(s)), ['20', '15', '10', '7']);
+  assert.deepEqual(LEVELS.settling.map((_, s) => chance(s)), SETTLE.map(String));
+  assert.equal(personality({ ...DEFAULTS.keeper, settling: SETTLE_DEFAULT }), personality(DEFAULTS.keeper));
+  assert.match(personality(DEFAULTS.keeper), /^# personality: template=keeper curiosity=0 boldness=1 sociability=1\n/, 'older texts stay valid');
+  for (let settling = 0; settling < LEVELS.settling.length; settling++) {
+    const c = compileRules(personality({ ...DEFAULTS.keeper, settling }));
+    assert.deepEqual([c.warnings, c.instructions], [[], 1111], `settling ${settling}`);
+  }
+  assert.throws(() => personality({ ...DEFAULTS.keeper, settling: 4 }), /settling must be 0\.\.3/);
+  assert.throws(() => personality({ ...DEFAULTS.keeper, settling: -1 }), /settling must be 0\.\.3/);
+  for (const t of ['forager', 'trail', 'guard', 'raider'] as const) assert.throws(() => personality({ ...DEFAULTS[t], settling: 1 }), /no settling/, t);
+});
+
+test('settling comes back from the text: the default is not written, any other level is', () => {
+  for (let settling = 0; settling < LEVELS.settling.length; settling++) {
+    const text = personality({ ...DEFAULTS.keeper, curiosity: 2, settling });
+    assert.equal(text.split('\n')[0].includes('settling='), settling !== SETTLE_DEFAULT, `settling ${settling}`);
+    const parsed = parsePersonality(text);
+    assert.equal(parsed?.settling ?? SETTLE_DEFAULT, settling);
+    assert.equal(parsePersonality(`${text}# one more comment\n`), null, 'hand edited');
+  }
+  const head = '# personality: template=keeper curiosity=0 boldness=1 sociability=1';
+  assert.equal(parsePersonality(`${head} settling=2\n`), null, 'the default is never written, so this is not generator text');
+  assert.equal(parsePersonality(`${head} settling=9\n`), null);
+  assert.equal(parsePersonality(personality({ ...DEFAULTS.keeper, settling: 1 }).replace('template=keeper', 'template=trail')), null);
 });
 
 test('boldness: timid flees, indifferent ignores, bold approaches a foe ahead, fierce also the sides; carriers never fight', () => {
