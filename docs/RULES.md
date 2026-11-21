@@ -181,8 +181,8 @@ row of the followed ant's current rule is highlighted. Reading a trace shows exa
 personality controls), and the **Example world** menu loads a generated 3, 4, 6 or 8 colony world (`web/colonies.ts`; the hills
 are alike but the world is not exactly symmetric, so it is not a fair-match generator). Rules switches to "Classic + up to 26
 colonies" by itself when the map needs it (Tinyminds already allows 26); Randomize or a new seed goes back to two colonies. Each
-colony has its own colour and scent line on the board; the status line lists every score and, at round 100,000, says who has the
-most food or who is tied (the reference defines no ranking rule for more than two). Share links carry all brains. Added colonies
+colony has its own colour and scent line on the board; the status line lists every score and, at round 100,000, shows
+the ranking of docs/MATCH.md (the reference defines none for more than two; this is a proposal). Share links carry all brains. Added colonies
 start as the starter ant, and last session's brains for C.. come back when the map does. Checked by `test/colonies.test.ts`
 and, once by hand, by running the real page in jsdom (with an in-process Worker and a stub canvas) through 3, 6 and 4 colonies
 and back to 2: that run is not part of the test suite and no browser was used.

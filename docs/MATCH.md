@@ -51,8 +51,31 @@ fair rows are 400 worlds (seeds 1001-1400). "Colony 0 minus the rest" is the mea
 On fair worlds no colony is ahead (wins are consistent with an even split; a food gap under about 7 cannot be excluded). On the ring
 worlds the place decides: with 4 colonies the two stronger colonies win three to four times as often as the other two. 100,000-round
 runs of 80 games agree (fair 3: 22 / 27 / 30 wins; fair 4: 21 / 18 / 19 / 22 and 25 / 20 / 18 / 17 on two sets of seeds; ring 3: 37 / 20 / 23).
-Not done: a ranking rule for more than two colonies (the workshop shows who has the most food), other brains than the trail ant, tilings
-for 13, 17, 19, 23 and 26 colonies (a twisted lattice would do it).
+Not done: other brains than the trail ant, tilings for 13, 17, 19, 23 and 26 colonies (a twisted lattice would do it); the ranking of more
+than two colonies is the next section.
+
+## Ranking more than two colonies
+
+The contest scores a game of two colonies 2 (more nest food), 1 (equal) or 0 and defines nothing for more. The rule here (`colonyResult(food)`
+in `src/core/ranking.ts`; the workshop's status line at the end of a match of 3 or more colonies) scores every pair of colonies that way:
+**a colony earns 2 points for each colony with less food and 1 for each colony with the same food**; its **rank** is 1 plus the number of
+colonies with more food, so equal food shares a rank and leaves a gap (1, 2, 2, 4). The status line shows the order, equal food joined by `=`:
+`ranking A > C = D > B`.
+
+| food A / B / C / D | ranks | points |
+|---|---|---|
+| 10 / 8 / 3 | 1, 2, 3 | 4, 2, 0 |
+| 10 / 8 / 8 | 1, 2, 2 | 4, 1, 1 |
+| 8 / 10 / 8 / 3 | 2, 1, 2, 4 | 3, 6, 3, 0 |
+| 7 / 7 / 7 | 1, 1, 1 | 2, 2, 2 |
+
+* For two colonies it is exactly `points(a, b)`, so every 2-colony table keeps its meaning.
+* The points of a game add up to n * (n - 1), whatever the food; only the order of the food counts (3,000 random games are checked in
+  `test/ranking.test.ts`), and more food never scores less.
+* It is a proposal, not the original's rule. It needs no constant that would have to be invented for each n (a place-based scale does), and it
+  keeps the order of every colony, which "winner takes all" throws away.
+* Not done: `standings`, `pairwise` and `cli/tourney.ts` still schedule games of two entries; games of n colonies with the points added up
+  per entry (and a Latin-square schedule so that every entry plays every hill on worlds that are not fair) are the next step.
 
 ## Order bias, measured (Classic and `altorder`)
 
