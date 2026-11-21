@@ -30,6 +30,8 @@ a flag the simulator cannot honour yet is **rejected** (`unsupported()`), never 
 2. `src/core/asm.ts`: parse its arguments (flat form) and, if it exists in the official format, `parseIcfp`.
 3. `src/core/sim.ts`: execute it in `stepAnt`. `oracle/ref.py`: the same.
 4. Micro-tests, a line in the reference's instruction table, and a generator entry in `testlib/random.ts`.
+5. `src/lang/highlight.ts`: a colour for the new word in each language that has it (assembly, and the rules or script word if one is added).
+   `test/highlight.test.ts` fails until every word of every language is coloured.
 
 `goto` is the one instruction that does not reach the simulator: the assembler resolves it (zero cost) and
 rejects a cycle made only of gotos.
