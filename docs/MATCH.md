@@ -133,8 +133,34 @@ colonies with more food, so equal food shares a rank and leaves a gap (1, 2, 2, 
   `test/ranking.test.ts`), and more food never scores less.
 * It is a proposal, not the original's rule. It needs no constant that would have to be invented for each n (a place-based scale does), and it
   keeps the order of every colony, which "winner takes all" throws away.
-* Not done: `standings`, `pairwise` and `cli/tourney.ts` still schedule games of two entries; games of n colonies with the points added up
-  per entry (and a Latin-square schedule so that every entry plays every hill on worlds that are not fair) are the next step.
+* `cli/tourney.ts` (`standings`, `pairwise`) still schedules games of two entries; games of n colonies are the league below.
+
+## League: n brains on one world
+
+`node cli/league.ts A B C [...] [--seeds 20] [--rounds 100000] [--world FILE | --contest] [--jobs N] [--json] [--games]` (`src/league.ts`):
+n brains in n colonies. Every world is played n times with the brains rotating round the hills (rotation r puts brain (h + r) mod n in
+hill h, a Latin square), so each brain takes each hill once per world and the advantage of a place cancels out, whether the world is fair
+or not. A game is scored by `colonyResult` (2 points for each colony with less food, 1 for each tie) and the table is ordered by points,
+then nest food. Worlds: two brains play point-mirror worlds (`--contest`: the contest generator), more play fair worlds for n colonies
+(13, 17, 19, 23 and 26 have none: give `--world FILE`), or one `--world FILE` whose hills are the brains and only the simulator seed changes.
+Rules are classic for two brains and colonies for more (`--rules`). Results do not depend on `--jobs`.
+
+"per game" is the mean points, n - 1 for an average brain, with the 95% interval over the worlds (the n games of a world are not independent).
+The last line, the mean points by hill, shows what the place is worth: 2 each for 3 colonies if it is worth nothing.
+
+```
+3 brains, 20 worlds (seeds 1..20; fair worlds for 3 colonies), 3 rotations each, 100000 rounds, rules colonies; 60 games
+ # brain        points  per game        rank  1st  shared  food
+ 1 trail.rules     206  3.43 +-0.36    1.28   48       0   368
+ 2 crumb.asm       132  2.20 +-0.21    1.90   11       0   222
+ 3 trail.asm        22  0.37 +-0.29    2.82    1       0    72
+Mean points by hill, 2 each when the place does not matter: A 1.97, B 1.93, C 2.10
+```
+
+The same brain three times on the lopsided ring world (`exampleWorld(3)`, 40 simulator seeds) gives every entry exactly 240 points, the place
+being cancelled by the rotation (identical brains play identical games, so this is exact), while the hill line shows the place that was
+cancelled: A 2.63, B 1.60, C 1.77. List a brain twice to see what a world's places are worth.
+Not done: more brains than colonies (every subset, or a random one), the workshop does not show a league.
 
 ## Order bias, measured (Classic and `altorder`)
 
