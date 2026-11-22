@@ -14,6 +14,13 @@ export { points };
 /** The world of a seed: the contest generator, or its point-mirror symmetric variant for ranked matches. */
 export const worldFor = (seed: number, symmetric: boolean): WorldMap => generateWorld(seed, symmetric ? SYMMETRIC_WORLD : CLASSIC_WORLD);
 
+/** One game of any number of colonies, the programs in hill order: the nest food of each colony at the end. */
+export function playColonies(map: WorldMap, programs: Program[], seed: number, rounds = MATCH_ROUNDS, rules: Rules = CLASSIC): number[] {
+  const sim = createSim({ map, programs, seed, rules });
+  sim.run(rounds);
+  return Array.from(sim.score());
+}
+
 /** One game to play. `a` and `b` are entry numbers; with `swap`, `a` takes the second hill (the colony whose ants act later). */
 export interface Task { a: number; b: number; seed: number; swap: boolean }
 /** What a game came to, from the point of view of `task.a`. */

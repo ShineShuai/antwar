@@ -1,0 +1,97 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { generateFairWorld } from '../src/core/gen.ts';
+import { playColonies } from '../src/core/match.ts';
+import { RULESETS } from '../src/core/rules.ts';
+import { fairness, normalTwoSidedP } from '../src/fairness.ts';
+import { compileRules } from '../src/lang/index.ts';
+
+const near = (a: number, b: number, tol: number, what: string): void => assert.ok(Math.abs(a - b) <= tol, `${what}: ${a} is not within ${tol} of ${b}`);
+const root = fileURLToPath(new URL('..', import.meta.url));
+
+test('normal p-values: the familiar points, symmetric, 1 at zero', () => {
+  near(normalTwoSidedP(0), 1, 1e-6, 'z=0');
+  near(normalTwoSidedP(1), 0.3173, 1e-4, 'z=1');
+  near(normalTwoSidedP(1.96), 0.05, 1e-3, 'z=1.96');
+  near(normalTwoSidedP(2.5758), 0.01, 3e-4, 'z=2.576');
+  near(normalTwoSidedP(3.2905), 0.001, 1e-4, 'z=3.29');
+  assert.equal(normalTwoSidedP(-2), normalTwoSidedP(2));
+  assert.ok(normalTwoSidedP(40) < 1e-12);
+});
+
+test('fairness of a list of games: the shares, the points, the food, the verdict', () => {
+  // three colonies take turns at winning: exactly fair
+  const turns = Array.from({ length: 300 }, (_, g) => [0, 1, 2].map((c) => (c === g % 3 ? 10 : 4)));
+  const f = fairness(turns);
+  assert.deepEqual([f.games, f.colonies], [300, 3]);
+  assert.deepEqual(f.rows.map((r) => r.wins), [100, 100, 100]);
+  assert.deepEqual(f.rows.map((r) => r.z), [0, 0, 0]);
+  assert.equal(f.p, 1); assert.equal(f.fair, true);
+  near(f.rows[0].points, (4 + 1 + 1) / 3, 1e-9, 'mean points: 4 as the winner, 1 as one of two tied losers (twice); 3 colonies share n * (n - 1) = 6'); // 2 each
+  near(f.rows[0].food, 6, 1e-9, 'mean food');
+  near(f.resolution, 1.96 * Math.sqrt((2 / 9) / 300), 1e-12, 'resolution');
+  // one colony wins 70 of 100
+  const lopsided = fairness(Array.from({ length: 100 }, (_, g) => (g < 70 ? [9, 1] : [1, 9])));
+  assert.deepEqual(lopsided.rows.map((r) => r.wins), [70, 30]);
+  near(lopsided.rows[0].z, 4, 1e-9, 'z of 70 in 100'); near(lopsided.rows[1].z, -4, 1e-9, 'z');
+  assert.ok(lopsided.p < 1e-3 && !lopsided.fair);
+  // a tie splits the win; all ties is fair
+  const ties = fairness(Array.from({ length: 10 }, () => [5, 5, 5, 5]));
+  assert.deepEqual(ties.rows.map((r) => r.wins), [2.5, 2.5, 2.5, 2.5]); assert.equal(ties.fair, true);
+  assert.deepEqual(ties.rows.map((r) => r.points), [3, 3, 3, 3]);
+  assert.deepEqual(fairness([[7, 7, 1]]).rows.map((r) => r.wins), [0.5, 0.5, 0]);
+  // the order of the colonies does not matter
+  const games = Array.from({ length: 60 }, (_, g) => [(g * 7) % 5, (g * 3) % 4, g % 6]);
+  const a = fairness(games), b = fairness(games.map((r) => [r[2], r[0], r[1]]));
+  assert.deepEqual(b.rows.map((r) => r.wins), [a.rows[2].wins, a.rows[0].wins, a.rows[1].wins]);
+  assert.equal(a.p, b.p);
+  assert.throws(() => fairness([]), RangeError);
+  assert.throws(() => fairness([[1]]), RangeError);
+  assert.throws(() => fairness([[1, 2], [1, 2, 3]]), RangeError);
+});
+
+test('the test itself: it rarely cries bias over fair play, and it sees a real bias (3 colonies, 100 games)', () => {
+  let seed = 4242;
+  const rnd = (n: number): number => { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return (seed >>> 16) % n; };
+  const trial = (weights: readonly number[]): boolean => {
+    const total = weights.reduce((a, b) => a + b, 0);
+    const games = Array.from({ length: 100 }, () => { let r = rnd(total), c = 0; while (r >= weights[c]) { r -= weights[c]; c++; } return [0, 1, 2].map((x) => (x === c ? 100 : 0)); });
+    return fairness(games).fair;
+  };
+  let alarms = 0, misses = 0;
+  for (let t = 0; t < 1500; t++) { if (!trial([1, 1, 1])) alarms++; if (trial([2, 1, 1])) misses++; } // 50 / 25 / 25 against 1/3 each
+  assert.ok(alarms >= 5 && alarms <= 120, `false alarms: ${alarms} of 1500 (about 5% allowed, Bonferroni makes it less)`);
+  assert.ok(misses <= 300, `a 50 / 25 / 25 split missed in ${misses} of 1500`);
+});
+
+test('playing it: games of identical brains on a fair world give a row of nest food per game', () => {
+  const rules = RULESETS.colonies;
+  const prog = compileRules(readFileSync(new URL('../ants/trail.rules', import.meta.url), 'utf8'), rules).program;
+  const map = generateFairWorld(3, 1);
+  const foods = [1, 2, 3].map((seed) => playColonies(map, [prog, prog, prog], seed, 1500, rules));
+  assert.ok(foods.every((f) => f.length === 3 && f.every((v) => Number.isInteger(v) && v >= 0)));
+  assert.deepEqual(foods[0], playColonies(map, [prog, prog, prog], 1, 1500, rules), 'deterministic');
+  assert.equal(fairness(foods).colonies, 3);
+});
+
+test('cli/fairness.ts: a table or JSON; refuses what does not make sense', () => {
+  const run = (...args: string[]) => spawnSync(process.execPath, ['cli/fairness.ts', 'ants/trail.rules', ...args], { cwd: root, encoding: 'utf8' });
+  const ok = run('--colonies', '3', '--map-seed', '1', '--games', '3', '--rounds', '1500', '--json');
+  assert.equal(ok.status, 0, ok.stderr);
+  const j = JSON.parse(ok.stdout) as { games: number; colonies: number; rows: unknown[]; rules: string; world: string; fair: boolean };
+  assert.deepEqual([j.games, j.colonies, j.rows.length, j.rules], [3, 3, 3, 'colonies']);
+  assert.match(j.world, /fair worlds, 3 colonies, the map of seed 1/);
+  const table = run('--symmetric', '--games', '2', '--rounds', '1000');
+  assert.equal(table.status, 0, table.stderr);
+  assert.match(table.stdout, /symmetric worlds, a new world per game \| 2 games of 1000 rounds \| rules classic/);
+  assert.match(table.stdout, /^A +\d+\.\d%/m);
+  assert.match(table.stdout, /cannot be seen with 2 games/);
+  assert.equal(run('--world', 'x.world', '--colonies', '3').status, 2);
+  assert.equal(run('--symmetric', '--colonies', '3').status, 2);
+  assert.equal(run('--colonies', '13').status, 2);
+  assert.equal(run('--games', '0').status, 2);
+  assert.equal(run('--rules', 'nope').status, 2);
+});
