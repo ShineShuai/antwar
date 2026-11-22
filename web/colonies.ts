@@ -1,12 +1,11 @@
 // More than two colonies in the workshop: labels, colours, the status line, the ruleset a map needs, bundled example worlds.
 // Pure functions (no DOM): test/colonies.test.ts.
 import { colonyResult } from '../src/core/ranking.ts';
-import { RULESETS } from '../src/core/rules.ts';
-import type { RulesId } from '../src/core/rules.ts';
+import { MAX_COLONIES } from '../src/core/types.ts';
 import { DARK, LIGHT } from './viewer.ts';
 import type { Palette } from './viewer.ts';
 
-export const MAX_COLONIES = 26;
+export { MAX_COLONIES };
 export const letter = (c: number): string => String.fromCharCode(65 + c);
 const NAMES = ['red', 'blue', 'green', 'amber', 'violet', 'teal', 'pink', 'brown'];
 export const colonyName = (c: number): string => NAMES[c] ?? `colony ${letter(c)}`;
@@ -19,9 +18,6 @@ export function colonyCount(hill: ArrayLike<number>): number {
   for (let i = 0; i < hill.length; i++) if (hill[i] + 1 > n) n = hill[i] + 1;
   return n;
 }
-
-/** The ruleset to play n colonies under: the chosen one when it allows that many, else the plain many-colonies ruleset. */
-export const rulesFor = (id: RulesId, n: number): RulesId => (n <= RULESETS[id].maxColonies ? id : 'colonies');
 
 /** Exactly n brain texts: the ones given, then `fill` for each missing one. */
 export const padBrains = (brains: readonly string[], n: number, fill: string): string[] => Array.from({ length: n }, (_, c) => brains[c] ?? fill);

@@ -4,8 +4,8 @@
 //                              [--rounds 30000] [--rules R] [--json]
 // Worlds: the contest generator, or --symmetric (point mirror), or --colonies N (fair worlds for N colonies), or one --world FILE.
 // By default every game has its own world and simulator seed, from + game number: that tests the generator. With --map-seed S (or
-// --world) the map stays the same and only the simulator seed changes: that tests the map. Rules default to classic for two colonies,
-// colonies for more. Exit code 0 whatever the verdict (it is a measurement); 2 for bad arguments.
+// --world) the map stays the same and only the simulator seed changes: that tests the map. The rules default to classic.
+// Exit code 0 whatever the verdict (it is a measurement); 2 for bad arguments.
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { generateFairWorld } from '../src/core/gen.ts';
@@ -42,7 +42,7 @@ let cache: WorldMap | undefined;
 const mapOf = (seed: number): WorldMap => (fixed ?? (mapSeed !== undefined ? (cache ??= make(mapSeed)) : make(seed)));
 
 const first = mapOf(from), n = count(first);
-const rulesId = (o.rules ?? (n > 2 ? 'colonies' : 'classic')) as RulesId, rules = RULESETS[rulesId];
+const rulesId = (o.rules ?? 'classic') as RulesId, rules = RULESETS[rulesId];
 const program = loadAnyBrain(readFileSync(files[0], 'utf8'), rules).program;
 const foods: number[][] = [];
 for (let g = 0; g < games; g++) {

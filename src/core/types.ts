@@ -3,6 +3,9 @@ export type Cell = number & { readonly __cell: unique symbol };
 export type Dir = number & { readonly __dir: unique symbol };
 export type AntId = number & { readonly __ant: unique symbol };
 
+/** Most colonies a match can have: one hill letter each, a..z. The number of colonies is the number of hills of the world, whatever the ruleset. */
+export const MAX_COLONIES = 26;
+
 export interface Rules {
   /** Food an ant can carry (Classic 1). */
   readonly cap: number;
@@ -12,8 +15,6 @@ export interface Rules {
   readonly scareThreshold: number;
   /** A blocked move with two packets drops one on the current cell (Classic: no). */
   readonly dropOnBlocked: boolean;
-  /** Most colonies a match may have (Classic 2). */
-  readonly maxColonies: number;
   /** Alternate which colony acts first each round (Classic: ascending id). */
   readonly altOrder: boolean;
 }

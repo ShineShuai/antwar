@@ -11,17 +11,18 @@ import struct
 
 MOD30 = 1 << 30
 
-# Rulesets mirror src/core/rules.ts (scare = scareThreshold, dropfail = dropOnBlocked, maxcol = maxColonies, altorder = altOrder).
+# Rulesets mirror src/core/rules.ts (scare = scareThreshold, dropfail = dropOnBlocked, altorder = altOrder). The number of colonies is the
+# number of hills of the world (1 to 26), under every ruleset; `colonies` is the old name of classic, kept for old files.
 # `ext` only gates the assembler's extra instructions; official .ant programs, the only format this oracle reads, have none.
-CLASSIC = dict(cap=1, ext=False, scare=0, dropfail=False, maxcol=2, altorder=False)
+CLASSIC = dict(cap=1, ext=False, scare=0, dropfail=False, altorder=False)
 RULESETS = {
     'classic': CLASSIC,
-    'tinyminds': dict(cap=2, ext=True, scare=4, dropfail=True, maxcol=26, altorder=True),
+    'tinyminds': dict(cap=2, ext=True, scare=4, dropfail=True, altorder=True),
     'cap2': dict(CLASSIC, cap=2),
     'scare4': dict(CLASSIC, scare=4),
     'dropfail': dict(CLASSIC, cap=2, dropfail=True),
     'altorder': dict(CLASSIC, altorder=True),
-    'colonies': dict(CLASSIC, maxcol=26),
+    'colonies': CLASSIC,
 }
 
 
@@ -109,14 +110,14 @@ class World:
     def __init__(self, text, programs, seed, wrap, rules=None):
         self.rules = rules or RULESETS['classic']
         r = self.rules
-        bad = [k for k, ok in (('cap', r['cap'] in (1, 2)), ('scare', 0 <= r['scare'] <= 4), ('maxcol', 1 <= r['maxcol'] <= 26)) if not ok]
+        bad = [k for k, ok in (('cap', r['cap'] in (1, 2)), ('scare', 0 <= r['scare'] <= 4)) if not ok]
         if bad:
             raise NotImplementedError('ruleset values out of range: ' + ', '.join(bad))
         self.w, self.h, self.rock, self.food, self.base = parse_map(text)
         self.wrap, self.progs, self.rng, self.round = wrap, programs, Rng(seed), 0
         self.ncol = len(programs)
-        if not 1 <= self.ncol <= self.rules['maxcol']:
-            raise ValueError('this ruleset allows 1 to %d colonies, got %d' % (self.rules['maxcol'], self.ncol))
+        if not 1 <= self.ncol <= 26:
+            raise ValueError('a match has 1 to 26 colonies, got %d' % self.ncol)
         n = self.w * self.h
         self.grid = [None] * n
         self.marks = [[0] * n for _ in range(self.ncol)]

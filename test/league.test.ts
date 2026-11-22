@@ -74,7 +74,7 @@ test('cli/league.ts: three brains on fair worlds, the same results with 1 or 2 w
   assert.equal(a.status, 0, a.stderr);
   assert.equal(a.stdout, b.stdout, 'results do not depend on --jobs');
   const j = JSON.parse(a.stdout) as { config: { rules: string; world: string }; table: { name: string; games: number; points: number; byHill: number[] }[]; games: unknown[]; meanPointsByHill: number[] };
-  assert.deepEqual([j.config.rules, j.config.world, j.games.length], ['colonies', 'fair', 6]);
+  assert.deepEqual([j.config.rules, j.config.world, j.games.length], ['classic', 'fair', 6]);
   assert.equal(j.table.length, 3);
   assert.equal(j.table.reduce((s, r) => s + r.points, 0), 6 * 6, 'a game of 3 colonies gives 6 points in all');
   assert.ok(j.table.every((r) => r.games === 6 && r.byHill.length === 3));

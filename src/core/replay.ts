@@ -8,6 +8,7 @@ import { RULESETS } from './rules.ts';
 import type { RulesId } from './rules.ts';
 import { createSim, fnv1a } from './sim.ts';
 import type { SimOptions } from './sim.ts';
+import { MAX_COLONIES } from './types.ts';
 import type { Instr, Program, Rules } from './types.ts';
 
 /** State hash checkpoints, the cross-implementation proof (reference, RNG tab): 4 bytes each, stored in the descriptor. */
@@ -170,7 +171,7 @@ export function parseDescriptor(raw: unknown): Descriptor {
     if (typeof d.map !== 'string' || d.map.length > MAX_MAP_TEXT) return bad('map must be world text under 128 KB');
     out.map = d.map;
   } else out.gen = num(d.gen, 0, 0xffff, 'gen (a descriptor without a map needs the generator version)');
-  if (!isArr(d.brains) || d.brains.length < 1 || d.brains.length > 26) return bad('brains: 1..26 entries');
+  if (!isArr(d.brains) || d.brains.length < 1 || d.brains.length > MAX_COLONIES) return bad(`brains: 1..${MAX_COLONIES} entries`);
   out.brains = d.brains.map((x: unknown, i: number): BrainEntry => {
     const b = x as Record<string, unknown> | null;
     if (typeof b !== 'object' || b === null) return bad(`brain ${i} must be an object`);

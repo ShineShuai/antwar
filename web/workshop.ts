@@ -2,7 +2,7 @@ import { EXAMPLES, STARTER } from './default-ant.ts';
 import { describeCell } from './inspect.ts';
 import { GENERATOR_VERSION, SYMMETRIC_WORLD, generateFairWorld, generateWorld } from '../src/core/gen.ts';
 import { formatMap, parseMap } from '../src/core/map.ts';
-import { RULESETS, RULESET_NAMES } from '../src/core/rules.ts';
+import { RULESETS, RULESET_NAMES, canonicalRules } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import { decodeShare, encodeShare } from './share.ts';
 import { describeBrain, fireRows, lineOfMessage, traceRows, whereIs } from './brain.ts';
@@ -10,7 +10,7 @@ import { mountHighlight } from './highlight.ts';
 import { mountPersonality } from './personality.ts';
 import type { BrainInfo } from './brain.ts';
 import type { Reply, Request } from './protocol.ts';
-import { MAX_COLONIES, colonyCount, colonyName, exampleWorld, keepBrains, letter, paletteFor, rulesFor, statusLine } from './colonies.ts';
+import { MAX_COLONIES, colonyCount, colonyName, exampleWorld, keepBrains, letter, paletteFor, statusLine } from './colonies.ts';
 import { cellAt, createViewer, layout } from './viewer.ts';
 import type { Layout } from './viewer.ts';
 
@@ -18,9 +18,8 @@ const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) 
 const MATCH = 100000;
 const canvas = $<HTMLCanvasElement>('view'), ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 const seedBox = $<HTMLInputElement>('seed'), rulesBox = $<HTMLSelectElement>('rules');
-for (const id of Object.keys(RULESETS)) rulesBox.add(new Option(RULESET_NAMES[id] ?? id, id));
+for (const [id, name] of Object.entries(RULESET_NAMES)) rulesBox.add(new Option(name, id)); // (the old `colonies` is not offered: it is Classic)
 const rulesId = (): RulesId => (Object.hasOwn(RULESETS, rulesBox.value) ? rulesBox.value : 'classic') as RulesId;
-let chosenRules: RulesId | undefined; // what the person picked: a map with many colonies may force another ruleset (rulesFor), and the pick comes back with the map
 const speedBox = $<HTMLSelectElement>('speed'), goBtn = $<HTMLButtonElement>('go'), statusBox = $('status');
 const tl = $<HTMLInputElement>('tl'), verifyBox = $('verify');
 let worker: Worker | undefined, viewer: ReturnType<typeof createViewer> | undefined;
@@ -91,13 +90,13 @@ baBox.value = bbBox.value = STARTER;
 // Edits survive a reload (per-browser convenience only); a share link, when present, wins over them.
 const KEY = 'tinyminds.workshop.v1';
 const save = (): void => {
-  try { localStorage.setItem(KEY, JSON.stringify({ seed: seedBox.value, a: baBox.value, b: bbBox.value, more: keepBrains(savedMore, boxes.slice(2).map((b) => b.value)), rules: chosenRules ?? rulesBox.value })); } catch { /* storage may be blocked */ }
+  try { localStorage.setItem(KEY, JSON.stringify({ seed: seedBox.value, a: baBox.value, b: bbBox.value, more: keepBrains(savedMore, boxes.slice(2).map((b) => b.value)), rules: rulesBox.value })); } catch { /* storage may be blocked */ }
 };
 const restore = (): void => {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { seed?: string; a?: string; b?: string; more?: unknown; rules?: string } | null;
     if (Array.isArray(s?.more)) savedMore = s.more.filter((t): t is string => typeof t === 'string').slice(0, MAX_COLONIES - 2);
-    if (typeof s?.rules === 'string' && Object.hasOwn(RULESETS, s.rules)) { rulesBox.value = s.rules; chosenRules = s.rules as RulesId; }
+    if (typeof s?.rules === 'string' && Object.hasOwn(RULESETS, s.rules)) rulesBox.value = canonicalRules(s.rules as RulesId);
     if (typeof s?.a === 'string' && typeof s.b === 'string') { baBox.value = s.a; bbBox.value = s.b; }
     if (typeof s?.seed === 'string' && s.seed !== '') seedBox.value = s.seed;
   } catch { /* corrupt or blocked storage: keep the defaults */ }
@@ -107,7 +106,7 @@ async function fromHash(): Promise<boolean> {
   const p = await decodeShare(location.hash.slice(4));
   if (!p) { say('That share link is damaged or too large.', true); return false; }
   setColonies(p.brains.length); p.brains.forEach((t, c) => { boxes[c].value = t; });
-  seedBox.value = String(p.seed); mapText = p.map ?? ''; rulesBox.value = p.rules ?? 'classic'; chosenRules = rulesId();
+  seedBox.value = String(p.seed); mapText = p.map ?? ''; rulesBox.value = canonicalRules(p.rules ?? 'classic');
   expect = p.result ?? null;
   if (p.gen !== undefined && p.gen !== GENERATOR_VERSION) say('Link made with another world generator: the map may differ.', true);
   return true;
@@ -169,11 +168,7 @@ function start(): void {
   if (mapText) {
     try { want = colonyCount(parseMap(mapText).hill); } catch (e) { say((e as Error).message, true); setRunning(false); return; }
   }
-  const picked = chosenRules ?? rulesId(), rid = rulesFor(picked, want);
-  colNote.textContent = '';
-  rulesBox.value = rid; // the pick itself returns once the map allows it
-  if (rid !== picked) colNote.textContent = `This map has ${want} colonies: Rules switched to "${RULESET_NAMES[rid]}" ("${RULESET_NAMES[picked]}" allows ${RULESETS[picked].maxColonies}).`;
-  else if (want > 2) colNote.textContent = `${want} colonies, one brain each. Ranking: more food ranks higher, and a colony scores 2 points for each colony it out-scores and 1 for each tie (docs/MATCH.md).`;
+  colNote.textContent = want > 2 ? `${want} colonies, one brain each. Ranking: more food ranks higher, and a colony scores 2 points for each colony it out-scores and 1 for each tie (docs/MATCH.md).` : '';
   setColonies(want);
   infos = boxes.map((b) => describeBrain(b.value, RULESETS[rulesId()]));
   selected = null; wantTrack = undefined; wantSeek = undefined; check = null;
@@ -310,7 +305,7 @@ $('rand').onclick = () => {
   start();
 };
 seedBox.onchange = () => { mapText = ''; save(); start(); };
-rulesBox.onchange = () => { chosenRules = rulesId(); save(); start(); };
+rulesBox.onchange = () => { save(); start(); };
 boxes.forEach(bindBox);
 boxes.forEach(mountHighlight);
 $<HTMLInputElement>('world').onchange = async (e) => {
