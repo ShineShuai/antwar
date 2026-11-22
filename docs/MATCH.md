@@ -67,9 +67,25 @@ Per map, 12 maps each, 40 games of 20,000 rounds (`--map-seed 1` to `12`): **11 
   box picks the world; the default world of the workshop and of `cli/eval.ts` is unchanged, so old share links and numbers still mean the same.
 * The ring example world for 3 colonies passes at 300 games (p = 0.10) although 400 games of another run gave 159 / 98 / 142 wins (the fair worlds
   section below): a pass at this size only means that the bias, if any, is small; the 4-colony ring is plainly unfair.
-* Not measured: other brains than the trail ant (a brain that fights, such as the Keeper, is the stronger probe), 100,000 rounds (the match
-  length), `altorder` per map, the shift worlds beyond the five maps above, and win chance for many colonies (1 / n is small, so the power drops).
-  The verdict looks at first place only; the mean ranking points (n - 1 when fair) are printed beside it.
+* The verdict looks at first place only; the mean ranking points (n - 1 when fair) are printed beside it.
+
+**A brain that fights, at the match length.** The Keeper (steals, settles on its pile, `docs/STEALING.md`) in every colony, 100,000 rounds,
+250 games per row (170 for the last); the colonies meet at the nests all game, so this is the stronger probe of the move order:
+
+| world | rules | wins | food | verdict |
+|---|---|---|---|---|
+| point-mirror map, seed 1 | classic | 109 / 141 | 260 / 266 | no bias found (p = 0.086) |
+| point-mirror map, seed 1 | `altorder` | 127 / 123 | 265 / 263 | no bias found (p = 1) |
+| point-mirror map, seed 2 | classic | 123 / 127 | 258 / 260 | no bias found (p = 1) |
+| point-mirror map, seed 2 | `altorder` | 127 / 123 | 261 / 258 | no bias found (p = 1) |
+| shift map, 2 colonies, seed 1 | classic | 83 / 88 | 275 / 276 | no bias found (p = 1) |
+
+Nothing is flagged, and the one near miss (map 1, classic: the second colony wins 141 of 250, p = 0.086) is 127 / 123 under `altorder`: at +-6
+points they cannot be told apart. On the two classic maps together the first colony won 232 of 500 (46.4%, p = 0.11), the opposite sign to the
+500 different worlds of the order-bias section below (52.5%), so there is no consistent order bias to remove, and none that `altorder`
+has been shown to remove.
+* Not measured: the Keeper on worlds of 3 or more colonies, `altorder` on shift maps, other brains (the raider, the squads), more than the
+  maps above, and win chance for many colonies (1 / n is small, so the power drops).
 
 ## Symmetric worlds
 
