@@ -55,6 +55,19 @@ test('eval CLI: JSON summary for a short run', () => {
   assert.equal(j.rows[0].total, 480);
 });
 
+test('eval CLI: --symmetric plays point-mirror worlds (another world per seed, the same every run)', () => {
+  const run = (...extra: string[]): { summary: { symmetric?: boolean }; rows: unknown[] } => {
+    const r = spawnSync(process.execPath, ['cli/eval.ts', '--ant', 'ants/crumb.asm', '--seeds', '2', '--rounds', '3000', '--json', ...extra], { cwd: root, encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    return JSON.parse(r.stdout) as { summary: { symmetric?: boolean }; rows: unknown[] };
+  };
+  const plain = run(), sym = run('--symmetric');
+  assert.equal(plain.summary.symmetric, undefined);
+  assert.equal(sym.summary.symmetric, true);
+  assert.notDeepEqual(sym.rows, plain.rows, 'not the contest worlds');
+  assert.deepEqual(run('--symmetric'), sym);
+});
+
 test('eval CLI: theft counters (a stash on a nest cell can be picked up by anyone)', () => {
   const run = (extra: string[]): { rows: { stole: number; lost: number }[] } => {
     const r = spawnSync(process.execPath, ['cli/eval.ts', '--ant', 'ants/trail.rules', ...extra, '--seeds', '1', '--rounds', '20000', '--json'], { cwd: root, encoding: 'utf8' });

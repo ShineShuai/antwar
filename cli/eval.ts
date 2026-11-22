@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Measure a brain on generated contest worlds.
-//   node cli/eval.ts --ant FILE [--vs FILE] [--swap] [--seeds 20] [--from 1] [--rounds 100000] [--json]
+//   node cli/eval.ts --ant FILE [--vs FILE] [--swap] [--seeds 20] [--from 1] [--rounds 100000] [--symmetric] [--json]
 // Without --vs the opponent colony idles, so nothing dies and the score is the food a colony can bring home alone.
 // With --vs the colonies play each other (--swap puts --ant on the second hill, which acts later in a round), and the
 // summary adds wins/draws/losses by nest food, and how many packets each side took from the other's nest (food on a nest
@@ -8,18 +8,20 @@
 // Besides the final nest food, each seed reports the round at which 25/50/90% of all food was home and the
 // carrier statistics the trail kit is judged by: pickups, deliveries, packets dropped elsewhere, and carriers that
 // are still holding food after STUCK rounds (lost carriers).
+// --symmetric plays point-mirror worlds, where both colonies have the same terrain: the contest generator's worlds are lopsided
+// map by map (docs/MATCH.md, Fairness), which matters for --vs, and --swap still tells the move order apart.
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { loadBrain } from '../src/core/asm.ts';
-import { generateWorld } from '../src/core/gen.ts';
+import { SYMMETRIC_WORLD, generateWorld } from '../src/core/gen.ts';
 import { CLASSIC, createSim } from '../src/core/sim.ts';
 import { compileRules } from '../src/lang/index.ts';
 
 const { values: o } = parseArgs({ options: {
   ant: { type: 'string' }, vs: { type: 'string' }, swap: { type: 'boolean', default: false }, seeds: { type: 'string', default: '20' }, from: { type: 'string', default: '1' },
-  rounds: { type: 'string', default: '100000' }, json: { type: 'boolean', default: false },
+  rounds: { type: 'string', default: '100000' }, symmetric: { type: 'boolean', default: false }, json: { type: 'boolean', default: false },
 } });
-if (!o.ant) { console.error('usage: eval.ts --ant FILE [--vs FILE] [--swap] [--seeds N] [--from SEED] [--rounds N] [--json]'); process.exit(2); }
+if (!o.ant) { console.error('usage: eval.ts --ant FILE [--vs FILE] [--swap] [--seeds N] [--from SEED] [--rounds N] [--symmetric] [--json]'); process.exit(2); }
 const STUCK = 5000, rounds = Number(o.rounds);
 const load = (f: string) => { // .rules files go through the rules compiler
   const text = readFileSync(f, 'utf8');
@@ -37,7 +39,7 @@ const median = (xs: number[]): number => (xs.length ? [...xs].sort((a, b) => a -
 
 const rows: Row[] = [];
 for (let s = 0; s < Number(o.seeds); s++) {
-  const seed = Number(o.from) + s, map = generateWorld(seed);
+  const seed = Number(o.from) + s, map = o.symmetric ? generateWorld(seed, SYMMETRIC_WORLD) : generateWorld(seed);
   const me = o.swap ? 1 : 0, sim = createSim({ map, programs: o.swap ? [foe, mine] : [mine, foe], seed });
   const total = map.food.reduce((a, b) => a + b, 0);
   const mineIds = Array.from({ length: sim.ants }, (_, i) => i).filter((i) => sim.ant(i).col === me);
@@ -77,7 +79,7 @@ for (let s = 0; s < Number(o.seeds); s++) {
 }
 const foods = rows.map((r) => r.food), pk = rows.reduce((a, r) => a + r.pickups, 0), dl = rows.reduce((a, r) => a + r.deliveries, 0);
 const summary = {
-  seeds: rows.length, rounds, medianFood: median(foods), minFood: Math.min(...foods), maxFood: Math.max(...foods),
+  seeds: rows.length, rounds, ...(o.symmetric ? { symmetric: true } : {}), medianFood: median(foods), minFood: Math.min(...foods), maxFood: Math.max(...foods),
   medianT50: median(rows.map((r) => r.t50 ?? Infinity).filter(Number.isFinite)), reachedT90: rows.filter((r) => r.t90 !== null).length,
   deliveredPerPickup: pk ? Math.round((1000 * dl) / pk) / 1000 : 0, stuckCarriers: rows.reduce((a, r) => a + r.stuck, 0),
   ...(o.vs ? { wins: rows.filter((r) => r.food > r.foe).length, draws: rows.filter((r) => r.food === r.foe).length, losses: rows.filter((r) => r.food < r.foe).length, medianAlive: median(rows.map((r) => r.alive)), medianStole: median(rows.map((r) => r.stole)), medianLost: median(rows.map((r) => r.lost)) } : {}),

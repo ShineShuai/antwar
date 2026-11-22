@@ -62,7 +62,9 @@ Per map, 12 maps each, 40 games of 20,000 rounds (`--map-seed 1` to `12`): **11 
 31.5, 39, 11, 26, 0, 4.5 and 39 of 40 games; only seed 9 passes), and **none of the 12 point-mirror maps** (closest: 14.5 / 25.5, p = 0.16).
 
 * A 2-colony world is **not** fair by default: the workshop, `cli/eval.ts` and `cli/rc.ts` use the contest generator, whose maps are mostly
-  lopsided. A fair 2-colony world is `worldFor(seed, true)` (point mirror; `cli/tourney.ts --symmetric`) or `generateFairWorld(2, seed)`.
+  lopsided. A fair 2-colony world is `worldFor(seed, true)` (point mirror; `cli/tourney.ts --symmetric`, `cli/eval.ts --symmetric`, and in
+  the workshop Example world, "2 colonies, mirrored (seed)") or `generateFairWorld(2, seed)` (workshop: "2 colonies, fair (seed)"). The seed
+  box picks the world; the default world of the workshop and of `cli/eval.ts` is unchanged, so old share links and numbers still mean the same.
 * The ring example world for 3 colonies passes at 300 games (p = 0.10) although 400 games of another run gave 159 / 98 / 142 wins (the fair worlds
   section below): a pass at this size only means that the bias, if any, is small; the 4-colony ring is plainly unfair.
 * Not measured: other brains than the trail ant (a brain that fights, such as the Keeper, is the stronger probe), 100,000 rounds (the match
@@ -162,5 +164,5 @@ Cost: about 0.6 s per 100,000-round game per core, so 3 brains x 20 worlds x 2 c
 
 ## Not done
 
-Hidden seeds (HMAC of a secret), the stored pairwise matrix and incremental runs, `--symmetric` in the workshop and in `cli/eval.ts`,
+Hidden seeds (HMAC of a secret), the stored pairwise matrix and incremental runs, `--symmetric` in `cli/rc.ts`,
 a generator version for symmetric worlds separate from `GENERATOR_VERSION`.
