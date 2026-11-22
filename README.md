@@ -19,6 +19,7 @@ Spec: `reference.html`.
 - `src/core/gen.ts`    `generateWorld(seed)`: Classic contest world (spec 3.1); `node cli/gen.ts SEED [--symmetric]`
 - `src/core/isa.ts`    the instruction table; `src/core/rules.ts` the rulesets registry: classic, tinyminds and one-flag bundles (carry two, dropfail, scare4, altorder, up to 26 colonies); see `docs/EXTENDING.md`
 - `src/core/seed.ts`   `dailySeed(date)` = hash of the UTC date string (the client supplies the date: `web/clock.ts`)
+- `docs/LADDER.md`: a round-robin of every shipped brain and the Keeper on point-mirror worlds (the Hall of Fame; how to rerun it is in the file)
 - `src/league.ts` and `cli/league.ts`: a league of n brains on n-colony worlds, rotating round the hills, scored by the ranking points (`docs/MATCH.md`)
 - `src/fairness.ts` and `cli/fairness.ts`: behavioural fairness, the same brain in every colony and a test of equal win chance (`docs/MATCH.md`)
 - `src/core/ranking.ts` `colonyResult(food)`: ranks and pairwise 2/1/0 points for any number of colonies (a proposal for more than two: `docs/MATCH.md`)
