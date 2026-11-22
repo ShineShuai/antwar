@@ -1,6 +1,6 @@
 import { EXAMPLES, STARTER } from './default-ant.ts';
 import { describeCell } from './inspect.ts';
-import { GENERATOR_VERSION, generateFairWorld } from '../src/core/gen.ts';
+import { GENERATOR_VERSION, SYMMETRIC_WORLD, generateFairWorld, generateWorld } from '../src/core/gen.ts';
 import { formatMap, parseMap } from '../src/core/map.ts';
 import { RULESETS, RULESET_NAMES } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
@@ -318,12 +318,16 @@ document.querySelectorAll<HTMLSelectElement>('select.ex').forEach(fillExamples);
 const exWorld = $<HTMLSelectElement>('exworld');
 exWorld.add(new Option('example world…', ''));
 for (const n of [3, 4, 6, 8]) exWorld.add(new Option(`${n} colonies`, String(n)));
-// fair worlds: the same place for every colony (docs/MATCH.md); the seed box picks the world, wrapped, no rock border
-for (const n of [3, 4, 6, 8]) exWorld.add(new Option(`${n} colonies, fair (seed)`, `fair${n}`));
+// worlds with the same terrain for every colony (docs/MATCH.md, Fairness); the seed box picks the world. The contest generator's own
+// worlds are lopsided map by map. Fair worlds are wrapped and have no rock border; mirrored ones are bordered, for two colonies.
+exWorld.add(new Option('2 colonies, mirrored (seed)', 'mirror'));
+for (const n of [2, 3, 4, 6, 8]) exWorld.add(new Option(`${n} colonies, fair (seed)`, `fair${n}`));
 exWorld.onchange = () => {
   const v = exWorld.value;
   if (!v) return;
-  mapText = v.startsWith('fair') ? formatMap(generateFairWorld(Number(v.slice(4)), Number.isInteger(Number(seedBox.value)) ? Number(seedBox.value) : 1)) : exampleWorld(Number(v));
+  const seed = Number.isInteger(Number(seedBox.value)) ? Number(seedBox.value) : 1;
+  mapText = v === 'mirror' ? formatMap(generateWorld(seed, SYMMETRIC_WORLD))
+    : v.startsWith('fair') ? formatMap(generateFairWorld(Number(v.slice(4)), seed)) : exampleWorld(Number(v));
   exWorld.value = '';
   start();
 };
