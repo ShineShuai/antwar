@@ -34,7 +34,13 @@ export interface Fairness {
   resolution: number;
   /** No bias found at the level `alpha`: p >= alpha. That is not proof of fairness; see `resolution`. */
   fair: boolean;
+  /** Fewer than MIN_EXPECTED expected wins per colony (games < MIN_EXPECTED * colonies): the normal approximation of the z-test is
+   * poor there and false alarms exceed `alpha` (14% for 26 colonies and 100 games, simulated). Play more games before trusting `fair`. */
+  thin: boolean;
 }
+
+/** Rule of thumb for the normal approximation of a win count: at least this many expected wins per colony. */
+export const MIN_EXPECTED = 10;
 
 export function fairness(foods: readonly (readonly number[])[], alpha = 0.05): Fairness {
   const games = foods.length, n = games > 0 ? foods[0].length : 0;
@@ -53,5 +59,5 @@ export function fairness(foods: readonly (readonly number[])[], alpha = 0.05): F
     return { colony, wins: w, share: w / games, z, p: normalTwoSidedP(z), points: points[colony] / games, food: food[colony] / games };
   });
   const p = Math.min(1, n * Math.min(...rows.map((r) => r.p)));
-  return { games, colonies: n, rows, p, resolution: 1.96 * Math.sqrt(((1 / n) * (1 - 1 / n)) / games), fair: p >= alpha };
+  return { games, colonies: n, rows, p, resolution: 1.96 * Math.sqrt(((1 / n) * (1 - 1 / n)) / games), fair: p >= alpha, thin: games < MIN_EXPECTED * n };
 }

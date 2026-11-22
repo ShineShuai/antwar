@@ -1,5 +1,5 @@
 // Match layer: every pair plays every world twice, once per colour; a game is worth 2 (more nest food), 1 (equal) or 0
-// points (reference, Matches tab). Integers only; statistics with fractions live in cli/tourney.ts. See docs/MATCH.md.
+// points (reference, Matches tab). Integers only; statistics with fractions live outside core (cli/tourney.ts, src/fairness.ts, src/league.ts). See docs/MATCH.md.
 import { CLASSIC_WORLD, SYMMETRIC_WORLD, generateWorld } from './gen.ts';
 import { points } from './ranking.ts';
 import { CLASSIC, createSim } from './sim.ts';

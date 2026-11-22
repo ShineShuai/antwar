@@ -26,6 +26,10 @@ export const rulesFor = (id: RulesId, n: number): RulesId => (n <= RULESETS[id].
 /** Exactly n brain texts: the ones given, then `fill` for each missing one. */
 export const padBrains = (brains: readonly string[], n: number, fill: string): string[] => Array.from({ length: n }, (_, c) => brains[c] ?? fill);
 
+/** The brains of colonies C.. to keep: the editors that exist, then what was stashed beyond them (a map with fewer colonies must not
+ * throw away the brains of the others). */
+export const keepBrains = (stash: readonly string[], live: readonly string[]): string[] => [...live, ...stash.slice(live.length)];
+
 /** The contest palette for A and B, and one distinct hue for each colony after them. */
 export function paletteFor(n: number, dark: boolean): Palette {
   const base = dark ? DARK : LIGHT;

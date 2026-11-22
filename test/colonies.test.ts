@@ -6,7 +6,7 @@ import { ANT_STRIDE } from '../src/core/types.ts';
 import { createEngine } from '../web/engine.ts';
 import type { Reply } from '../web/protocol.ts';
 import { STARTER } from '../web/default-ant.ts';
-import { MAX_COLONIES, colonyCount, colonyName, exampleWorld, letter, padBrains, paletteFor, rulesFor, statusLine } from '../web/colonies.ts';
+import { MAX_COLONIES, colonyCount, colonyName, exampleWorld, keepBrains, letter, padBrains, paletteFor, rulesFor, statusLine } from '../web/colonies.ts';
 import { describeCell } from '../web/inspect.ts';
 import { decodeShare, encodeShare } from '../web/share.ts';
 import { DARK, LIGHT, createViewer, layout } from '../web/viewer.ts';
@@ -130,4 +130,11 @@ test('the viewer: colony colours come from the palette, and each colony\'s scent
   assert.deepEqual(ys, [...ys].sort((a, b) => a - b), 'in colony order, top to bottom');
   const two = draw(2).rects.filter(([f]) => LIGHT.mark.includes(f)).map(([, y]) => y), cy = (0.75 * 0 + 0.5) * L.h;
   assert.ok(Math.abs(two[0] - (cy - 0.22 * L.h - s / 2)) < 1e-9 && Math.abs(two[1] - (cy + 0.22 * L.h - s / 2)) < 1e-9, `two colonies as before: ${two}`);
+});
+
+test('keepBrains: live editors first, then the stash beyond them, so a smaller map never costs a brain', () => {
+  assert.deepEqual(keepBrains(['x', 'y'], ['c', 'd', 'e']), ['c', 'd', 'e'], 'the live editors win');
+  assert.deepEqual(keepBrains(['x', 'y', 'z'], ['c']), ['c', 'y', 'z'], 'colonies D and E are not on the map now: their brains stay');
+  assert.deepEqual(keepBrains(['x', 'y'], []), ['x', 'y'], 'a two-colony map keeps all of C..');
+  assert.deepEqual(keepBrains([], ['c']), ['c']);
 });

@@ -14,7 +14,7 @@ import { parseMap } from '../src/core/map.ts';
 import { RULESETS } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import type { WorldMap } from '../src/core/types.ts';
-import { fairness } from '../src/fairness.ts';
+import { MIN_EXPECTED, fairness } from '../src/fairness.ts';
 import { loadAnyBrain } from '../src/lang/index.ts';
 
 const { values: o, positionals: files } = parseArgs({ allowPositionals: true, options: {
@@ -60,4 +60,5 @@ if (o.json) {
   console.log('colony  win chance  z       mean points  mean food');
   for (const r of result.rows) console.log(`${String.fromCharCode(65 + r.colony).padEnd(7)} ${pct(r.share).padEnd(11)} ${r.z.toFixed(2).padStart(5)}   ${r.points.toFixed(2).padStart(11)}  ${r.food.toFixed(1).padStart(9)}`);
   console.log(`fair would be ${pct(1 / n)} each and ${n - 1} point${n === 2 ? '' : 's'}. ${result.fair ? 'No bias found' : 'BIASED'} (p = ${result.p.toFixed(3)}, Bonferroni over ${n} colonies); a bias below +-${pct(result.resolution)} of win chance cannot be seen with ${result.games} games.`);
+  if (result.thin) console.log(`warning: under ${MIN_EXPECTED} expected wins per colony (${result.games} games, ${n} colonies): the test raises false alarms; use at least ${MIN_EXPECTED * n} games.`);
 }
