@@ -73,29 +73,30 @@ generator wrote).
   trails, guard = the guard; percentages compile to the `mix` flip chain (801 instructions for 70/20/10). The control starts at
   90/10/0 because every share given to guards or scouts measured as a loss (`docs/STEALING.md`).
 
-Measured like everything else (20 worlds, 100,000 rounds, idle opponent; head to head over 80 games, both hills), with the
-compiler as it was before the `follow trail` optimization (explorer step 3% slower; the comparisons between rows hold):
+Measured like everything else (20 worlds, 100,000 rounds, idle opponent, medians average the middle two; head to head over 80 games,
+both hills) and **re-measured with the defaults of `docs/TUNING.md`** (explore 64, a dead end always eaten); the first version of this
+table was measured with explore 5 and is replaced:
 
 | personality | food home, median (min) | worlds with all 480 | rounds to 90% | head to head |
 |---|---|---|---|---|
-| Forager (defaults) | 110 (42) | 0 | - | - |
-| **Trail-layer, curiosity 0 (the default)** | **480 (444)** | **15** | **52,300** | identical to `ants/trail.rules` |
-| curiosity 1 / 2 / 3 / 4 | 480 / 480 / 478 / 438 | 12 / 12 / 6 / 3 | 61.9k / 63.4k / 68.7k / 88.7k | |
-| sociability loner / follower / devoted (curiosity 1) | 461 / 480 / 478 | 5 / 12 / 9 | 76.4k / 61.9k / 57.0k | |
-| boldness fierce (curiosity 1) | 478 (382) | 8 | 65.8k | 33-47 against indifferent |
+| Forager (defaults) | 94.5 (43) | 0 | - | - |
+| **Trail-layer, curiosity 0 (the default)** | **480 (480)** | **20** | **31,350** | identical to `ants/trail.rules` |
+| curiosity 1 / 2 / 3 / 4 | 480 / 480 / 480 / 478.5 | 19 / 19 / 20 / 9 | 35.2k / 38.8k / 46.9k / 68.0k (18 worlds) | |
+| sociability loner / follower / devoted (curiosity 1) | 480 / 480 / 480 | 20 / 19 / 19 | 48.0k / 35.2k / 35.9k | |
+| boldness fierce (curiosity 1) | 480 (479) | 19 | 42.6k | 11-0-69 against indifferent |
 | 90/10/0 worker/scout mix | - | - | - | 36-44 against the pure trail-layer (`docs/STEALING.md`) |
-| Raider (curiosity 0, devoted) | 476 (447) | 5 | 62.3k | **0-80** against the trail-layer |
+| Raider (curiosity 0, devoted) | 480 (476) | 18 | 40.2k | **6-74** against the trail-layer (`docs/STEALING.md`) |
 | Guard | 0 | 0 | - | - |
 
-* The generator at curiosity 0 reproduces `trail.rules` exactly (same worlds, same numbers), so the template is the
+* The generator at curiosity 0 reproduces `trail.rules` exactly (the compiled programs are identical, checked), so the template is the
   hand-tuned ant, not a lookalike.
-* **The sliders are real trade-offs, and monotonic**: more curiosity costs foraging speed (90% of the food at 52k rounds
-  focused, 89k wild); a loner is slower than a follower. On these worlds, with all the food on the map, curiosity never pays.
+* **The sliders are real trade-offs, and monotonic**: more curiosity costs foraging speed (90% of the food at 31k rounds
+  focused, 68k wild); a loner is slower than a follower (48.0k against 35.2k). On these worlds, with all the food on the map, curiosity never pays.
 * **The other archetypes are not balanced** and were not tuned: the food race rewards speed, so aggression, guards and
-  a mix of idle ants all lose to the plain trail-layer. The raider loses every game although it never dies (91 ants alive)
-  and its raids work: over 5 worlds it took 538 packets from the foe nest and 96% of them reached its own nest. But **food
-  at a nest is not safe**: every `food ... and not home ...` rule also picks up food from the *foe's* nest, so the trail-layer
-  took 1,261 packets from the raider's nest, more than twice as many, without trying. `docs/STEALING.md` measures why and
+  a mix of idle ants all lose to the plain trail-layer. The raider loses 6-74 although it never dies (91 ants alive)
+  and its raids work: over 5 worlds (measured with the original kit) it took 538 packets from the foe nest and 96% of them reached its
+  own nest. But **food at a nest is not safe**: every `food ... and not home ...` rule also picks up food from the *foe's* nest, so the
+  trail-layer took 1,261 packets from the raider's nest, more than twice as many, without trying. `docs/STEALING.md` measures why and
   what was tried against it (concealing, guarding, sitting on piles): against the original ant nothing beat the plain trail-layer;
   against the retuned one (`docs/TUNING.md`) a light dose of sitting does (the Keeper), the rest still loses.
 
@@ -107,31 +108,33 @@ written but never read (or read but never written).
 
 ## Results: the kit through the compiler
 
-*Measured with the original explorer (`explore 5`) and a dead end eaten 1 time in 4; the defaults are now `explore 64` and always
-(`docs/EXPLORE.md`, `docs/TUNING.md`: the trail ant beats the original 73-0-7).*
+*Re-measured with the defaults of `docs/TUNING.md` (`explore 64`, a dead end always eaten); the first version of this table used `explore 5`
+and a dead end eaten 1 time in 4 (`docs/EXPLORE.md`: the trail ant beats the original 73-0-7). The hand-written ants do not depend on
+those settings: `trail.asm` gives exactly its old numbers, which also shows that the simulator and these 20 worlds are unchanged.*
 
 `ants/trail.rules` (13 rules, 382 instructions, 239 states) against the hand-written `ants/trail.asm` (204 states);
 20 worlds, 100,000 rounds, idle opponent (same protocol as `docs/TRAILS.md`).
 
 | | food home, median (min) | worlds with all 480 | rounds to 50% / 90% | delivered per pickup | stuck carriers per world |
 |---|---|---|---|---|---|
-| reference page flat starter | 73 (27) | 0 | - | 0.97 | 72 |
-| `ants/forager.rules` (level 1, no kit) | 92 (29) | 0 | - | - | - |
+| reference page flat starter (from `docs/TRAILS.md`) | 73 (27) | 0 | - | 0.97 | 72 |
+| `ants/forager.rules` (level 1, no kit) | 92 (29) | 0 | - | 0.58 | 66 |
 | `ants/trail.asm` (hand mod-3 + food trail) | 480 (461) | 18 / 20 | 17,350 / 49,750 | 0.999 | 0.3 |
-| **`ants/trail.rules` (compiled)** | **480 (460)** | **14 / 20** | **18,500 / 50,700** | 0.998 | 0.5 |
+| **`ants/trail.rules` (compiled)** | **480 (480)** | **20 / 20** | **12,950 / 31,350** | 1.000 | 0.0 |
 
-* **The gap is small**: the compiled program reaches 50% of the food within 7% of the hand-written one's time and 90% about 2%
-  later (the figures above are after the `follow trail` optimization below; 20 worlds is noisy, about +-5%); it completes 14
-  worlds against 18. Before that optimization it won 26 of 80 games against the hand ant (food is shared, so a few percent
-  of speed decides more than it earns alone).
+* **The compiled ant is now ahead of the hand-written one**: it reaches 50% of the food in 12,950 rounds against 17,350 and 90% in
+  31,350 against 49,750, and completes all 20 worlds against 18. Head to head it wins 65-0-15 against `trail.asm` (31-9 and 34-6 on the
+  two hills) and 53-0-27 against the best hand-written ant, the breadcrumb ant `crumb.asm` (`docs/TRAILS.md`). With the first kit it
+  was a few percent slower than the hand ant and won 26 of 80 games.
 * **The level-1 forager** (6 rules, no kit) scores like the reference's starter, which also checks that the semantics
   above match the reference's: a failed `move` falls through to the next rule.
 * One design lesson: the first version of `return home` simply failed when blocked or lost and left the rest to
   `otherwise roam`. Every blocked carrier then wandered off the trail: twice as many stuck carriers (1.2 against 0.6 per world) and 20 wins in 80
   head to head (26 now). The
-  skill now retries, sidesteps and feels around itself, so rule authors cannot get it wrong.
-* **Explain why** (`--fire-counts`): in `trail.rules` 30% of all acting rounds go to `follow trail` (it is tried every step
-  by every searching ant), 23% to `explore`, 17% to `return home`; the four food checks cost 6% each.
+  skill now retries, sidesteps and feels around itself, so rule authors cannot get it wrong (26 wins in 80 then; 65 against the hand ant now).
+* **Explain why** (`--fire-counts`): in `trail.rules` 25% of all acting rounds go to `follow trail` (it is tried every step
+  by every searching ant), 28% to `explore`, 15% to `return home`; the four food checks cost about 7% each (it was 30 / 23 / 17 and 6% with
+  `explore 5`).
 
 ### Optimizing `follow trail`
 

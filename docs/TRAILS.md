@@ -23,6 +23,9 @@ ant, measured, before a Trails level is promised. This is that experiment, for t
 | breadcrumb, no food trail | 480 (434) | 12 / 20 | 20,075 / 62,700 | 0.997 | 0 |
 | **breadcrumb + food trail** | **480 (480)** | **20 / 20** | **15,250 / 44,250** | 1.000 | 0 |
 
+* **Re-checked** with today's simulator: `trail.asm` (17,350 / 49,750) and `crumb.asm` (15,250 / 44,250) reproduce the rows above exactly, so the
+  tables of the hand-written ants stand. They were never retuned, and no longer lead: the compiled `ants/trail.rules` (`docs/RULES.md`, `docs/TUNING.md`)
+  reaches 90% of the food in 31,350 rounds and beats `crumb.asm` 53-0-27 over 80 games.
 * The harness reproduces the reference's own baseline: its flat starter scores a median 73 here (page: 76, range 22-183).
 * The official `starter.ant` is much weaker (29): on a failed move or pickup it returns to the sense state instead of wandering.
 * Head to head (`--vs`, both hills): breadcrumb + food trail beats the reference starter 40/40 and loses no ant; in a mirror
