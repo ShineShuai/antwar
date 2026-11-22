@@ -90,7 +90,7 @@ test('cli/fairness.ts: a table or JSON; refuses what does not make sense', () =>
   const ok = run('--colonies', '3', '--map-seed', '1', '--games', '3', '--rounds', '1500', '--json');
   assert.equal(ok.status, 0, ok.stderr);
   const j = JSON.parse(ok.stdout) as { games: number; colonies: number; rows: unknown[]; rules: string; world: string; fair: boolean };
-  assert.deepEqual([j.games, j.colonies, j.rows.length, j.rules], [3, 3, 3, 'colonies']);
+  assert.deepEqual([j.games, j.colonies, j.rows.length, j.rules], [3, 3, 3, 'classic']);
   assert.match(j.world, /fair worlds, 3 colonies, the map of seed 1/);
   const table = run('--symmetric', '--games', '2', '--rounds', '1000');
   assert.equal(table.status, 0, table.stderr);

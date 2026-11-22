@@ -2,17 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseIcfp } from '../src/core/asm.ts';
 import { parseMap } from '../src/core/map.ts';
-import { CLASSIC, RULESETS, TINYMINDS, unsupported } from '../src/core/rules.ts';
+import { CLASSIC, RULESETS, RULESET_NAMES, TINYMINDS, canonicalRules, unsupported } from '../src/core/rules.ts';
 import { createSim } from '../src/core/sim.ts';
 
 const map = parseMap('6\n4\n. . . . . .\n. + . . . .\n. . . . . .\n. . . . . .\n');
 
 test('the rules registry: Classic is the task, extras are named flags', () => {
-  assert.deepEqual(CLASSIC, { cap: 1, ext: false, scareThreshold: 0, dropOnBlocked: false, maxColonies: 2, altOrder: false });
+  assert.deepEqual(CLASSIC, { cap: 1, ext: false, scareThreshold: 0, dropOnBlocked: false, altOrder: false });
   assert.deepEqual(RULESETS.tinyminds, TINYMINDS);
   assert.deepEqual(unsupported(CLASSIC), []);
   assert.deepEqual(unsupported(TINYMINDS), [], 'every flag is implemented');
-  assert.deepEqual(TINYMINDS, { cap: 2, ext: true, scareThreshold: 4, dropOnBlocked: true, maxColonies: 26, altOrder: true });
+  assert.deepEqual(TINYMINDS, { cap: 2, ext: true, scareThreshold: 4, dropOnBlocked: true, altOrder: true });
   for (const [id, r] of Object.entries(RULESETS)) assert.deepEqual(unsupported(r), [], id);
 });
 
@@ -21,7 +21,6 @@ test('flag values the simulator cannot honour are rejected, never silently ignor
   for (const [flag, rules] of [
     ['cap', { ...CLASSIC, cap: 3 }], ['cap', { ...CLASSIC, cap: 0 }],
     ['scareThreshold', { ...CLASSIC, scareThreshold: 5 }], ['scareThreshold', { ...CLASSIC, scareThreshold: -1 }],
-    ['maxColonies', { ...CLASSIC, maxColonies: 27 }], ['maxColonies', { ...CLASSIC, maxColonies: 0 }],
   ] as const) {
     assert.deepEqual(unsupported(rules), [flag]);
     assert.throws(() => createSim({ map, programs: [P], rules }), new RegExp(`not implemented yet: ${flag}`));
@@ -47,4 +46,12 @@ test('a scare threshold below 4 fires on exactly that many foes, and on no other
   assert.equal(carry(four, 4), 0, '4 foes, threshold 4: scared');
   assert.equal(carry(four, 0), 1, 'threshold 0 is off');
   assert.equal(carry(three, 0), 1);
+});
+
+test('the number of colonies is not a flag: the old `colonies` name is Classic, and is not offered in menus', () => {
+  assert.deepEqual(RULESETS.colonies, CLASSIC);
+  assert.equal(canonicalRules('colonies'), 'classic');
+  for (const id of Object.keys(RULESETS)) if (id !== 'colonies') assert.equal(canonicalRules(id as keyof typeof RULESETS), id);
+  assert.deepEqual(Object.keys(RULESET_NAMES).sort(), Object.keys(RULESETS).filter((id) => id !== 'colonies').sort());
+  assert.ok(!('maxColonies' in CLASSIC) && !('maxColonies' in TINYMINDS));
 });

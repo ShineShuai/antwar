@@ -115,9 +115,12 @@ world; 4 colonies are 2 x 2 tiles of 50 x 50 (a 100 x 100 world with hills of 91
   n grows: hills of 91, 61, 37 and 19 cells at tiles of 44+, 30+, 22+ and 16+ cells.
 * The worlds have **no rock border** and need wrapped play (the simulator's default; `--no-wrap` of `cli/replay.ts` would break them).
   They are not files for the official engine.
-* Fair terrain does not make the move order fair (ids still run colony by colony, `altorder` is the ruleset for that).
+* Fair terrain does not make the move order fair (ids still run colony by colony). `altorder` combines with any number of colonies, but it
+  only reverses the id order every other round, so it swaps the two ends of the order: for 3 or more colonies the ones in the middle are
+  never first or last in a round, and the first-colony bias measured for two colonies (52.5% classic, 51.1% altorder) says nothing about
+  them. Not measured; a rotating order would be the fair one (not implemented).
 
-Measured: the plain trail ant on every hill, 400 games of 30,000 rounds each, under the `colonies` ruleset. The ring example world of
+Measured: the plain trail ant on every hill, 400 games of 30,000 rounds each, under `colonies` (then the name of Classic with up to 26 colonies; now just Classic). The ring example world of
 the workshop (`exampleWorld(n)`, similar hills but not the same places) is one world, so its 400 games are 400 simulation seeds; the
 fair rows are 400 worlds (seeds 1001-1400). "Colony 0 minus the rest" is the mean food of colony 0 less the mean of the others, with its 95% interval.
 
@@ -164,13 +167,13 @@ hill h, a Latin square), so each brain takes each hill once per world and the ad
 or not. A game is scored by `colonyResult` (2 points for each colony with less food, 1 for each tie) and the table is ordered by points,
 then nest food. Worlds: two brains play point-mirror worlds (`--contest`: the contest generator), more play fair worlds for n colonies
 (13, 17, 19, 23 and 26 have none: give `--world FILE`), or one `--world FILE` whose hills are the brains and only the simulator seed changes.
-Rules are classic for two brains and colonies for more (`--rules`). Results do not depend on `--jobs`.
+Rules are classic (`--rules`); any ruleset plays any number of colonies. Results do not depend on `--jobs`.
 
 "per game" is the mean points, n - 1 for an average brain, with the 95% interval over the worlds (the n games of a world are not independent).
 The last line, the mean points by hill, shows what the place is worth: 2 each for 3 colonies if it is worth nothing.
 
 ```
-3 brains, 20 worlds (seeds 1..20; fair worlds for 3 colonies), 3 rotations each, 100000 rounds, rules colonies; 60 games
+3 brains, 20 worlds (seeds 1..20; fair worlds for 3 colonies), 3 rotations each, 100000 rounds, rules classic; 60 games
  # brain        points  per game        rank  1st  shared  food
  1 trail.rules     206  3.43 +-0.36    1.28   48       0   368
  2 crumb.asm       132  2.20 +-0.21    1.90   11       0   222

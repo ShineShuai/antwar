@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { assemble } from '../src/core/asm.ts';
 import { parseMap } from '../src/core/map.ts';
-import { ALTORDER, COLONIES, TINYMINDS } from '../src/core/rules.ts';
+import { ALTORDER, TINYMINDS } from '../src/core/rules.ts';
 import { CLASSIC, createSim } from '../src/core/sim.ts';
 import { lcg, randIcfp } from '../testlib/random.ts';
 import { desugar } from '../testlib/desugar.ts';
@@ -106,7 +106,7 @@ test('reference.html demo and the core agree round by round with three colonies 
   for (let k = 1; k <= 10; k++) {
     const r = lcg(k * 7919), flat = k === 1 ? GREEDY : k === 2 ? CHARGER : k >= 3 && k <= 5 ? MARKPROG.replace('mark 0', `mark ${k - 3}`) : desugar(randIcfp(r, 6 + (r() % 20)), false);
     demo.setup(demo.parse(flat), flags, THREE);
-    const P = assemble(flat, COLONIES), sim = createSim({ map, programs: [P, P, P], seed: 99999, rules: COLONIES });
+    const P = assemble(flat, CLASSIC), sim = createSim({ map, programs: [P, P, P], seed: 99999, rules: CLASSIC });
     assert.equal(demo.state().ants.length, sim.ants, 'ants of three colonies');
     for (let round = 1; round <= 1500; round++) {
       demo.tick(); sim.step();
@@ -122,7 +122,7 @@ test('reference.html demo and the core agree round by round with three colonies 
   }
   assert.equal(marked, 3, 'the three marking programs leave marks');
   // foemarker is really used: the same program with that test replaced by one that is never true plays a different game
-  const run = (src: string): number => { const P = assemble(src, COLONIES), q = createSim({ map, programs: [P, P, P], seed: 99999, rules: COLONIES }); q.run(1500); return q.hash(); };
+  const run = (src: string): number => { const P = assemble(src, CLASSIC), q = createSim({ map, programs: [P, P, P], seed: 99999, rules: CLASSIC }); q.run(1500); return q.hash(); };
   assert.notEqual(run(MARKPROG), run(MARKPROG.replace('sense here foemarker', 'sense here rock')), 'foemarker never fired: the check would be vacuous');
 });
 

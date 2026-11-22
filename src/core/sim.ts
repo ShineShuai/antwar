@@ -3,7 +3,7 @@ import { COND as C, OP } from './asm.ts';
 import { DE, DO } from './hex.ts';
 import { CLASSIC, TINYMINDS, unsupported } from './rules.ts';
 import { createRng } from './rng.ts';
-import { ANT_STRIDE } from './types.ts';
+import { ANT_STRIDE, MAX_COLONIES } from './types.ts';
 import type { AntId, Cell, Dir, Frame, Program, Rules, WorldMap } from './types.ts';
 
 export { CLASSIC, TINYMINDS };
@@ -18,7 +18,7 @@ const ACT_EVERY = 15; // a mover rests 14 rounds, so it acts again 15 rounds lat
 
 export interface SimOptions {
   map: WorldMap;
-  /** One program per colony (v1: one or two). */
+  /** One program per colony (1 to 26; every hill of the map needs one). */
   programs: Program[];
   seed?: number;
   rules?: Rules;
@@ -31,7 +31,7 @@ export function createSim({ map, programs, seed = 12345, rules = CLASSIC, wrap =
   const { W, H } = map, N = W * H, ncol = programs.length;
   const missing = unsupported(rules); // VARIATION POINT (all flags): see docs/EXTENDING.md
   if (missing.length) throw new Error(`ruleset needs features not implemented yet: ${missing.join(', ')}`);
-  if (ncol < 1 || ncol > rules.maxColonies) throw new Error(`this ruleset allows 1 to ${rules.maxColonies} colonies, got ${ncol}`); // VARIATION POINT: maxColonies
+  if (ncol < 1 || ncol > MAX_COLONIES) throw new Error(`a match has 1 to ${MAX_COLONIES} colonies, got ${ncol}`);
   if (N > 65535) throw new Error('world too large: cells must fit u16 with 0xFFFF reserved');
   if (wrap && H % 2) throw new Error('wrapped worlds need an even height');
   const rock = Uint8Array.from(map.rock), food = Uint16Array.from(map.food), hill = map.hill;

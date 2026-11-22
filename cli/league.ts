@@ -4,7 +4,7 @@
 //                      [--jobs N] [--json] [--games]
 // Worlds: for two brains point-mirror worlds, for more fair worlds for n colonies (n = 13, 17, 19, 23 and 26 have none: use --world), or
 // one --world FILE whose hills are the brains (the simulator seed still changes per world number). --contest: the contest generator (two
-// brains). Rules default to classic for two brains, colonies for more. A game is scored 2 points for each colony with less food and 1
+// brains). The rules default to classic (any number of brains). A game is scored 2 points for each colony with less food and 1
 // for each tie; the same brain may be listed twice (then the table shows what the place alone is worth). Results do not depend on --jobs.
 import { readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
@@ -58,7 +58,7 @@ if (!isMainThread) {
   if (n < 2 || n > 26) die('usage: league.ts A B [C ...] (2 to 26 brains) [--seeds N] [--from SEED] [--rounds N] [--rules R] [--world FILE | --contest] [--jobs N] [--json] [--games]');
   if (o.world !== undefined && o.contest) die('--world and --contest exclude each other');
   if (o.contest && n !== 2) die('--contest is the two-colony contest generator; use two brains');
-  const rulesId = (o.rules ?? (n > 2 ? 'colonies' : 'classic')) as RulesId;
+  const rulesId = (o.rules ?? 'classic') as RulesId;
   if (!Object.hasOwn(RULESETS, rulesId)) die(`unknown ruleset "${rulesId}"; try ${Object.keys(RULESETS).join(', ')}`);
   const nSeeds = int(o.seeds, 1, '--seeds'), from = int(o.from, 0, '--from'), rounds = int(o.rounds, 0, '--rounds'), jobs = int(o.jobs, 1, '--jobs');
   const seeds = Array.from({ length: nSeeds }, (_, k) => from + k);

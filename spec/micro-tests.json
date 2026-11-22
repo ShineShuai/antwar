@@ -1231,7 +1231,7 @@
   },
   {
    "name": "3 colonies: FoeMarker sees the markers of every other colony, from either side",
-   "spec": "Ant tab: foemarker = any marker of any other colony (a..z colonies, maxColonies > 2)",
+   "spec": "Ant tab: foemarker = any marker of any other colony (a..z colonies)",
    "map": "6\n4\n. . . . . .\n. a b . . .\n. c . . . .\n. . . . . .\n",
    "ants": [
     "Mark 2 1\nDrop 1",

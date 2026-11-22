@@ -89,18 +89,18 @@ const withThird = (mapText: string): string => { let k = 0; return mapText.repla
 
 // Each flag, one at a time and all together, against the Python oracle on random official-format programs. A flag that
 // never changed any match would make this vacuous, so each must change the final state in a good share of the matches.
-for (const id of ['cap2', 'scare4', 'dropfail', 'altorder', 'colonies', 'tinyminds'] as RulesId[]) {
+for (const id of ['cap2', 'scare4', 'dropfail', 'altorder', 'tinyminds'] as RulesId[]) {
   test(`second implementation agrees under the ${id} ruleset, and the flag matters`, { skip: !hasPython && 'python3 not found' }, () => {
     const dir = mkdtempSync(join(tmpdir(), `xcheck-${id}-`));
-    const rules = RULESETS[id], many = id === 'colonies' || id === 'tinyminds';
+    const rules = RULESETS[id]; // every ruleset also plays three colonies on half of the maps: the number of colonies is not a flag
     let differs = 0;
     const SEEDS = id === 'scare4' ? 40 : 14, ROUNDS = 1200; // exactly four foes around a carrier is rare in random play
     try {
       for (let seed = 1; seed <= SEEDS; seed++) {
         const r = lcg(seed * 6151 + id.length), n = 8 + (r() % 18);
         let mapText = formatMap(randMap(r, seed % 2 === 1));
-        if (many && seed % 2 === 0) mapText = withThird(mapText);
-        const progs = [randIcfp(r, n), randIcfp(r, n), randIcfp(r, n)].slice(0, many && seed % 2 === 0 ? 3 : 2);
+        if (seed % 2 === 0) mapText = withThird(mapText);
+        const progs = [randIcfp(r, n), randIcfp(r, n), randIcfp(r, n)].slice(0, seed % 2 === 0 ? 3 : 2);
         const files = progs.map((t, k) => { const f = join(dir, `p${k}.ant`); writeFileSync(f, t); return f; });
         const mapFile = join(dir, 'm.world');
         writeFileSync(mapFile, mapText);
@@ -113,14 +113,14 @@ for (const id of ['cap2', 'scare4', 'dropfail', 'altorder', 'colonies', 'tinymin
           sim.run(e.round - sim.cycle);
           assert.equal(sim.hash(), e.hash, `${id}, seed ${seed}, round ${e.round}`);
         }
-        const classic = createSim({ map, programs: progs.map((t) => parseIcfp(t, CLASSIC)), seed, rules: { ...CLASSIC, maxColonies: 26 } });
+        const classic = createSim({ map, programs: progs.map((t) => parseIcfp(t, CLASSIC)), seed, rules: CLASSIC });
         classic.run(ROUNDS);
         if (classic.hash() !== sim.hash()) differs++;
       }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-    if (id !== 'colonies') assert.ok(differs >= (id === 'scare4' ? 1 : 3), `${id} changed only ${differs} of ${SEEDS} matches`); // colonies changes nothing for two-colony matches by design
+    assert.ok(differs >= (id === 'scare4' ? 1 : 3), `${id} changed only ${differs} of ${SEEDS} matches`);
     console.log(`# ${id}: changed ${differs}/${SEEDS} matches`);
   });
 }

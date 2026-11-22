@@ -5,13 +5,16 @@ later without touching the rest. The mechanism: a **ruleset** is a named bundle 
 a flag the simulator cannot honour yet is **rejected** (`unsupported()`), never ignored; each flag plugs in at a
 `VARIATION POINT` comment in `src/core/sim.ts`.
 
+The number of colonies is **not** a flag: a match has as many colonies as the world has hills (1 to 26, letters a..z, `MAX_COLONIES`), under
+every ruleset, so a flag can be tried with any number of colonies. (`colonies`, the former name of Classic with up to 26 colonies, is kept
+as another name of Classic so that old share links, replays and saved settings still open; menus do not list it.)
+
 | Flag (Classic value) | Variation point in `sim.ts` | Status |
 |---|---|---|
 | `cap` (1) | `OP.PICKUP` capacity check | implemented |
 | `ext` (false) | assembler gate (`FLAT_OPS[].ext`) + `OP.DIRECTION` / `OP.PAYLOAD` / `OP.SENSEANY` | implemented |
 | `scareThreshold` (0 = off) | `check()` after the kill test | rejected until implemented |
 | `dropOnBlocked` (false) | `OP.MOVE` failure branch | rejected until implemented |
-| `maxColonies` (2) | colony-count check; `foemarker`, scoring and order need an N-colony review | rejected until implemented |
 | `altOrder` (false) | `step()` loop order | rejected until implemented |
 
 ## Adding a rule (checklist)
@@ -48,7 +51,6 @@ random programs (`test/crosscheck.test.ts`; each flag must change a good share o
 | `dropOnBlocked` | `dropfail`, `tinyminds` | a blocked mover carrying exactly 2 drops 1 packet here and keeps 1 | Python oracle, reference demo (DF), micro-tests |
 | `scareThreshold` 4 | `scare4`, `tinyminds` | an ant with exactly 4 foe neighbours drops its food and survives (5 still kills) | Python oracle, reference demo (SC), micro-tests incl. 3 foes / threshold 3 |
 | `altOrder` | `altorder`, `tinyminds` | odd rounds run ants in ascending id order, even rounds descending | Python oracle, reference demo (AO), micro-tests |
-| `maxColonies` up to 26 | `colonies`, `tinyminds` | more than two colonies (hills a..z) | Python oracle, reference demo (3 colonies, marks and foemarker), micro-tests |
 | `ext` | `tinyminds` | direction / payload / senseany / senseall instructions | reference demo (direction and payload), unit tests (the oracle reads official `.ant` only) |
 
 **Decision for the owner of the reference:** the reference says only that `altorder` "would alternate" who acts first. The reading
@@ -58,7 +60,7 @@ implemented is *alternate the direction of the id order each round* (round 1 asc
 implements it independently (`test/refdemo.test.ts` compares it with the core round by round), so the implementations agree on it; they would
 agree on a wrong reading too, so it stays the owner's decision.
 Measured effect (`docs/MATCH.md`, 500 symmetric seeds, the Keeper on both hills): first colony 52.5% of decided games in Classic order, 51.1% with `altorder`; neither is distinguishable from 50% at this size.
-`unsupported()` now only rejects values outside the spec: `cap` not 1 or 2, `scareThreshold` not 0..4, `maxColonies` not 1..26.
+`unsupported()` now only rejects values outside the spec: `cap` not 1 or 2, `scareThreshold` not 0..4. The colony count is checked per match (1 to 26).
 
 The workshop's **Rules** menu runs any of these ids (both colonies, saved and shared); `node cli/run.ts --rules ID` and
 `python3 oracle/ref.py --rules ID` do the same from the command line. Single-flag ids exist for experiments and tests.

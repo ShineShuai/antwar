@@ -3,6 +3,7 @@
 import { RULESETS } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import { MAX_ROUNDS } from '../src/core/replay.ts';
+import { MAX_COLONIES } from '../src/core/types.ts';
 
 /** `result`: the state hash the sender saw at `round`; the opener re-runs to that round and says whether it matches. */
 export interface Share { seed: number; brains: string[]; map?: string; gen?: number; /** absent = classic */ rules?: RulesId; result?: { round: number; hash: number } }
@@ -48,7 +49,7 @@ export async function decodeShare(token: string): Promise<Share | null> {
     const o = JSON.parse(new TextDecoder().decode(raw)) as Partial<Share> & { v?: number };
     const brains = o.brains;
     if (o.v !== 1 || typeof o.seed !== 'number' || !Number.isFinite(o.seed)) return null;
-    if (!Array.isArray(brains) || brains.length < 2 || brains.length > 26 || !brains.every((b) => typeof b === 'string')) return null; // one brain per colony: 2 to 26
+    if (!Array.isArray(brains) || brains.length < 2 || brains.length > MAX_COLONIES || !brains.every((b) => typeof b === 'string')) return null; // one brain per colony: 2 to 26
     if (o.map !== undefined && typeof o.map !== 'string') return null;
     if (o.rules !== undefined && !(typeof o.rules === 'string' && Object.hasOwn(RULESETS, o.rules))) return null;
     let result: Share['result'];

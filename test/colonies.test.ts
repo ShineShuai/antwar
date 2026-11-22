@@ -6,7 +6,7 @@ import { ANT_STRIDE } from '../src/core/types.ts';
 import { createEngine } from '../web/engine.ts';
 import type { Reply } from '../web/protocol.ts';
 import { STARTER } from '../web/default-ant.ts';
-import { MAX_COLONIES, colonyCount, colonyName, exampleWorld, keepBrains, letter, padBrains, paletteFor, rulesFor, statusLine } from '../web/colonies.ts';
+import { MAX_COLONIES, colonyCount, colonyName, exampleWorld, keepBrains, letter, padBrains, paletteFor, statusLine } from '../web/colonies.ts';
 import { describeCell } from '../web/inspect.ts';
 import { decodeShare, encodeShare } from '../web/share.ts';
 import { DARK, LIGHT, createViewer, layout } from '../web/viewer.ts';
@@ -21,14 +21,6 @@ test('labels and counts: A to Z, a colour name for the first eight, colonies = h
   assert.equal(colonyCount(parseMap(exampleWorld(5)).hill), 5);
   assert.equal(colonyCount(Int8Array.from([-1, -1])), 2, 'a map with one hill still shows two editors');
   assert.equal(colonyCount(Int8Array.from([0, 25])), 26);
-});
-
-test('the ruleset a map needs: the chosen one while it allows that many colonies, else the many-colonies ruleset', () => {
-  assert.equal(rulesFor('classic', 2), 'classic');
-  assert.equal(rulesFor('classic', 3), 'colonies');
-  assert.equal(rulesFor('tinyminds', 26), 'tinyminds', 'Tinyminds allows 26 already');
-  assert.equal(rulesFor('altorder', 4), 'colonies');
-  assert.equal(rulesFor('colonies', 26), 'colonies');
 });
 
 test('padBrains gives exactly n texts: the ones given, then the fill', () => {
@@ -89,8 +81,10 @@ test('the engine plays three colonies: a frame has a score, a live count and a r
   const cols = new Set<number>();
   for (let i = 0; i < f.ants.length; i += ANT_STRIDE) cols.add(f.ants[i + 2]);
   assert.deepEqual([...cols].sort(), [0, 1, 2]);
-  const bad = eng.handle({ type: 'init', seed: 5, mapText: map, rules: 'classic', brains: [STARTER, STARTER, STARTER] }).msg;
-  assert.equal(bad.type, 'error', 'classic cannot play three colonies');
+  for (const rules of ['classic', 'altorder', 'tinyminds'] as const) {
+    const ok = createEngine().handle({ type: 'init', seed: 5, mapText: map, rules, brains: [STARTER, STARTER, STARTER] }).msg;
+    assert.equal(ok.type, 'ready', `${rules} plays three colonies: the colony count is not a flag`);
+  }
 });
 
 test('share links carry one brain per colony (2 to 26) and nothing else', async () => {

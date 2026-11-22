@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createRng } from '../src/core/rng.ts';
 import { AsmError, OP, assemble, makeProgram, parseIcfp } from '../src/core/asm.ts';
 import { parseMap } from '../src/core/map.ts';
+import { RULESETS } from '../src/core/rules.ts';
 import { CLASSIC, TINYMINDS, createSim } from '../src/core/sim.ts';
 import type { Rules, WorldMap } from '../src/core/types.ts';
 import { refSim } from '../testlib/ref-sim.ts';
@@ -121,11 +122,12 @@ test('daily seed: stable hash of the UTC date, 30-bit, differs per day', async (
   assert.equal(utcDate(new Date('2026-11-10T00:00:00Z')), '2026-11-10');
 });
 
-test('Classic allows at most two colonies; a ruleset with maxColonies allows more', () => {
+test('a match has 1 to 26 colonies under every ruleset: their number is the number of hills, not a flag', () => {
   const P = parseIcfp('Drop 0', CLASSIC);
-  assert.throws(() => createSim({ map: strip(10), programs: [P, P, P] }), /allows 1 to 2 colonies, got 3/);
-  assert.throws(() => createSim({ map: strip(10), programs: [] }), /allows 1 to 2 colonies, got 0/);
-  assert.doesNotThrow(() => createSim({ map: strip(10), programs: [P, P, P], rules: { ...CLASSIC, maxColonies: 3 } }));
+  for (const [id, rules] of Object.entries(RULESETS)) assert.doesNotThrow(() => createSim({ map: strip(10), programs: [P, P, P], rules }), id);
+  assert.throws(() => createSim({ map: strip(10), programs: [] }), /1 to 26 colonies, got 0/);
+  assert.throws(() => createSim({ map: strip(10), programs: Array.from({ length: 27 }, () => P) }), /1 to 26 colonies, got 27/);
+  assert.throws(() => createSim({ map: parseMap('6\n4\n. . . . . .\n. + - c . .\n. . . . . .\n. . . . . .\n'), programs: [P, P] }), /more hills than programs/);
 });
 
 test('canonical state stream: layout, hash, snapshot/restore round trip', async () => {
