@@ -48,6 +48,14 @@ test('fairness of a list of games: the shares, the points, the food, the verdict
   const a = fairness(games), b = fairness(games.map((r) => [r[2], r[0], r[1]]));
   assert.deepEqual(b.rows.map((r) => r.wins), [a.rows[2].wins, a.rows[0].wins, a.rows[1].wins]);
   assert.equal(a.p, b.p);
+  // thin: fewer than MIN_EXPECTED expected wins per colony (games < 10 * colonies)
+  const three = (k: number): number[][] => Array.from({ length: k }, (_, g) => [g % 3 === 0 ? 1 : 0, g % 3 === 1 ? 1 : 0, g % 3 === 2 ? 1 : 0]);
+  assert.equal(fairness(three(29)).thin, true, '29 games, 3 colonies: just under 10 each');
+  assert.equal(fairness(three(30)).thin, false, '30 games, 3 colonies: 10 each');
+  assert.equal(fairness(turns).thin, false, '300 games, 3 colonies');
+  assert.equal(fairness(Array.from({ length: 100 }, (_, g) => (g % 26 === 0 ? [1, 0] : [0, 1]))).thin, false, '2 colonies, 100 games');
+  assert.equal(fairness(Array.from({ length: 259 }, () => new Array<number>(26).fill(1))).thin, true, '26 colonies need 260 games');
+  assert.equal(fairness(Array.from({ length: 260 }, () => new Array<number>(26).fill(1))).thin, false);
   assert.throws(() => fairness([]), RangeError);
   assert.throws(() => fairness([[1]]), RangeError);
   assert.throws(() => fairness([[1, 2], [1, 2, 3]]), RangeError);

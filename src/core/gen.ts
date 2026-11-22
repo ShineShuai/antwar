@@ -118,7 +118,6 @@ function attemptWorld(next: () => number, cfg: WorldConfig): WorldMap | null {
 export function allReachable({ W, H, rock, food, hill }: WorldMap): boolean {
   const start = hill.findIndex((h: number) => h === 0), seen = new Uint8Array(W * H);
   const qx: number[] = [start % W], qy: number[] = [0]; // y is recovered by counting rows below
-  qy[0] = 0;
   for (let y = 0; y < H; y++) if (start >= y * W && start < (y + 1) * W) qy[0] = y;
   seen[start] = 1;
   for (let i = 0; i < qx.length; i++) {
@@ -267,7 +266,8 @@ export function reachableOnTorus({ W, H, rock, food, hill }: WorldMap): boolean 
 }
 
 /** Fair for every colony: for each hill there is a shift of the wrapped world (an even number of rows, so the rows keep their
- * offsets) that maps rock to rock, food to food, and hill 0 exactly onto that hill (and, for that reason, every other hill onto a hill). */
+ * offsets) that maps rock to rock, food to food, hill 0 exactly onto that hill, and the set of all hill cells onto itself (so that
+ * every colony also sees the other hills in the same places; hills at 0, 1 and 3 of a ring are not alike, although 0 maps onto each). */
 export function isShiftSymmetric({ W, H, rock, food, hill }: WorldMap): boolean {
   if (H % 2) return false;
   const first = new Map<number, [number, number]>();
@@ -281,7 +281,7 @@ export function isShiftSymmetric({ W, H, rock, food, hill }: WorldMap): boolean 
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const p = y * W + x, q = ((y + dy) % H) * W + ((x + dx) % W);
-        if (rock[p] !== rock[q] || food[p] !== food[q] || (hill[p] === 0) !== (hill[q] === c)) return false; // (so every hill is hill 0's image)
+        if (rock[p] !== rock[q] || food[p] !== food[q] || (hill[p] >= 0) !== (hill[q] >= 0) || (hill[p] === 0) !== (hill[q] === c)) return false;
       }
     }
   }

@@ -65,6 +65,16 @@ test('isShiftSymmetric is not fooled: one extra food, one rock fewer, a damaged 
   const one = copy(m); one.hill.forEach((h, p) => { if (h > 0) one.hill[p] = -1; }); assert.equal(isShiftSymmetric(one), false, 'a single colony');
 });
 
+test('isShiftSymmetric: the other hills must be in alike places for every colony, not only hill 0 mapped onto each', () => {
+  const ring = (at: number[]): WorldMap => {
+    const W = 12, H = 4, hill = new Int8Array(W * H).fill(-1);
+    at.forEach((x, c) => { hill[x] = c; });
+    return { W, H, rock: new Uint8Array(W * H), food: new Uint16Array(W * H), hill };
+  };
+  assert.equal(isShiftSymmetric(ring([0, 4, 8])), true, 'evenly spaced: every colony sees the others at +4 and +8');
+  assert.equal(isShiftSymmetric(ring([0, 1, 3])), false, 'hill 0 maps onto 1 and onto 3, but hill 1 would map onto an empty cell');
+});
+
 test('reachable round the edges: a food packet sealed in by rock is found out', () => {
   const m = generateFairWorld(2, 1);
   assert.ok(reachableOnTorus(m));

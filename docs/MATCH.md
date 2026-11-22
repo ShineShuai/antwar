@@ -31,7 +31,9 @@ the ants act in (`altorder`); the point mirror also does not cover that every an
 **The test.** A colony's wins are counted over the games (a tie counts 1 / the colonies tied); z = (wins - games / n) / sqrt(games * (1 / n)
 * (1 - 1 / n)); the p-value is two-sided and the smallest one is multiplied by n (Bonferroni). p >= 0.05 is reported as "no bias found",
 which is **not proof of fairness**: the interval `resolution` (95% half-width of one colony's win share if play is fair; 5.7 points at 300
-games and 2 colonies) says what could not have been seen. Checked on simulated fair play: false alarms 2 to 5%; with 100 games a 50 / 25 / 25
+games and 2 colonies) says what could not have been seen. Checked on simulated fair play (3,000 to 4,000 runs each): false alarms 2% (2 colonies, which Bonferroni over-corrects: their two z values are
+mirror images) to 6% (3 to 8 colonies, 100 games); below 10 expected wins per colony the normal approximation fails (26 colonies, 100 games: 14%;
+300 games: 9%), so `fairness()` sets `thin` and the CLI warns when games < 10 * colonies. With 100 games a 50 / 25 / 25
 split of 3 colonies is found 87% of the time and a 60 / 40 split of 2 colonies only 38%.
 
 ```
@@ -105,7 +107,8 @@ picks the world). The point mirror pairs two hills, so for n colonies the same i
 2 to 4 food blobs; 240 food per colony when the tile is 30 cells or more a side) is generated on its own torus and repeated `across`
 by `down` times (across * down = n) on a wrapped world. Shifting the world by a tile maps rock to rock and food to food and takes hill 0
 onto any other hill, so every colony has the same hill, food and rock in the same places; `isShiftSymmetric(map)` checks that for any world (an
-even number of rows, hill 0's cells onto hill c's cells exactly). `fairLayout(n)` gives the tiling: the biggest tile, then the squarest
+even number of rows; for each hill c a shift that maps rock to rock, food to food, hill 0's cells onto hill c's cells exactly, and the hill cells
+as a whole onto themselves, so every colony sees the other hills in the same places). `fairLayout(n)` gives the tiling: the biggest tile, then the squarest
 world; 4 colonies are 2 x 2 tiles of 50 x 50 (a 100 x 100 world with hills of 91 cells), 9 are 3 x 3, 16 are 4 x 4.
 
 * Tiles need 16 cells a side, so **13, 17, 19, 23 and 26 colonies are refused** (a world is at most 200 cells a side), and tiles shrink as
