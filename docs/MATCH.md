@@ -59,7 +59,9 @@ Measured, the plain trail ant in every colony, 30,000 rounds, 300 games per row 
 | point-mirror generator, a new world per game | 155 / 145 | 224 / 223 | no bias found (p = 1) |
 
 Per map, 12 maps each, 40 games of 20,000 rounds (`--map-seed 1` to `12`): **11 of 12 contest maps are biased** (colony A wins 39, 0, 1, 9, 40,
-31.5, 39, 11, 26, 0, 4.5 and 39 of 40 games; only seed 9 passes), and **none of the 12 point-mirror maps** (closest: 14.5 / 25.5, p = 0.16).
+31.5, 39, 11, 26, 0, 4.5 and 39 of 40 games; only seed 9 passes), **none of the 12 point-mirror maps** (closest: 14.5 / 25.5, p = 0.16) and
+**none of 30 shift maps** (12 of 2 colonies, closest 26 / 14, p = 0.12; 10 of 3, closest 16 / 7 / 17, p = 0.10; 8 of 4, closest 8 / 11 / 6 / 15, p = 0.27).
+Forty games only show a big bias, such as the contest maps' 39-1; with a false-alarm rate of 2 to 5% a test would flag one or none of 30 fair maps by chance.
 
 * A 2-colony world is **not** fair by default: the workshop, `cli/eval.ts` and `cli/rc.ts` use the contest generator, whose maps are mostly
   lopsided. A fair 2-colony world is `worldFor(seed, true)` (point mirror; `cli/tourney.ts --symmetric`, `cli/eval.ts --symmetric`, and in
