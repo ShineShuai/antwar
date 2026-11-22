@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { CLASSIC_WORLD, SYMMETRIC_WORLD, fairLayout, generateFairWorld, generateWorld, isFair, reachableOnTorus } from '../src/core/gen.ts';
+import { CLASSIC_WORLD, SYMMETRIC_WORLD, fairLayout, generateFairWorld, generateWorld, isShiftSymmetric, reachableOnTorus } from '../src/core/gen.ts';
 import { formatMap, parseMap } from '../src/core/map.ts';
 import { RULESETS } from '../src/core/rules.ts';
 import { createSim } from '../src/core/sim.ts';
@@ -31,7 +31,7 @@ test('a fair world: every colony has the same hill, the same food and the same r
   for (const n of SUPPORTED) {
     for (const seed of [1, 2]) {
       const m = generateFairWorld(n, seed), tag = `n=${n} seed=${seed}`;
-      assert.ok(isFair(m), tag);
+      assert.ok(isShiftSymmetric(m), tag);
       assert.ok(m.H % 2 === 0 && m.W <= 200 && m.H <= 200, tag);
       const sizes = new Map<number, number>();
       for (const h of m.hill) if (h >= 0) sizes.set(h, (sizes.get(h) ?? 0) + 1);
@@ -48,21 +48,21 @@ test('a fair world: every colony has the same hill, the same food and the same r
   assert.notEqual(formatMap(generateFairWorld(5, 3)), formatMap(generateFairWorld(5, 4)), 'the seed picks the world');
 });
 
-test('isFair is not fooled: one extra food, one rock fewer, a damaged hill, hills of another shape, or a world that is only point-symmetric', () => {
+test('isShiftSymmetric is not fooled: one extra food, one rock fewer, a damaged hill, hills of another shape, or a world that is only point-symmetric', () => {
   const m = generateFairWorld(3, 1);
   const free = m.food.findIndex((f, p) => !f && !m.rock[p] && m.hill[p] < 0), rock = m.rock.findIndex((r) => r === 1);
   const food = m.food.findIndex((f) => f > 0), hill = m.hill.findIndex((h, p) => h === 1 && m.hill[p - 1] === 1);
-  assert.ok(isFair(m));
-  const plusFood = copy(m); plusFood.food[free] = 5; assert.equal(isFair(plusFood), false, 'one extra food');
-  const lessFood = copy(m); lessFood.food[food] = 4; assert.equal(isFair(lessFood), false, 'one packet fewer');
-  const lessRock = copy(m); lessRock.rock[rock] = 0; assert.equal(isFair(lessRock), false, 'one rock fewer');
-  const moved = copy(m); moved.hill[hill] = -1; assert.equal(isFair(moved), false, 'one hill cell missing');
+  assert.ok(isShiftSymmetric(m));
+  const plusFood = copy(m); plusFood.food[free] = 5; assert.equal(isShiftSymmetric(plusFood), false, 'one extra food');
+  const lessFood = copy(m); lessFood.food[food] = 4; assert.equal(isShiftSymmetric(lessFood), false, 'one packet fewer');
+  const lessRock = copy(m); lessRock.rock[rock] = 0; assert.equal(isShiftSymmetric(lessRock), false, 'one rock fewer');
+  const moved = copy(m); moved.hill[hill] = -1; assert.equal(isShiftSymmetric(moved), false, 'one hill cell missing');
   const last = (c: number): number => m.hill.reduce((at, h, p) => (h === c ? p : at), -1);
-  const swapped = copy(m); swapped.hill[last(1)] = 2; swapped.hill[last(2)] = 1; assert.equal(isFair(swapped), false, 'two cells traded between hills: equal sizes, different shapes');
-  assert.equal(isFair(generateWorld(1, SYMMETRIC_WORLD)), false, 'the point mirror is not a shift');
-  assert.equal(isFair(generateWorld(1, CLASSIC_WORLD)), false);
-  assert.equal(isFair(parseMap(exampleWorld(3))), false, 'the ring example world is only similar');
-  const one = copy(m); one.hill.forEach((h, p) => { if (h > 0) one.hill[p] = -1; }); assert.equal(isFair(one), false, 'a single colony');
+  const swapped = copy(m); swapped.hill[last(1)] = 2; swapped.hill[last(2)] = 1; assert.equal(isShiftSymmetric(swapped), false, 'two cells traded between hills: equal sizes, different shapes');
+  assert.equal(isShiftSymmetric(generateWorld(1, SYMMETRIC_WORLD)), false, 'the point mirror is not a shift');
+  assert.equal(isShiftSymmetric(generateWorld(1, CLASSIC_WORLD)), false);
+  assert.equal(isShiftSymmetric(parseMap(exampleWorld(3))), false, 'the ring example world is only similar');
+  const one = copy(m); one.hill.forEach((h, p) => { if (h > 0) one.hill[p] = -1; }); assert.equal(isShiftSymmetric(one), false, 'a single colony');
 });
 
 test('reachable round the edges: a food packet sealed in by rock is found out', () => {

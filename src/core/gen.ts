@@ -144,8 +144,9 @@ export function isSymmetric({ W, H, rock, food, hill }: WorldMap): boolean {
 // The point mirror above gives two colonies the same surroundings. For n colonies the same is done with translations: a tile holding
 // one hill, some rocks and some food is generated on its own torus and repeated across x tiles by down y tiles (across * down = n)
 // on a wrapped world. Shifting the map by a tile maps it onto itself, rock for rock and food for food, and takes hill 0 to any other
-// hill, so no colony has a better place than another (`isFair`). These worlds have no rock border: they need the wrapped play the
-// simulator does by default, and they are not files for the official engine.
+// hill, so every colony has the same terrain (`isShiftSymmetric`; the point mirror above is `isSymmetric`). That is a sufficient condition for a
+// fair world, not the definition: whether identical brains win equally often from every colony is measured (`src/fairness.ts`, docs/MATCH.md).
+// These worlds have no rock border: they need the wrapped play the simulator does by default, and they are not files for the official engine.
 
 export interface FairLayout { across: number; down: number; w: number; h: number; hillRadius: number }
 const TILE_MAX = 50, TILE_MIN = 16, SIDE_MAX = 200;
@@ -267,7 +268,7 @@ export function reachableOnTorus({ W, H, rock, food, hill }: WorldMap): boolean 
 
 /** Fair for every colony: for each hill there is a shift of the wrapped world (an even number of rows, so the rows keep their
  * offsets) that maps rock to rock, food to food, and hill 0 exactly onto that hill (and, for that reason, every other hill onto a hill). */
-export function isFair({ W, H, rock, food, hill }: WorldMap): boolean {
+export function isShiftSymmetric({ W, H, rock, food, hill }: WorldMap): boolean {
   if (H % 2) return false;
   const first = new Map<number, [number, number]>();
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const l = hill[y * W + x]; if (l >= 0 && !first.has(l)) first.set(l, [x, y]); }
