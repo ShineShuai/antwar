@@ -4,20 +4,25 @@ import type { Outcome, Task } from '../src/core/match.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import type { WorldSpec } from '../src/fairness.ts';
 import type { LeagueTask, LeagueWorld } from '../src/league.ts';
+import type { Series } from '../src/series.ts';
 
 /** What every game of a batch shares. 'head': the brains (by index, as `Task.a` and `Task.b` use them), the rules, the length, the kind of world. */
 export type BatchSetup =
   | { kind: 'head'; texts: string[]; rules: RulesId; rounds: number; symmetric: boolean }
   | { kind: 'fair'; text: string; rules: RulesId; rounds: number; world: WorldSpec }
   /** 'league': n brains in n colonies, rotating round the hills (src/league.ts); a task is (world seed, rotation). */
-  | { kind: 'league'; texts: string[]; rules: RulesId; rounds: number; world: LeagueWorld };
+  | { kind: 'league'; texts: string[]; rules: RulesId; rounds: number; world: LeagueWorld }
+  /** 'series': one game sampled every `every` rounds (src/series.ts); the task is its seed; no `mapText` = the contest world of the seed. */
+  | { kind: 'series'; texts: string[]; rules: RulesId; rounds: number; every: number; mapText?: string };
 /** A fairness game is its seed: the world (unless fixed) and the simulator RNG both come from it. */
 export interface FairTask { seed: number }
 /** The nest food of each colony ('fair'), or of each hill ('league'). */
 export interface FairOut { food: number[] }
+/** A sampled game. */
+export interface SeriesOut { series: Series }
 export type BatchRequest = { type: 'init'; setup: BatchSetup } | { type: 'play'; i: number; task: Task | FairTask | LeagueTask };
 export type BatchReply =
   | { type: 'ready' }
-  | { type: 'played'; i: number; out: Outcome | FairOut }
+  | { type: 'played'; i: number; out: Outcome | FairOut | SeriesOut }
   /** `brain`: the index of the brain that does not compile, when it is one. */
   | { type: 'error'; message: string; brain?: number };
