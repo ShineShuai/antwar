@@ -15,6 +15,7 @@ import { RULESETS } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import type { WorldMap } from '../src/core/types.ts';
 import { loadAnyBrain } from '../src/lang/index.ts';
+import { wilson } from '../src/stats.ts';
 
 interface Setup { texts: string[]; rules: RulesId; rounds: number; symmetric: boolean }
 
@@ -26,12 +27,6 @@ function engine(s: Setup): (t: Task) => Outcome {
     if (!map) { map = worldFor(t.seed, s.symmetric); worlds.set(t.seed, map); }
     return playGame(map, programs[t.a], programs[t.b], t, s.rounds, RULESETS[s.rules]);
   };
-}
-
-/** 95% Wilson interval of a proportion (draws count half a win; games on one world are not independent, so it is approximate). */
-function wilson(score: number, n: number): [number, number] {
-  const z = 1.96, p = score / n, d = 1 + (z * z) / n, c = p + (z * z) / (2 * n), m = z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n));
-  return [(c - m) / d, (c + m) / d];
 }
 
 if (!isMainThread) {

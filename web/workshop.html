@@ -55,6 +55,7 @@
   #verify.err { color: var(--err); }
   @media (prefers-color-scheme: dark) { #verify.ok { color: #4ade80; } }
   #tl { width: 100%; box-sizing: border-box; padding: 0; }
+  .evalout { margin: 4px 0; font: 12px ui-monospace, monospace; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
   .note .warn { color: #a16207; }
   @media (prefers-color-scheme: dark) { .note .warn { color: #fbbf24; } }
   .fire { display: grid; grid-template-columns: 56px 44px 1fr; gap: 6px; align-items: center; font-size: 11px; margin: 2px 0; }
@@ -151,6 +152,13 @@
       <div id="ant">Click an ant to follow it.</div>
       <p style="font-size:12px;color:var(--mut);margin:4px 0">Its recent rules, newest first (run to record). Click a line to jump to it in the editor.</p>
       <div id="trace"></div>
+    </details>
+    <details id="evalbox">
+      <summary>Evaluate (two brains, many worlds)</summary>
+      <p>Plays one brain against another on many worlds, once per colour, on your cores. The numbers are those of
+        <code>cli/tourney.ts</code>, and the command that reproduces them is shown. Mirrored worlds give both colonies the same terrain;
+        the interval is approximate (the two games of a world are not independent).</p>
+      <div id="evalhost"></div>
     </details>
     <details id="explain">
       <summary>Explain why (rules brains)</summary>

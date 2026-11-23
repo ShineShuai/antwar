@@ -6,6 +6,7 @@ import { RULESETS, RULESET_NAMES, canonicalRules } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import { decodeShare, encodeShare } from './share.ts';
 import { describeBrain, fireRows, lineOfMessage, traceRows, whereIs } from './brain.ts';
+import { mountEvaluate } from './evaluate.ts';
 import { mountHighlight } from './highlight.ts';
 import { mountPersonality } from './personality.ts';
 import type { BrainInfo } from './brain.ts';
@@ -171,6 +172,7 @@ function start(): void {
   }
   colNote.textContent = want > 2 ? `${want} colonies, one brain each. Ranking: more food ranks higher, and a colony scores 2 points for each colony it out-scores and 1 for each tie (docs/MATCH.md).` : '';
   setColonies(want);
+  evalPanel.refresh();
   infos = boxes.map((b) => describeBrain(b.value, RULESETS[rulesId()]));
   selected = null; wantTrack = undefined; wantSeek = undefined; check = null;
   verifyBox.textContent = ''; verifyBox.className = ''; tl.value = '0'; startedKey = keyNow();
@@ -339,6 +341,7 @@ exWorld.onchange = () => {
   mapText = worldText(worldKind, seedNumber());
   start();
 };
+const evalPanel = mountEvaluate($('evalhost'), { brains: () => ({ names: boxes.map((_, c) => letter(c)), texts: boxes.map((b) => b.value) }), rules: rulesId });
 $('share').onclick = async () => {
   const link = `${location.href.split('#')[0]}#v1.${await encodeShare({
     seed: Number(seedBox.value), brains: boxes.map((b) => b.value), map: mapText || undefined, gen: GENERATOR_VERSION, rules: rulesId() === 'classic' ? undefined : rulesId(),
