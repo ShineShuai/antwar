@@ -341,7 +341,10 @@ exWorld.onchange = () => {
   mapText = worldText(worldKind, seedNumber());
   start();
 };
-const evalPanel = mountEvaluate($('evalhost'), { brains: () => ({ names: boxes.map((_, c) => letter(c)), texts: boxes.map((b) => b.value) }), rules: rulesId });
+const evalPanel = mountEvaluate($('evalhost'), {
+  brains: () => ({ names: boxes.map((_, c) => letter(c)), texts: boxes.map((b) => b.value) }), rules: rulesId,
+  world: () => ({ kind: worldKind, mapText, seed: seedNumber() }),
+});
 $('share').onclick = async () => {
   const link = `${location.href.split('#')[0]}#v1.${await encodeShare({
     seed: Number(seedBox.value), brains: boxes.map((b) => b.value), map: mapText || undefined, gen: GENERATOR_VERSION, rules: rulesId() === 'classic' ? undefined : rulesId(),
