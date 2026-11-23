@@ -17,7 +17,7 @@ Spec: `reference.html`.
 - `src/core/asm.ts`    `assemble()` flat `.asm` with labels (`goto` is a zero-cost edge, resolved at load); `parseIcfp()` official `.ant`; `loadBrain()`
 - `src/core/map.ts`    `parseMap()` / `formatMap()` official world files
 - `src/core/gen.ts`    `generateWorld(seed)`: Classic contest world (spec 3.1); `node cli/gen.ts SEED [--symmetric]`
-- `src/core/isa.ts`    the instruction table; `src/core/rules.ts` the rulesets registry: classic, tinyminds and one-flag bundles (carry two, dropfail, scare4, altorder, up to 26 colonies); see `docs/EXTENDING.md`
+- `src/core/isa.ts`    the instruction table; `src/core/rules.ts` the rulesets registry: classic, tinyminds and one-flag bundles (carry two, dropfail, scare4, altorder; the number of colonies is the map's, up to 26); see `docs/EXTENDING.md`
 - `src/core/seed.ts`   `dailySeed(date)` = hash of the UTC date string (the client supplies the date: `web/clock.ts`)
 - `docs/LADDER.md`: a round-robin of every shipped brain and the Keeper on point-mirror worlds (the Hall of Fame; how to rerun it is in the file)
 - `src/league.ts` and `cli/league.ts`: a league of n brains on n-colony worlds, rotating round the hills, scored by the ranking points (`docs/MATCH.md`)

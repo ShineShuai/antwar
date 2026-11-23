@@ -182,8 +182,10 @@ row of the followed ant's current rule is highlighted. Reading a trace shows exa
 **More than two colonies.** The colonies of a match are the hills of its map: a generated world has two, a **world file** with hills
 `a`, `b`, `c`... brings one editor per hill (Brain C (green), Brain D (amber), ... up to 26, each with its note, examples menu and
 personality controls), and the **Example world** menu loads a generated 3, 4, 6 or 8 colony world (`web/colonies.ts`; the hills
-are alike but the world is not exactly symmetric, so it is not a fair-match generator). Rules switches to "Classic + up to 26
-colonies" by itself when the map needs it (Tinyminds already allows 26); Randomize or a new seed goes back to two colonies. Each
+are alike but the world is not exactly symmetric, so it is not a fair-match generator), a mirrored 2-colony world, or a fair world
+for 2, 3, 4, 6 or 8 colonies. The picker shows what the map is. The number of colonies is not a Rules choice: any Rules plays any number of
+colonies. A new seed or Randomize makes the mirrored and fair worlds again from the seed; any other map gives way to the contest
+world of the seed (two colonies). Each
 colony has its own colour and scent line on the board; the status line lists every score and, at round 100,000, shows
 the ranking of docs/MATCH.md (the reference defines none for more than two; this is a proposal). Share links carry all brains. Added colonies
 start as the starter ant, and last session's brains for C.. come back when the map does. Checked by `test/colonies.test.ts`
