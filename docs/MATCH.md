@@ -234,8 +234,15 @@ of the seed box included, as text; the CLI needs it as `--world`, so the panel h
 the CLI's default (mirrored worlds for two brains, fair worlds for n; none for 13, 17, 19, 23 and 26 colonies). Rotation cancels the
 value of a place on any map. Scoring is the n-colony ranking *proposal* above, not the contest's. The `+-` is the CLI's (z = 1.96 over the
 worlds: too narrow for few worlds). `src/league.ts` now holds the player, summary and report that both the CLI and the panel use; a test
-checks identical games and table lines against the CLI for 2 and 3 brains, a given map and the contest generator. Not in the panel yet:
-a food-over-time chart, sweeps, a league with more brains than colonies.
+checks identical games and table lines against the CLI for 2 and 3 brains, a given map and the contest generator.
+
+The fourth part charts one game over time: nest food (or ants alive) of every colony, sampled 200 times, for the match of the viewer
+(the editors, the seed box, the map shown, the Rules chosen). `src/series.ts` plays and samples it, and `cli/series.ts` prints the
+same numbers (`node cli/series.ts A B [C ...] [--world FILE] --seed S --rounds N --every K --rules R [--what food|alive] [--json]`;
+without `--world` the world is the contest generator's world of the seed, as in the viewer); a test checks identical series, tables
+and `--what alive` rows against the CLI, and that the last sample is what a plain `playColonies` game gives. One game is one sample: it
+shows how a game went, not how a brain does (that is what the other parts measure). Not in the panel yet: sweeps, a league with
+more brains than colonies, a chart averaged over several games.
 
 ## Not done
 

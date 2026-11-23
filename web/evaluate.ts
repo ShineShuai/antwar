@@ -1,6 +1,7 @@
 // The Evaluate panel, on Workers (web/pool.ts): one brain of the workshop against another on many worlds, both colours; one brain in
 // every colony of a world (is the world fair?); and a league of all the editors. The games are those of `cli/tourney.ts`,
-// `cli/fairness.ts` and `cli/league.ts` (the panel shows the command), so a number here can be reproduced and checked.
+// `cli/fairness.ts` and `cli/league.ts` (the panel shows the command), so a number here can be reproduced and checked. A fourth part
+// charts one game over time (`cli/series.ts`): the match of the viewer.
 import { generateWorld } from '../src/core/gen.ts';
 import { formatMap } from '../src/core/map.ts';
 import { MATCH_ROUNDS, schedule } from '../src/core/match.ts';
@@ -11,6 +12,10 @@ import type { WorldSpec } from '../src/fairness.ts';
 import { describe, headToHead, reproCommand } from '../src/headtohead.ts';
 import { leagueCommand, leagueHeader, leagueLines, leagueSummary, leagueTasks } from '../src/league.ts';
 import type { LeagueGame, LeagueWorld } from '../src/league.ts';
+import { seriesCommand } from '../src/series.ts';
+import type { Series } from '../src/series.ts';
+import { drawChart } from './chart.ts';
+import { paletteFor } from './colonies.ts';
 import { BatchError, Cancelled, runBatch } from './pool.ts';
 import type { Batch, WorkerLike } from './pool.ts';
 
@@ -78,7 +83,11 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
   const lSeeds = num(20, 1, MAX_WORLDS), lFrom = num(1, 0, MAX_SEED), lRounds = roundsBox(30000);
   const lRun = el('button', 'Run'), lCancel = el('button', 'Cancel');
   const lProgress = el('span', '', 'note'), lResult = el('pre', '', 'evalout'), lCommand = el('pre', '', 'evalout');
-  cancel.hidden = fCancel.hidden = lCancel.hidden = copyMap.hidden = true;
+  // ---- one game over time
+  const sLen = roundsBox(MATCH_ROUNDS), sShow = select([['food', 'nest food'], ['alive', 'ants alive']]);
+  const sRun = el('button', 'Run'), sCancel = el('button', 'Cancel');
+  const sProgress = el('span', '', 'note'), sChart = el('div'), sLegend = el('div', '', 'note'), sCommand = el('pre', '', 'evalout');
+  cancel.hidden = fCancel.hidden = lCancel.hidden = sCancel.hidden = copyMap.hidden = true;
   host.append(
     el('div', 'Two brains on many worlds', 'evalhead'),
     row(labelled('Brain ', selX), labelled('against ', selY)), row(labelled('Worlds ', worlds)),
@@ -88,7 +97,9 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     row(labelled('Games ', fGames), labelled('from seed ', fFrom), labelled('Length ', fRounds)), row(fRun, fCancel, fProgress), fResult, fCommand,
     el('div', 'League of all the editors', 'evalhead'),
     row(labelled('Worlds ', lMode)), row(labelled('How many ', lSeeds), labelled('from seed ', lFrom), labelled('Length ', lRounds)),
-    row(lRun, lCancel, lProgress), lResult, lCommand, row(copyMap));
+    row(lRun, lCancel, lProgress), lResult, lCommand,
+    el('div', 'Food over time: the match in the viewer', 'evalhead'),
+    row(labelled('Length ', sLen), labelled('Show ', sShow)), row(sRun, sCancel, sProgress), sChart, sLegend, sCommand, row(copyMap));
 
   let names: string[] = [], batch: Batch<unknown> | undefined;
   function refresh(): void {
@@ -101,8 +112,9 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     selY.selectedIndex = y >= 0 && y < names.length ? y : Math.min(1, names.length - 1);
     fBrain.selectedIndex = f >= 0 && f < names.length ? f : 0;
   }
-  const busy = (which: 'head' | 'fair' | 'league' | null): void => {
-    run.disabled = fRun.disabled = lRun.disabled = which !== null; cancel.hidden = which !== 'head'; fCancel.hidden = which !== 'fair'; lCancel.hidden = which !== 'league';
+  const busy = (which: 'head' | 'fair' | 'league' | 'series' | null): void => {
+    run.disabled = fRun.disabled = lRun.disabled = sRun.disabled = which !== null;
+    cancel.hidden = which !== 'head'; fCancel.hidden = which !== 'fair'; lCancel.hidden = which !== 'league'; sCancel.hidden = which !== 'series';
   };
   const failure = (e: unknown, brain: (i: number) => string): string => e instanceof Cancelled ? 'Cancelled.'
     : e instanceof BatchError && e.brain !== undefined ? `Brain ${brain(e.brain)}: ${e.message}` : e instanceof Error ? e.message : String(e);
@@ -189,6 +201,44 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     } finally { batch = undefined; busy(null); }
   };
   lCancel.onclick = () => batch?.cancel();
+
+  let shown: { series: Series; n: number } | undefined;
+  /** The chart of the last series: nest food or ants alive, a line per colony in the viewer's colours. */
+  function drawSeries(): void {
+    sChart.replaceChildren(); sLegend.textContent = '';
+    if (!shown) return;
+    const { series, n } = shown, rows = sShow.value === 'food' ? series.food : series.alive;
+    const dark = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches, colors = paletteFor(n, dark).ant;
+    const lines = names.slice(0, n).map((label, c) => ({ label, color: colors[c], y: rows.map((r) => r[c]) }));
+    sChart.append(drawChart({ x: series.at, lines }));
+    lines.forEach((l, c) => {
+      const chip = el('span', '\u25a0 ' + l.label + ' ' + l.y[l.y.length - 1] + (c < n - 1 ? '   ' : '')); chip.style.color = l.color; sLegend.append(chip);
+    });
+    sLegend.append(el('span', `   (round ${series.rounds})`));
+  }
+  sShow.onchange = drawSeries;
+  sRun.onclick = async () => {
+    refresh();
+    const w = ctx.world(), { texts } = ctx.brains(), n = texts.length, len = Number(sLen.value), rules = ctx.rules();
+    const every = Math.max(1, Math.floor(len / 200)), mapText = w.kind === '' ? undefined : w.mapText, seed = w.seed, t0 = performance.now();
+    sCommand.textContent = ''; shown = undefined; drawSeries(); copyMap.hidden = true; mapShown = mapText ?? ''; mapNote = sProgress;
+    sProgress.textContent = 'playing…';
+    const b = runBatch(ctx.makeWorker ?? defaultWorker, 1, { kind: 'series', texts, rules, rounds: len, every, mapText }, [{ seed }]);
+    batch = b;
+    busy('series');
+    try {
+      shown = { series: (await b.done)[0].series, n };
+      drawSeries();
+      const files = names.map((x) => `${x}.brain`);
+      sCommand.textContent = `Reproduce (save the editors as ${files.join(', ')}${mapText ? ' and the map as W.world' : ''}):\n` +
+        seriesCommand({ files, seed, job: { rules, rounds: len, every, mapText }, worldFile: 'W.world' });
+      copyMap.hidden = !mapText;
+      sProgress.textContent = `${len} rounds in ${((performance.now() - t0) / 1000).toFixed(1)} s, seed ${seed}`;
+    } catch (e) {
+      sProgress.textContent = ''; sChart.textContent = failure(e, (i) => names[i]);
+    } finally { batch = undefined; busy(null); }
+  };
+  sCancel.onclick = () => batch?.cancel();
   refresh();
   return { refresh };
 }

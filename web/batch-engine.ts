@@ -6,6 +6,7 @@ import type { Program, WorldMap } from '../src/core/types.ts';
 import { fairGame, worldMaker } from '../src/fairness.ts';
 import { leaguePlayer } from '../src/league.ts';
 import type { LeagueTask } from '../src/league.ts';
+import { seriesGame } from '../src/series.ts';
 import { loadAnyBrain } from '../src/lang/index.ts';
 import type { BatchReply, BatchRequest, BatchSetup, FairTask } from './batch-protocol.ts';
 
@@ -38,11 +39,13 @@ export function createBatchEngine(): { handle(m: BatchRequest): BatchReply } {
           }
           if (s.kind === 'fair') { makeWorld = worldMaker(s.world); makeWorld(0); } // (a world that cannot be made is an error now, not at the first game)
           if (s.kind === 'league') { league = leaguePlayer(programs, s); league.world(0); }
+          if (s.kind === 'series') seriesGame(programs, { ...s, rounds: 0 }, 0); // the map, the hills and `every` are checked now
           setup = s;
           return { type: 'ready' };
         }
         if (!setup) return { type: 'error', message: 'play before init' };
         const rules = RULESETS[setup.rules];
+        if (setup.kind === 'series') return { type: 'played', i: m.i, out: { series: seriesGame(programs, setup, (m.task as FairTask).seed) } };
         if (setup.kind === 'league') return { type: 'played', i: m.i, out: { food: (league as NonNullable<typeof league>).play(m.task as LeagueTask) } };
         if (setup.kind === 'fair') {
           const { seed } = m.task as FairTask;
