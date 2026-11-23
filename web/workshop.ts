@@ -24,6 +24,7 @@ const speedBox = $<HTMLSelectElement>('speed'), goBtn = $<HTMLButtonElement>('go
 const tl = $<HTMLInputElement>('tl'), verifyBox = $('verify');
 let worker: Worker | undefined, viewer: ReturnType<typeof createViewer> | undefined;
 let mapText = '', running = false, busy = false, cycle = 0;
+let worldKind = ''; // what mapText is, as the example-world picker lists it: '' contest generator, 'custom' file or link, else an entry of the picker
 let geom: { L: Layout; W: number; H: number } | undefined, last: Extract<Reply, { type: 'frame' }> | undefined;
 const marksBox = $<HTMLInputElement>('marks'), inspectBox = $('inspect');
 const baBox = $<HTMLTextAreaElement>('ba'), bbBox = $<HTMLTextAreaElement>('bb');
@@ -106,7 +107,7 @@ async function fromHash(): Promise<boolean> {
   const p = await decodeShare(location.hash.slice(4));
   if (!p) { say('That share link is damaged or too large.', true); return false; }
   setColonies(p.brains.length); p.brains.forEach((t, c) => { boxes[c].value = t; });
-  seedBox.value = String(p.seed); mapText = p.map ?? ''; rulesBox.value = canonicalRules(p.rules ?? 'classic');
+  seedBox.value = String(p.seed); mapText = p.map ?? ''; worldKind = mapText ? 'custom' : ''; exWorld.value = worldKind; rulesBox.value = canonicalRules(p.rules ?? 'classic');
   expect = p.result ?? null;
   if (p.gen !== undefined && p.gen !== GENERATOR_VERSION) say('Link made with another world generator: the map may differ.', true);
   return true;
@@ -300,33 +301,42 @@ $('step').onclick = () => { setRunning(false); if (!busy) { busy = true; send({ 
 $('reset').onclick = start;
 $('rand').onclick = () => {
   seedBox.value = String(crypto.getRandomValues(new Uint32Array(1))[0] & 0x3fffffff);
-  mapText = '';
+  reseed();
   save();
   start();
 };
-seedBox.onchange = () => { mapText = ''; save(); start(); };
+seedBox.onchange = () => { reseed(); save(); start(); };
 rulesBox.onchange = () => { save(); start(); };
 boxes.forEach(bindBox);
 boxes.forEach(mountHighlight);
 $<HTMLInputElement>('world').onchange = async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
-  if (file) { mapText = await file.text(); start(); }
+  if (file) { mapText = await file.text(); worldKind = 'custom'; exWorld.value = worldKind; start(); }
 };
 document.querySelectorAll<HTMLSelectElement>('select.ex').forEach(fillExamples);
 const exWorld = $<HTMLSelectElement>('exworld');
-exWorld.add(new Option('example world…', ''));
+exWorld.add(new Option('contest world (seed)', ''));
 for (const n of [3, 4, 6, 8]) exWorld.add(new Option(`${n} colonies`, String(n)));
 // worlds with the same terrain for every colony (docs/MATCH.md, Fairness); the seed box picks the world. The contest generator's own
 // worlds are lopsided map by map. Fair worlds are wrapped and have no rock border; mirrored ones are bordered, for two colonies.
 exWorld.add(new Option('2 colonies, mirrored (seed)', 'mirror'));
 for (const n of [2, 3, 4, 6, 8]) exWorld.add(new Option(`${n} colonies, fair (seed)`, `fair${n}`));
+const customWorld = new Option('custom map', 'custom'); // shown for a world file or a shared link; not a choice
+customWorld.disabled = customWorld.hidden = true;
+exWorld.add(customWorld);
+const seedNumber = (): number => (Number.isInteger(Number(seedBox.value)) ? Number(seedBox.value) : 1);
+/** The map text of a picker entry ('' = the contest generator, which the seed box drives anyway). */
+const worldText = (kind: string, seed: number): string => (kind === 'mirror' ? formatMap(generateWorld(seed, SYMMETRIC_WORLD))
+  : kind.startsWith('fair') ? formatMap(generateFairWorld(Number(kind.slice(4)), seed)) : /^\d+$/.test(kind) ? exampleWorld(Number(kind)) : '');
+/** A new seed: the seed-driven worlds (mirrored, fair) are made again from it; every other map gives way to the contest world of the seed. */
+function reseed(): void {
+  if (!/^(mirror|fair\d+)$/.test(worldKind)) worldKind = '';
+  mapText = worldText(worldKind, seedNumber());
+  exWorld.value = worldKind;
+}
 exWorld.onchange = () => {
-  const v = exWorld.value;
-  if (!v) return;
-  const seed = Number.isInteger(Number(seedBox.value)) ? Number(seedBox.value) : 1;
-  mapText = v === 'mirror' ? formatMap(generateWorld(seed, SYMMETRIC_WORLD))
-    : v.startsWith('fair') ? formatMap(generateFairWorld(Number(v.slice(4)), seed)) : exampleWorld(Number(v));
-  exWorld.value = '';
+  worldKind = exWorld.value;
+  mapText = worldText(worldKind, seedNumber());
   start();
 };
 $('share').onclick = async () => {
