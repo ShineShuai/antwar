@@ -6,14 +6,20 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { generateFairWorld } from '../src/core/gen.ts';
+import { formatMap } from '../src/core/map.ts';
 import { playGame, schedule, worldFor } from '../src/core/match.ts';
 import type { Game, Outcome } from '../src/core/match.ts';
 import { RULESETS } from '../src/core/rules.ts';
+import type { RulesId } from '../src/core/rules.ts';
+import { coloniesOf, fairness, fairnessCommand, fairnessHeader, fairnessLines, worldMaker } from '../src/fairness.ts';
+import type { WorldSpec } from '../src/fairness.ts';
 import { describe, headToHead, reproCommand } from '../src/headtohead.ts';
 import { loadAnyBrain } from '../src/lang/index.ts';
 import { wilson } from '../src/stats.ts';
 import { createBatchEngine } from '../web/batch-engine.ts';
-import type { BatchReply, BatchRequest, BatchSetup } from '../web/batch-protocol.ts';
+import type { BatchReply, BatchRequest, FairOut } from '../web/batch-protocol.ts';
+import { worldSpec } from '../web/evaluate.ts';
 import { BatchError, Cancelled, runBatch } from '../web/pool.ts';
 import type { WorkerLike } from '../web/pool.ts';
 
@@ -21,7 +27,7 @@ const fx = (f: string): string => readFileSync(new URL(`./fixtures/${f}`, import
 const root = (f: string): string => fileURLToPath(new URL(`../${f}`, import.meta.url));
 const hasPython = spawnSync('python3', ['--version']).status === 0; void hasPython;
 const STARTER = fx('starter.ant'), IDLE = 'Drop 0';
-const setup: BatchSetup = { texts: [STARTER, IDLE], rules: 'classic', rounds: 300, symmetric: true };
+const setup = { kind: 'head' as const, texts: [STARTER, IDLE], rules: 'classic' as const, rounds: 300, symmetric: true };
 
 /** A worker in this process: replies on a later tick, as a real one does. */
 function fakeWorker(log: { made: number; terminated: number }): WorkerLike {
@@ -58,6 +64,12 @@ test('the pool plays the games of playGame, in task order, with any number of wo
   }
 });
 
+test('the pool finishes without a progress callback', async () => {
+  const log = { made: 0, terminated: 0 };
+  const outs = await runBatch(() => fakeWorker(log), 2, setup, schedule(2, [1, 2])).done;
+  assert.equal(outs.length, 4); assert.ok(outs.every((o) => o.food.length === 2));
+});
+
 test('the pool: nothing to play, a brain that does not compile, a worker that fails, cancel', async () => {
   const log = { made: 0, terminated: 0 };
   assert.deepEqual(await runBatch(() => fakeWorker(log), 2, setup, []).done, []);
@@ -80,10 +92,10 @@ test('the pool: nothing to play, a brain that does not compile, a worker that fa
 test('the engine: init errors name the brain; play before init; unknown ruleset', () => {
   const e = createBatchEngine();
   assert.equal(e.handle({ type: 'play', i: 0, task: { a: 0, b: 1, seed: 1, swap: false } }).type, 'error');
-  const r = e.handle({ type: 'init', ...setup, texts: ['Drop 0', 'nope'] }) as Extract<BatchReply, { type: 'error' }>;
+  const r = e.handle({ type: 'init', setup: { ...setup, texts: ['Drop 0', 'nope'] } }) as Extract<BatchReply, { type: 'error' }>;
   assert.equal(r.type, 'error'); assert.equal(r.brain, 1);
-  assert.equal(e.handle({ type: 'init', ...setup, rules: 'nope' as never }).type, 'error');
-  assert.equal(e.handle({ type: 'init', ...setup }).type, 'ready');
+  assert.equal(e.handle({ type: 'init', setup: { ...setup, rules: 'nope' as never } }).type, 'error');
+  assert.equal(e.handle({ type: 'init', setup }).type, 'ready');
 });
 
 test('headToHead and its text', () => {
@@ -116,8 +128,97 @@ test('the panel and cli/tourney.ts play the same games (outcomes, hashes), and t
     assert.equal(r.status, 0, r.stderr);
     const cli = JSON.parse(r.stdout) as { games: Game[] };
     const engine = createBatchEngine();
-    assert.equal(engine.handle({ type: 'init', texts: [STARTER, IDLE], rules: 'classic', rounds: 300, symmetric: true }).type, 'ready');
+    assert.equal(engine.handle({ type: 'init', setup }).type, 'ready');
     const mine = schedule(2, [5, 6]).map((t, i) => ({ ...t, ...(engine.handle({ type: 'play', i, task: t }) as Extract<BatchReply, { type: 'played' }>).out }));
     assert.deepEqual(mine, cli.games);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+// ---- one brain in every colony (the panel's fairness block, cli/fairness.ts)
+const TRAIL = readFileSync(new URL('../ants/trail.rules', import.meta.url), 'utf8');
+
+/** The games of a fairness run in this process, as the panel's engine plays them. */
+function engineFoods(world: WorldSpec, seeds: number[], rounds: number, rules: RulesId = 'classic'): number[][] {
+  const e = createBatchEngine(), ready = e.handle({ type: 'init', setup: { kind: 'fair', text: TRAIL, rules, rounds, world } });
+  assert.equal(ready.type, 'ready', JSON.stringify(ready));
+  return seeds.map((seed, i) => ((e.handle({ type: 'play', i, task: { seed } }) as Extract<BatchReply, { type: 'played' }>).out as FairOut).food);
+}
+
+test('worldSpec: what the picker says the map is, and what can be asked of it', () => {
+  const w = (kind: string, mapText = '') => ({ kind, mapText, seed: 7 });
+  assert.deepEqual(worldSpec(w(''), true), { kind: 'contest', mapSeed: 7 });
+  assert.deepEqual(worldSpec(w(''), false), { kind: 'contest' });
+  assert.deepEqual(worldSpec(w('mirror'), true), { kind: 'mirror', mapSeed: 7 });
+  assert.deepEqual(worldSpec(w('fair6'), false), { kind: 'fair', colonies: 6 });
+  assert.deepEqual(worldSpec(w('fair3'), true), { kind: 'fair', colonies: 3, mapSeed: 7 });
+  assert.deepEqual(worldSpec(w('4', 'MAP'), true), { kind: 'map', mapText: 'MAP' }, 'a ring example is one map');
+  assert.equal(worldSpec(w('4', 'MAP'), false), undefined, 'and cannot be generated again');
+  assert.deepEqual(worldSpec(w('custom', 'MAP'), true), { kind: 'map', mapText: 'MAP' });
+  assert.equal(worldSpec(w('custom', 'MAP'), false), undefined);
+});
+
+test('worldMaker: a fixed map stays, a map seed fixes the generator, else a world per seed; bad specs throw', () => {
+  const fixed = worldMaker({ kind: 'fair', colonies: 3, mapSeed: 4 });
+  assert.equal(fixed(1), fixed(99), 'the same map object for every game');
+  const per = worldMaker({ kind: 'fair', colonies: 3 });
+  assert.notDeepEqual(per(1).rock, per(2).rock);
+  assert.equal(coloniesOf(per(1)), 3);
+  assert.equal(coloniesOf(worldMaker({ kind: 'mirror' })(3)), 2);
+  assert.equal(coloniesOf(worldMaker({ kind: 'map', mapText: formatMap(generateFairWorld(4, 1)) })(5)), 4);
+  assert.throws(() => worldMaker({ kind: 'fair', colonies: 13 })(1), /no fair world for 13/);
+  assert.throws(() => worldMaker({ kind: 'map', mapText: 'not a map' }));
+});
+
+test('fairness batches: any number of workers gives the games of fairGame; init errors come back as errors', async () => {
+  const world: WorldSpec = { kind: 'fair', colonies: 3, mapSeed: 1 }, seeds = [1, 2, 3, 4, 5];
+  const expect = engineFoods(world, seeds, 600);
+  assert.ok(expect.every((f) => f.length === 3));
+  const fairSetup = { kind: 'fair' as const, text: TRAIL, rules: 'classic' as const, rounds: 600, world };
+  for (const size of [1, 3, 9]) {
+    const log = { made: 0, terminated: 0 };
+    const outs = await runBatch(() => fakeWorker(log), size, fairSetup, seeds.map((seed) => ({ seed }))).done;
+    assert.deepEqual(outs.map((o) => o.food), expect, `${size} workers`);
+    assert.equal(log.terminated, log.made);
+  }
+  const e = createBatchEngine();
+  assert.equal(e.handle({ type: 'init', setup: { ...fairSetup, world: { kind: 'fair', colonies: 13 } } }).type, 'error');
+  const bad = e.handle({ type: 'init', setup: { ...fairSetup, text: 'nope' } }) as Extract<BatchReply, { type: 'error' }>;
+  assert.equal(bad.type, 'error'); assert.equal(bad.brain, 0);
+  assert.equal(e.handle({ type: 'init', setup: { ...fairSetup, world: { kind: 'map', mapText: 'x' } } }).type, 'error');
+});
+
+test('the panel and cli/fairness.ts: the same foods, the same verdict, the same table, for a fixed map, a map seed and a world per game', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fair-'));
+  try {
+    writeFileSync(join(dir, 'T.brain'), TRAIL);
+    const mapText = formatMap(generateFairWorld(3, 2));
+    writeFileSync(join(dir, 'W.world'), mapText);
+    const cases: { spec: WorldSpec; rules: RulesId }[] = [
+      { spec: { kind: 'fair', colonies: 3, mapSeed: 1 }, rules: 'classic' },
+      { spec: { kind: 'mirror' }, rules: 'altorder' },
+      { spec: { kind: 'map', mapText }, rules: 'classic' },
+      { spec: { kind: 'contest', mapSeed: 3 }, rules: 'classic' },
+    ];
+    for (const { spec, rules } of cases) {
+      const job = { brain: join(dir, 'T.brain'), world: join(dir, 'W.world'), spec, games: 3, from: 4, rounds: 700, rules };
+      const argv = fairnessCommand(job).split(' ').slice(2);
+      const run = (...extra: string[]) => spawnSync(process.execPath, [root('cli/fairness.ts'), ...argv, ...extra], { encoding: 'utf8' });
+      const j = run('--json'), table = run();
+      assert.equal(j.status, 0, j.stderr); assert.equal(table.status, 0, table.stderr);
+      const mine = fairness(engineFoods(spec, [4, 5, 6], 700, rules));
+      const { brain: _b, world: _w, rules: _r, rounds: _n, from: _f, ...cliResult } = JSON.parse(j.stdout) as Record<string, unknown>;
+      assert.deepEqual(cliResult, JSON.parse(JSON.stringify(mine)), JSON.stringify(spec));
+      const lines = table.stdout.trimEnd().split('\n');
+      assert.equal(lines[0], fairnessHeader(join(dir, 'T.brain'), spec, join(dir, 'W.world'), 3, 700, rules));
+      assert.deepEqual(lines.slice(1), fairnessLines(mine));
+    }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('fairnessCommand: the flags of each kind of world', () => {
+  const c = (spec: WorldSpec) => fairnessCommand({ brain: 'A.brain', world: 'W.world', spec, games: 200, from: 1, rounds: 30000, rules: 'classic' });
+  assert.equal(c({ kind: 'contest' }), 'node cli/fairness.ts A.brain --games 200 --from 1 --rounds 30000 --rules classic');
+  assert.equal(c({ kind: 'mirror', mapSeed: 5 }), 'node cli/fairness.ts A.brain --symmetric --map-seed 5 --games 200 --from 1 --rounds 30000 --rules classic');
+  assert.equal(c({ kind: 'fair', colonies: 4 }), 'node cli/fairness.ts A.brain --colonies 4 --games 200 --from 1 --rounds 30000 --rules classic');
+  assert.equal(c({ kind: 'map', mapText: '' }), 'node cli/fairness.ts A.brain --world W.world --games 200 --from 1 --rounds 30000 --rules classic');
 });

@@ -1,8 +1,11 @@
-// The Evaluate panel: one brain of the workshop against another on many worlds, both colours, on Workers (web/pool.ts).
-// The games are those of `cli/tourney.ts` (the panel shows the command), so a number here can be reproduced and checked.
+// The Evaluate panel, on Workers (web/pool.ts): one brain of the workshop against another on many worlds, both colours; and one brain in
+// every colony of a world (is the world fair?). The games are those of `cli/tourney.ts` and `cli/fairness.ts` (the panel shows the
+// command), so a number here can be reproduced and checked.
 import { MATCH_ROUNDS, schedule } from '../src/core/match.ts';
 import type { Game } from '../src/core/match.ts';
 import type { RulesId } from '../src/core/rules.ts';
+import { fairness, fairnessHeader, fairnessLines, fairnessCommand } from '../src/fairness.ts';
+import type { WorldSpec } from '../src/fairness.ts';
 import { describe, headToHead, reproCommand } from '../src/headtohead.ts';
 import { BatchError, Cancelled, runBatch } from './pool.ts';
 import type { Batch, WorkerLike } from './pool.ts';
@@ -11,14 +14,26 @@ export interface EvalContext {
   /** The editors, in colony order: their names (letters) and texts. */
   brains(): { names: string[]; texts: string[] };
   rules(): RulesId;
+  /** The map in the workshop: what the example-world picker says it is ('' contest generator, 'mirror', 'fairN', a number of colonies for
+   * a ring example, 'custom' for a file or a link), its text when it is not the generator's, and the seed box. */
+  world(): { kind: string; mapText: string; seed: number };
   /** The Workers; the page uses the module Worker of web/batch-worker.ts. */
   makeWorker?: () => WorkerLike;
 }
 
-const MAX_WORLDS = 200;
+const MAX_WORLDS = 200, MAX_GAMES = 5000, MAX_SEED = 0x3fffffff;
 const defaultWorker = (): WorkerLike => new Worker(new URL('./batch-worker.js', import.meta.url), { type: 'module' }) as unknown as WorkerLike;
 /** One core is left to the page. */
 const poolSize = (): number => Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 2) - 1));
+
+/** The worlds of a fairness run for the workshop's map: `thisMap` fixes it (only the simulator seed varies), else every game has its own
+ * world of the same kind. A ring example or a loaded file is one map and cannot be generated again. */
+export function worldSpec(w: { kind: string; mapText: string; seed: number }, thisMap: boolean): WorldSpec | undefined {
+  const base: WorldSpec | undefined = w.kind === '' ? { kind: 'contest' } : w.kind === 'mirror' ? { kind: 'mirror' }
+    : /^fair\d+$/.test(w.kind) ? { kind: 'fair', colonies: Number(w.kind.slice(4)) } : undefined;
+  if (base) return thisMap ? { ...base, mapSeed: w.seed } : base;
+  return thisMap ? { kind: 'map', mapText: w.mapText } : undefined;
+}
 
 export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh(): void } {
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', cls = ''): HTMLElementTagNameMap[K] => {
@@ -31,58 +46,107 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
   const num = (value: number, min: number, max: number): HTMLInputElement => {
     const i = el('input'); i.type = 'number'; i.min = String(min); i.max = String(max); i.value = String(value); i.style.width = '5.5em'; return i;
   };
-  const selX = select([]), selY = select([]);
-  const worlds = select([['mirror', 'mirrored worlds (same terrain for both)'], ['contest', 'contest generator (lopsided map by map)']]);
-  const seeds = num(20, 1, MAX_WORLDS), from = num(1, 0, 0x3fffffff);
-  const rounds = select([[String(10000), '10,000 rounds (quick)'], [String(30000), '30,000 rounds'], [String(MATCH_ROUNDS), '100,000 rounds (a match)']]);
-  rounds.value = String(MATCH_ROUNDS);
-  const run = el('button', 'Run'), cancel = el('button', 'Cancel');
-  cancel.hidden = true;
-  const progress = el('span', '', 'note'), result = el('pre', '', 'evalout'), command = el('pre', '', 'evalout');
+  const roundsBox = (def: number): HTMLSelectElement => {
+    const s = select([[String(10000), '10,000 rounds (quick)'], [String(30000), '30,000 rounds'], [String(MATCH_ROUNDS), '100,000 rounds (a match)']]);
+    s.value = String(def); return s;
+  };
   const row = (...c: HTMLElement[]): HTMLDivElement => { const r = el('div', '', 'row'); r.append(...c); return r; };
-  host.append(row(labelled('Brain ', selX), labelled('against ', selY)), row(labelled('Worlds ', worlds)),
-    row(labelled('How many ', seeds), labelled('from seed ', from), labelled('Length ', rounds)), row(run, cancel, progress), result, command);
-
-  let names: string[] = [], batch: Batch | undefined;
-  function refresh(): void {
-    const now = ctx.brains().names;
-    if (now.length === names.length && now.every((n, i) => n === names[i])) return;
-    const x = selX.selectedIndex, y = selY.selectedIndex;
-    names = now;
-    for (const s of [selX, selY]) { s.length = 0; names.forEach((n, i) => s.add(new Option(n, String(i)))); }
-    selX.selectedIndex = x >= 0 && x < names.length ? x : 0;
-    selY.selectedIndex = y >= 0 && y < names.length ? y : Math.min(1, names.length - 1);
-  }
-  const busy = (on: boolean): void => { run.disabled = on; cancel.hidden = !on; };
   const int = (i: HTMLInputElement, lo: number, hi: number): number | undefined => {
     const v = Number(i.value); return Number.isInteger(v) && v >= lo && v <= hi ? v : undefined;
   };
 
+  // ---- two brains on many worlds
+  const selX = select([]), selY = select([]);
+  const worlds = select([['mirror', 'mirrored worlds (same terrain for both)'], ['contest', 'contest generator (lopsided map by map)']]);
+  const seeds = num(20, 1, MAX_WORLDS), from = num(1, 0, MAX_SEED), rounds = roundsBox(MATCH_ROUNDS);
+  const run = el('button', 'Run'), cancel = el('button', 'Cancel');
+  const progress = el('span', '', 'note'), result = el('pre', '', 'evalout'), command = el('pre', '', 'evalout');
+  // ---- one brain in every colony
+  const fBrain = select([]), fMode = select([['map', 'this map, other simulator seeds (tests the map)'], ['gen', 'a new world per game (tests the generator)']]);
+  const fGames = num(200, 1, MAX_GAMES), fFrom = num(1, 0, MAX_SEED), fRounds = roundsBox(30000);
+  const fRun = el('button', 'Run'), fCancel = el('button', 'Cancel'), copyMap = el('button', 'Copy map text');
+  const fProgress = el('span', '', 'note'), fResult = el('pre', '', 'evalout'), fCommand = el('pre', '', 'evalout');
+  cancel.hidden = fCancel.hidden = copyMap.hidden = true;
+  host.append(
+    el('div', 'Two brains on many worlds', 'evalhead'),
+    row(labelled('Brain ', selX), labelled('against ', selY)), row(labelled('Worlds ', worlds)),
+    row(labelled('How many ', seeds), labelled('from seed ', from), labelled('Length ', rounds)), row(run, cancel, progress), result, command,
+    el('div', 'One brain in every colony: is the world fair?', 'evalhead'),
+    row(labelled('Brain ', fBrain), labelled('Worlds ', fMode)),
+    row(labelled('Games ', fGames), labelled('from seed ', fFrom), labelled('Length ', fRounds)), row(fRun, fCancel, fProgress), fResult, fCommand, row(copyMap));
+
+  let names: string[] = [], batch: Batch<unknown> | undefined;
+  function refresh(): void {
+    const now = ctx.brains().names;
+    if (now.length === names.length && now.every((n, i) => n === names[i])) return;
+    const x = selX.selectedIndex, y = selY.selectedIndex, f = fBrain.selectedIndex;
+    names = now;
+    for (const s of [selX, selY, fBrain]) { s.length = 0; names.forEach((n, i) => s.add(new Option(n, String(i)))); }
+    selX.selectedIndex = x >= 0 && x < names.length ? x : 0;
+    selY.selectedIndex = y >= 0 && y < names.length ? y : Math.min(1, names.length - 1);
+    fBrain.selectedIndex = f >= 0 && f < names.length ? f : 0;
+  }
+  const busy = (which: 'head' | 'fair' | null): void => {
+    run.disabled = fRun.disabled = which !== null; cancel.hidden = which !== 'head'; fCancel.hidden = which !== 'fair';
+  };
+  const failure = (e: unknown, brain: (i: number) => string): string => e instanceof Cancelled ? 'Cancelled.'
+    : e instanceof BatchError && e.brain !== undefined ? `Brain ${brain(e.brain)}: ${e.message}` : e instanceof Error ? e.message : String(e);
+
   run.onclick = async () => {
     refresh();
-    const n = int(seeds, 1, MAX_WORLDS), first = int(from, 0, 0x3fffffff);
+    const n = int(seeds, 1, MAX_WORLDS), first = int(from, 0, MAX_SEED);
     if (n === undefined || first === undefined) { result.textContent = `How many: a whole number from 1 to ${MAX_WORLDS}; from seed: a whole number from 0.`; return; }
     const { texts } = ctx.brains(), x = selX.selectedIndex, y = selY.selectedIndex, len = Number(rounds.value), symmetric = worlds.value === 'mirror';
     const shown: [string, string] = x === y ? [`${names[x]} (1st)`, `${names[y]} (2nd)`] : [names[x], names[y]];
     const tasks = schedule(2, Array.from({ length: n }, (_, k) => first + k)), rules = ctx.rules();
     result.textContent = ''; command.textContent = ''; progress.textContent = `0 / ${tasks.length} games`;
     const t0 = performance.now();
-    batch = runBatch(ctx.makeWorker ?? defaultWorker, poolSize(), { texts: [texts[x], texts[y]], rules, rounds: len, symmetric }, tasks,
+    const b = runBatch(ctx.makeWorker ?? defaultWorker, poolSize(), { kind: 'head', texts: [texts[x], texts[y]], rules, rounds: len, symmetric }, tasks,
       (done) => { progress.textContent = `${done} / ${tasks.length} games`; });
-    busy(true);
+    batch = b;
+    busy('head');
     try {
-      const outs = await batch.done, games: Game[] = tasks.map((t, i) => ({ ...t, ...outs[i] }));
+      const outs = await b.done, games: Game[] = tasks.map((t, i) => ({ ...t, ...outs[i] }));
       result.textContent = describe(headToHead(games), shown).join('\n');
       command.textContent = `Reproduce (save the two editors as ${names[x]}.brain and ${names[y]}.brain):\n` +
         reproCommand({ files: [`${names[x]}.brain`, `${names[y]}.brain`], seeds: n, from: first, rounds: len, rules, symmetric });
       progress.textContent = `${tasks.length} games in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
     } catch (e) {
-      progress.textContent = '';
-      result.textContent = e instanceof Cancelled ? 'Cancelled.'
-        : e instanceof BatchError && e.brain !== undefined ? `Brain ${names[e.brain === 0 ? x : y]}: ${e.message}` : e instanceof Error ? e.message : String(e);
-    } finally { batch = undefined; busy(false); }
+      progress.textContent = ''; result.textContent = failure(e, (i) => names[i === 0 ? x : y]);
+    } finally { batch = undefined; busy(null); }
   };
   cancel.onclick = () => batch?.cancel();
+
+  let mapShown = '';
+  copyMap.onclick = async () => {
+    try { await navigator.clipboard.writeText(mapShown); fProgress.textContent = 'Map text copied.'; } catch { fProgress.textContent = 'Could not copy the map text.'; }
+  };
+  fRun.onclick = async () => {
+    refresh();
+    const n = int(fGames, 1, MAX_GAMES), first = int(fFrom, 0, MAX_SEED);
+    if (n === undefined || first === undefined) { fResult.textContent = `Games: a whole number from 1 to ${MAX_GAMES}; from seed: a whole number from 0.`; return; }
+    const w = ctx.world(), spec = worldSpec(w, fMode.value === 'map'), x = fBrain.selectedIndex, len = Number(fRounds.value), rules = ctx.rules();
+    fResult.textContent = ''; fCommand.textContent = ''; copyMap.hidden = true;
+    if (!spec) { fResult.textContent = 'This map is one fixed world (a ring example or a loaded file): pick "this map". "A new world per game" needs the contest, mirrored or fair worlds.'; return; }
+    mapShown = w.mapText;
+    const tasks = Array.from({ length: n }, (_, k) => ({ seed: first + k })), t0 = performance.now();
+    fProgress.textContent = `0 / ${n} games`;
+    const b = runBatch(ctx.makeWorker ?? defaultWorker, poolSize(), { kind: 'fair', text: ctx.brains().texts[x], rules, rounds: len, world: spec }, tasks,
+      (done) => { fProgress.textContent = `${done} / ${n} games`; });
+    batch = b;
+    busy('fair');
+    try {
+      const outs = await b.done, result = fairness(outs.map((o) => o.food)), file = 'W.world';
+      fResult.textContent = [fairnessHeader(names[x], spec, file, n, len, rules), ...fairnessLines(result)].join('\n');
+      fCommand.textContent = `Reproduce (save editor ${names[x]} as ${names[x]}.brain${spec.kind === 'map' ? ' and the map as W.world' : ''}):\n` +
+        fairnessCommand({ brain: `${names[x]}.brain`, world: file, spec, games: n, from: first, rounds: len, rules: ctx.rules() });
+      copyMap.hidden = spec.kind !== 'map';
+      fProgress.textContent = `${n} games in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+    } catch (e) {
+      fProgress.textContent = ''; fResult.textContent = failure(e, () => names[x]);
+    } finally { batch = undefined; busy(null); }
+  };
+  fCancel.onclick = () => batch?.cancel();
   refresh();
   return { refresh };
 }

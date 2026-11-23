@@ -55,6 +55,7 @@
   #verify.err { color: var(--err); }
   @media (prefers-color-scheme: dark) { #verify.ok { color: #4ade80; } }
   #tl { width: 100%; box-sizing: border-box; padding: 0; }
+  .evalhead { margin: 10px 0 2px; font-weight: 600; color: var(--fg); }
   .evalout { margin: 4px 0; font: 12px ui-monospace, monospace; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
   .note .warn { color: #a16207; }
   @media (prefers-color-scheme: dark) { .note .warn { color: #fbbf24; } }
@@ -158,6 +159,8 @@
       <p>Plays one brain against another on many worlds, once per colour, on your cores. The numbers are those of
         <code>cli/tourney.ts</code>, and the command that reproduces them is shown. Mirrored worlds give both colonies the same terrain;
         the interval is approximate (the two games of a world are not independent).</p>
+      <p>The second part puts one brain in every colony of the map shown and asks whether each colony wins about 1 game in n
+        (<code>cli/fairness.ts</code>). It measures a map and a brain together, and a result of "no bias found" is not proof of fairness.</p>
       <div id="evalhost"></div>
     </details>
     <details id="explain">

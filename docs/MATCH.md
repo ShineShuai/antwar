@@ -220,7 +220,15 @@ wins/draws/losses, food margin, the score with its 95% Wilson interval, a verdic
 50%) and the wins by hill. It also prints the `cli/tourney.ts` command that plays the same games, and a test checks that the two
 produce identical outcomes and hashes. Worlds are mirrored (same terrain for both colonies) or the contest generator's; at most
 200 worlds; 10,000, 30,000 or 100,000 rounds. Games are between two brains on two-hill worlds: more colonies are the league's job
-(`cli/league.ts`). Not in the panel yet: fairness of a world, a league of three or more brains, sweeps.
+(`cli/league.ts`).
+
+The panel's second part is the fairness check (`cli/fairness.ts`) for the map in the workshop, any number of colonies: one editor's
+brain in every colony, under the Rules chosen in the page (so `altorder` with 3 colonies can be measured), at most 5,000 games.
+"This map, other simulator seeds" fixes the map (a ring example or a loaded file is one map: `--world`; the generators use
+`--map-seed` with the seed box) and tests the map; "a new world per game" tests the generator (contest, mirrored or fair worlds only).
+It prints the table, the verdict and, below 10 expected wins per colony, the `thin` warning, plus the command. A test checks that the
+panel's engine and the CLI give identical foods, JSON and table for a fixed map, a map seed and a world per game. Not in the panel
+yet: a league of three or more brains, sweeps.
 
 ## Not done
 

@@ -8,13 +8,11 @@
 // Exit code 0 whatever the verdict (it is a measurement); 2 for bad arguments.
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import { generateFairWorld } from '../src/core/gen.ts';
-import { playColonies, worldFor } from '../src/core/match.ts';
-import { parseMap } from '../src/core/map.ts';
 import { RULESETS } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import type { WorldMap } from '../src/core/types.ts';
-import { MIN_EXPECTED, fairness } from '../src/fairness.ts';
+import { coloniesOf, fairGame, fairness, fairnessHeader, fairnessLines, worldLabel, worldMaker } from '../src/fairness.ts';
+import type { WorldSpec } from '../src/fairness.ts';
 import { loadAnyBrain } from '../src/lang/index.ts';
 
 const { values: o, positionals: files } = parseArgs({ allowPositionals: true, options: {
@@ -32,33 +30,26 @@ const games = int(o.games, 1, '--games'), from = int(o.from, 0, '--from'), round
 const mapSeed = o['map-seed'] === undefined ? undefined : int(o['map-seed'], 0, '--map-seed');
 const nColonies = o.colonies === undefined ? undefined : int(o.colonies, 2, '--colonies');
 
-const fixed: WorldMap | undefined = o.world !== undefined ? parseMap(readFileSync(o.world, 'utf8')) : undefined;
-const make = (seed: number): WorldMap => {
-  if (fixed) return fixed;
-  try { return nColonies !== undefined ? generateFairWorld(nColonies, seed) : worldFor(seed, o.symmetric); } catch (e) { return die(e instanceof Error ? e.message : String(e)); }
-};
-const count = (m: WorldMap): number => Math.max(2, 1 + Math.max(...m.hill));
-let cache: WorldMap | undefined;
-const mapOf = (seed: number): WorldMap => (fixed ?? (mapSeed !== undefined ? (cache ??= make(mapSeed)) : make(seed)));
+const spec: WorldSpec = o.world !== undefined ? { kind: 'map', mapText: readFileSync(o.world, 'utf8') }
+  : nColonies !== undefined ? { kind: 'fair', colonies: nColonies, mapSeed } : { kind: o.symmetric ? 'mirror' : 'contest', mapSeed };
+let make: (seed: number) => WorldMap;
+try { make = worldMaker(spec); } catch (e) { make = () => die(e instanceof Error ? e.message : String(e)); }
+const mapOf = (seed: number): WorldMap => { try { return make(seed); } catch (e) { return die(e instanceof Error ? e.message : String(e)); } };
 
-const first = mapOf(from), n = count(first);
+const first = mapOf(from), n = coloniesOf(first);
 const rulesId = (o.rules ?? 'classic') as RulesId, rules = RULESETS[rulesId];
 const program = loadAnyBrain(readFileSync(files[0], 'utf8'), rules).program;
 const foods: number[][] = [];
 for (let g = 0; g < games; g++) {
   const seed = from + g, map = mapOf(seed);
-  if (count(map) !== n) die('the worlds do not all have the same number of colonies');
-  foods.push(playColonies(map, Array.from({ length: n }, () => program), seed, rounds, rules));
+  if (coloniesOf(map) !== n) die('the worlds do not all have the same number of colonies');
+  foods.push(fairGame(map, program, seed, rounds, rules));
 }
 const result = fairness(foods);
-const what = fixed ? `map ${o.world}` : `${nColonies !== undefined ? `fair worlds, ${nColonies} colonies` : o.symmetric ? 'symmetric worlds' : 'contest worlds'}${mapSeed !== undefined ? `, the map of seed ${mapSeed}` : ', a new world per game'}`;
+const what = worldLabel(spec, o.world);
 if (o.json) {
   console.log(JSON.stringify({ brain: files[0], world: what, rules: rulesId, rounds, from, ...result }));
 } else {
-  const pct = (x: number): string => `${(100 * x).toFixed(1)}%`;
-  console.log(`${files[0]} in every colony | ${what} | ${result.games} games of ${rounds} rounds | rules ${rulesId}`);
-  console.log('colony  win chance  z       mean points  mean food');
-  for (const r of result.rows) console.log(`${String.fromCharCode(65 + r.colony).padEnd(7)} ${pct(r.share).padEnd(11)} ${r.z.toFixed(2).padStart(5)}   ${r.points.toFixed(2).padStart(11)}  ${r.food.toFixed(1).padStart(9)}`);
-  console.log(`fair would be ${pct(1 / n)} each and ${n - 1} point${n === 2 ? '' : 's'}. ${result.fair ? 'No bias found' : 'BIASED'} (p = ${result.p.toFixed(3)}, Bonferroni over ${n} colonies); a bias below +-${pct(result.resolution)} of win chance cannot be seen with ${result.games} games.`);
-  if (result.thin) console.log(`warning: under ${MIN_EXPECTED} expected wins per colony (${result.games} games, ${n} colonies): the test raises false alarms; use at least ${MIN_EXPECTED * n} games.`);
+  console.log(fairnessHeader(files[0], spec, o.world ?? '', result.games, rounds, rulesId));
+  for (const line of fairnessLines(result)) console.log(line);
 }

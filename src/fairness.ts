@@ -2,7 +2,12 @@
 // should have the most food in 1/n of the games (equal food splits the win). This module judges a list of games, one row of nest food
 // per game, one column per colony, all colonies running the same brain on the same map or on maps of the same generator. Statistics
 // with fractions live here, outside core (docs/MATCH.md). The ranking points are those of `colonyResult`.
+import { generateFairWorld } from './core/gen.ts';
+import { parseMap } from './core/map.ts';
+import { playColonies, worldFor } from './core/match.ts';
 import { colonyResult } from './core/ranking.ts';
+import type { RulesId } from './core/rules.ts';
+import type { Program, Rules, WorldMap } from './core/types.ts';
 
 /** Two-sided p-value of a standard normal z (Abramowitz and Stegun 7.1.26, error below 1.5e-7). */
 export function normalTwoSidedP(z: number): number {
@@ -60,4 +65,47 @@ export function fairness(foods: readonly (readonly number[])[], alpha = 0.05): F
   });
   const p = Math.min(1, n * Math.min(...rows.map((r) => r.p)));
   return { games, colonies: n, rows, p, resolution: 1.96 * Math.sqrt(((1 / n) * (1 - 1 / n)) / games), fair: p >= alpha, thin: games < MIN_EXPECTED * n };
+}
+
+/** Where the worlds of a fairness run come from. `mapSeed` fixes the map (only the simulator seed varies, which tests the map); without
+ * it every game has its own world from its seed (which tests the generator). `map` is one given world. */
+export interface WorldSpec { kind: 'contest' | 'mirror' | 'fair' | 'map'; colonies?: number; mapSeed?: number; mapText?: string }
+
+/** The colonies of a world: one per hill, at least two. */
+export const coloniesOf = (m: WorldMap): number => Math.max(2, 1 + Math.max(...m.hill));
+
+/** The world of a game, from its seed. Throws for a given map that does not parse or a fair world that cannot be made. */
+export function worldMaker(spec: WorldSpec): (seed: number) => WorldMap {
+  const fixed = spec.kind === 'map' ? parseMap(spec.mapText ?? '') : undefined;
+  const make = (seed: number): WorldMap => (spec.kind === 'fair' ? generateFairWorld(spec.colonies ?? 2, seed) : worldFor(seed, spec.kind === 'mirror'));
+  let cache: WorldMap | undefined;
+  return (seed) => fixed ?? (spec.mapSeed !== undefined ? (cache ??= make(spec.mapSeed)) : make(seed));
+}
+
+/** One game with the same brain in every colony of the map: the nest food of each colony. */
+export const fairGame = (map: WorldMap, program: Program, seed: number, rounds: number, rules: Rules): number[] =>
+  playColonies(map, Array.from({ length: coloniesOf(map) }, () => program), seed, rounds, rules);
+
+/** What a fairness run is about, as the first line of its report. `file` names a given map. */
+export const worldLabel = (spec: WorldSpec, file = 'the map'): string => spec.kind === 'map' ? `map ${file}`
+  : `${spec.kind === 'fair' ? `fair worlds, ${spec.colonies} colonies` : spec.kind === 'mirror' ? 'symmetric worlds' : 'contest worlds'}${spec.mapSeed !== undefined ? `, the map of seed ${spec.mapSeed}` : ', a new world per game'}`;
+
+export const fairnessHeader = (brain: string, spec: WorldSpec, file: string, games: number, rounds: number, rules: RulesId): string =>
+  `${brain} in every colony | ${worldLabel(spec, file)} | ${games} games of ${rounds} rounds | rules ${rules}`;
+
+/** The table, the verdict and, for too few games, the warning: what `cli/fairness.ts` prints under its first line. */
+export function fairnessLines(r: Fairness): string[] {
+  const n = r.colonies, pct = (x: number): string => `${(100 * x).toFixed(1)}%`;
+  const out = ['colony  win chance  z       mean points  mean food'];
+  for (const row of r.rows) out.push(`${String.fromCharCode(65 + row.colony).padEnd(7)} ${pct(row.share).padEnd(11)} ${row.z.toFixed(2).padStart(5)}   ${row.points.toFixed(2).padStart(11)}  ${row.food.toFixed(1).padStart(9)}`);
+  out.push(`fair would be ${pct(1 / n)} each and ${n - 1} point${n === 2 ? '' : 's'}. ${r.fair ? 'No bias found' : 'BIASED'} (p = ${r.p.toFixed(3)}, Bonferroni over ${n} colonies); a bias below +-${pct(r.resolution)} of win chance cannot be seen with ${r.games} games.`);
+  if (r.thin) out.push(`warning: under ${MIN_EXPECTED} expected wins per colony (${r.games} games, ${n} colonies): the test raises false alarms; use at least ${MIN_EXPECTED * n} games.`);
+  return out;
+}
+
+/** The `cli/fairness.ts` command that plays the same games; `brain` and `world` are the files it reads. */
+export function fairnessCommand(o: { brain: string; world: string; spec: WorldSpec; games: number; from: number; rounds: number; rules: RulesId }): string {
+  const w = o.spec.kind === 'map' ? `--world ${o.world}` : o.spec.kind === 'fair' ? `--colonies ${o.spec.colonies}` : o.spec.kind === 'mirror' ? '--symmetric' : '';
+  const seed = o.spec.mapSeed !== undefined ? `--map-seed ${o.spec.mapSeed}` : '';
+  return ['node cli/fairness.ts', o.brain, w, seed, `--games ${o.games} --from ${o.from} --rounds ${o.rounds} --rules ${o.rules}`].filter(Boolean).join(' ');
 }
