@@ -1,12 +1,16 @@
-// The Evaluate panel, on Workers (web/pool.ts): one brain of the workshop against another on many worlds, both colours; and one brain in
-// every colony of a world (is the world fair?). The games are those of `cli/tourney.ts` and `cli/fairness.ts` (the panel shows the
-// command), so a number here can be reproduced and checked.
+// The Evaluate panel, on Workers (web/pool.ts): one brain of the workshop against another on many worlds, both colours; one brain in
+// every colony of a world (is the world fair?); and a league of all the editors. The games are those of `cli/tourney.ts`,
+// `cli/fairness.ts` and `cli/league.ts` (the panel shows the command), so a number here can be reproduced and checked.
+import { generateWorld } from '../src/core/gen.ts';
+import { formatMap } from '../src/core/map.ts';
 import { MATCH_ROUNDS, schedule } from '../src/core/match.ts';
 import type { Game } from '../src/core/match.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import { fairness, fairnessHeader, fairnessLines, fairnessCommand } from '../src/fairness.ts';
 import type { WorldSpec } from '../src/fairness.ts';
 import { describe, headToHead, reproCommand } from '../src/headtohead.ts';
+import { leagueCommand, leagueHeader, leagueLines, leagueSummary, leagueTasks } from '../src/league.ts';
+import type { LeagueGame, LeagueWorld } from '../src/league.ts';
 import { BatchError, Cancelled, runBatch } from './pool.ts';
 import type { Batch, WorkerLike } from './pool.ts';
 
@@ -34,6 +38,9 @@ export function worldSpec(w: { kind: string; mapText: string; seed: number }, th
   if (base) return thisMap ? { ...base, mapSeed: w.seed } : base;
   return thisMap ? { kind: 'map', mapText: w.mapText } : undefined;
 }
+
+/** The workshop's map as text: the contest generator's world of the seed when the box holds no text. */
+export const mapTextOf = (w: { kind: string; mapText: string; seed: number }): string => (w.kind === '' ? formatMap(generateWorld(w.seed)) : w.mapText);
 
 export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh(): void } {
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', cls = ''): HTMLElementTagNameMap[K] => {
@@ -66,14 +73,22 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
   const fGames = num(200, 1, MAX_GAMES), fFrom = num(1, 0, MAX_SEED), fRounds = roundsBox(30000);
   const fRun = el('button', 'Run'), fCancel = el('button', 'Cancel'), copyMap = el('button', 'Copy map text');
   const fProgress = el('span', '', 'note'), fResult = el('pre', '', 'evalout'), fCommand = el('pre', '', 'evalout');
-  cancel.hidden = fCancel.hidden = copyMap.hidden = true;
+  // ---- a league of all the editors
+  const lMode = select([['map', 'this map, other simulator seeds'], ['gen', 'a new world per seed (mirrored for 2 brains, fair for more)']]);
+  const lSeeds = num(20, 1, MAX_WORLDS), lFrom = num(1, 0, MAX_SEED), lRounds = roundsBox(30000);
+  const lRun = el('button', 'Run'), lCancel = el('button', 'Cancel');
+  const lProgress = el('span', '', 'note'), lResult = el('pre', '', 'evalout'), lCommand = el('pre', '', 'evalout');
+  cancel.hidden = fCancel.hidden = lCancel.hidden = copyMap.hidden = true;
   host.append(
     el('div', 'Two brains on many worlds', 'evalhead'),
     row(labelled('Brain ', selX), labelled('against ', selY)), row(labelled('Worlds ', worlds)),
     row(labelled('How many ', seeds), labelled('from seed ', from), labelled('Length ', rounds)), row(run, cancel, progress), result, command,
     el('div', 'One brain in every colony: is the world fair?', 'evalhead'),
     row(labelled('Brain ', fBrain), labelled('Worlds ', fMode)),
-    row(labelled('Games ', fGames), labelled('from seed ', fFrom), labelled('Length ', fRounds)), row(fRun, fCancel, fProgress), fResult, fCommand, row(copyMap));
+    row(labelled('Games ', fGames), labelled('from seed ', fFrom), labelled('Length ', fRounds)), row(fRun, fCancel, fProgress), fResult, fCommand,
+    el('div', 'League of all the editors', 'evalhead'),
+    row(labelled('Worlds ', lMode)), row(labelled('How many ', lSeeds), labelled('from seed ', lFrom), labelled('Length ', lRounds)),
+    row(lRun, lCancel, lProgress), lResult, lCommand, row(copyMap));
 
   let names: string[] = [], batch: Batch<unknown> | undefined;
   function refresh(): void {
@@ -86,8 +101,8 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     selY.selectedIndex = y >= 0 && y < names.length ? y : Math.min(1, names.length - 1);
     fBrain.selectedIndex = f >= 0 && f < names.length ? f : 0;
   }
-  const busy = (which: 'head' | 'fair' | null): void => {
-    run.disabled = fRun.disabled = which !== null; cancel.hidden = which !== 'head'; fCancel.hidden = which !== 'fair';
+  const busy = (which: 'head' | 'fair' | 'league' | null): void => {
+    run.disabled = fRun.disabled = lRun.disabled = which !== null; cancel.hidden = which !== 'head'; fCancel.hidden = which !== 'fair'; lCancel.hidden = which !== 'league';
   };
   const failure = (e: unknown, brain: (i: number) => string): string => e instanceof Cancelled ? 'Cancelled.'
     : e instanceof BatchError && e.brain !== undefined ? `Brain ${brain(e.brain)}: ${e.message}` : e instanceof Error ? e.message : String(e);
@@ -117,9 +132,9 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
   };
   cancel.onclick = () => batch?.cancel();
 
-  let mapShown = '';
+  let mapShown = '', mapNote = fProgress; // the map text of the last run that needs a file, and where to say it was copied
   copyMap.onclick = async () => {
-    try { await navigator.clipboard.writeText(mapShown); fProgress.textContent = 'Map text copied.'; } catch { fProgress.textContent = 'Could not copy the map text.'; }
+    try { await navigator.clipboard.writeText(mapShown); mapNote.textContent = 'Map text copied.'; } catch { mapNote.textContent = 'Could not copy the map text.'; }
   };
   fRun.onclick = async () => {
     refresh();
@@ -128,7 +143,7 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     const w = ctx.world(), spec = worldSpec(w, fMode.value === 'map'), x = fBrain.selectedIndex, len = Number(fRounds.value), rules = ctx.rules();
     fResult.textContent = ''; fCommand.textContent = ''; copyMap.hidden = true;
     if (!spec) { fResult.textContent = 'This map is one fixed world (a ring example or a loaded file): pick "this map". "A new world per game" needs the contest, mirrored or fair worlds.'; return; }
-    mapShown = w.mapText;
+    mapShown = w.mapText; mapNote = fProgress;
     const tasks = Array.from({ length: n }, (_, k) => ({ seed: first + k })), t0 = performance.now();
     fProgress.textContent = `0 / ${n} games`;
     const b = runBatch(ctx.makeWorker ?? defaultWorker, poolSize(), { kind: 'fair', text: ctx.brains().texts[x], rules, rounds: len, world: spec }, tasks,
@@ -147,6 +162,33 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     } finally { batch = undefined; busy(null); }
   };
   fCancel.onclick = () => batch?.cancel();
+
+  lRun.onclick = async () => {
+    refresh();
+    const nWorlds = int(lSeeds, 1, MAX_WORLDS), first = int(lFrom, 0, MAX_SEED);
+    if (nWorlds === undefined || first === undefined) { lResult.textContent = `How many: a whole number from 1 to ${MAX_WORLDS}; from seed: a whole number from 0.`; return; }
+    const w = ctx.world(), n = names.length, len = Number(lRounds.value), rules = ctx.rules();
+    const world: LeagueWorld = lMode.value === 'map' ? { kind: 'map', mapText: mapTextOf(w) } : { kind: 'gen' };
+    const seedList = Array.from({ length: nWorlds }, (_, k) => first + k), tasks = leagueTasks(n, seedList), t0 = performance.now();
+    lResult.textContent = ''; lCommand.textContent = ''; copyMap.hidden = true; mapShown = world.kind === 'map' ? world.mapText : ''; mapNote = lProgress;
+    lProgress.textContent = `0 / ${tasks.length} games`;
+    const b = runBatch(ctx.makeWorker ?? defaultWorker, poolSize(), { kind: 'league', texts: ctx.brains().texts, rules, rounds: len, world }, tasks,
+      (done) => { lProgress.textContent = `${done} / ${tasks.length} games`; });
+    batch = b;
+    busy('league');
+    try {
+      const outs = await b.done, games: LeagueGame[] = tasks.map((t, i) => ({ ...t, food: outs[i].food }));
+      const file = 'W.world', label = world.kind === 'map' ? file : n === 2 ? 'point-mirror worlds' : `fair worlds for ${n} colonies`;
+      lResult.textContent = [leagueHeader(n, seedList, label, len, rules, games.length), ...leagueLines(names, leagueSummary(n, games, seedList))].join('\n');
+      lCommand.textContent = `Reproduce (save the editors as ${names.map((x) => `${x}.brain`).join(', ')}${world.kind === 'map' ? ' and the map as W.world' : ''}):\n` +
+        leagueCommand({ files: names.map((x) => `${x}.brain`), seeds: nWorlds, from: first, rounds: len, rules, world, worldFile: file });
+      copyMap.hidden = world.kind !== 'map';
+      lProgress.textContent = `${tasks.length} games in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+    } catch (e) {
+      lProgress.textContent = ''; lResult.textContent = failure(e, (i) => names[i]);
+    } finally { batch = undefined; busy(null); }
+  };
+  lCancel.onclick = () => batch?.cancel();
   refresh();
   return { refresh };
 }

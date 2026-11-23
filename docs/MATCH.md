@@ -227,8 +227,15 @@ brain in every colony, under the Rules chosen in the page (so `altorder` with 3 
 "This map, other simulator seeds" fixes the map (a ring example or a loaded file is one map: `--world`; the generators use
 `--map-seed` with the seed box) and tests the map; "a new world per game" tests the generator (contest, mirrored or fair worlds only).
 It prints the table, the verdict and, below 10 expected wins per colony, the `thin` warning, plus the command. A test checks that the
-panel's engine and the CLI give identical foods, JSON and table for a fixed map, a map seed and a world per game. Not in the panel
-yet: a league of three or more brains, sweeps.
+panel's engine and the CLI give identical foods, JSON and table for a fixed map, a map seed and a world per game.
+
+The third part is the league (`cli/league.ts`) of all the editors, one per colony: "this map" plays the map shown (the contest world
+of the seed box included, as text; the CLI needs it as `--world`, so the panel has a "Copy map text" button), "a new world per seed" is
+the CLI's default (mirrored worlds for two brains, fair worlds for n; none for 13, 17, 19, 23 and 26 colonies). Rotation cancels the
+value of a place on any map. Scoring is the n-colony ranking *proposal* above, not the contest's. The `+-` is the CLI's (z = 1.96 over the
+worlds: too narrow for few worlds). `src/league.ts` now holds the player, summary and report that both the CLI and the panel use; a test
+checks identical games and table lines against the CLI for 2 and 3 brains, a given map and the contest generator. Not in the panel yet:
+a food-over-time chart, sweeps, a league with more brains than colonies.
 
 ## Not done
 

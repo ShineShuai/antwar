@@ -161,6 +161,9 @@
         the interval is approximate (the two games of a world are not independent).</p>
       <p>The second part puts one brain in every colony of the map shown and asks whether each colony wins about 1 game in n
         (<code>cli/fairness.ts</code>). It measures a map and a brain together, and a result of "no bias found" is not proof of fairness.</p>
+      <p>The third part is a league of all the editors (<code>cli/league.ts</code>): every world is played once per rotation, so each brain
+        takes each hill once and the value of a place cancels. A game scores 2 points for each colony out-scored and 1 for each tie, the
+        n-colony ranking proposed in <code>docs/MATCH.md</code> (not the contest's).</p>
       <div id="evalhost"></div>
     </details>
     <details id="explain">
