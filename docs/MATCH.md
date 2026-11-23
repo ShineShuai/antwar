@@ -241,8 +241,21 @@ The fourth part charts one game over time: nest food (or ants alive) of every co
 same numbers (`node cli/series.ts A B [C ...] [--world FILE] --seed S --rounds N --every K --rules R [--what food|alive] [--json]`;
 without `--world` the world is the contest generator's world of the seed, as in the viewer); a test checks identical series, tables
 and `--what alive` rows against the CLI, and that the last sample is what a plain `playColonies` game gives. One game is one sample: it
-shows how a game went, not how a brain does (that is what the other parts measure). Not in the panel yet: sweeps, a league with
-more brains than colonies, a chart averaged over several games.
+shows how a game went, not how a brain does (that is what the other parts measure).
+
+The fifth part sweeps one slider of a generated brain: the editor's text is written at every level of the slider (`src/sweep.ts`;
+sociability only for a trail-layer, raider or keeper, settling only for a keeper, never for text edited by hand), and each level
+plays a reference editor on the same worlds, both colours, as one `cli/tourney.ts` batch (variant, reference). The table has the
+score with its 95% Wilson interval, W-D-L and food margin per level, `+`/`-` where the interval excludes 50%, and `*` for the level the
+brain has (against itself it should read about 50%, which makes a reference line: sweep a brain against itself first). It is the
+by-hand sweep of `docs/STEALING.md` in one command: `node cli/sweep.ts BRAIN --vs REF --param settling --seeds 20 --rounds 30000
+[--symmetric] [--jobs N]`, and a test checks identical games and table lines for the CLI (1 or 2 jobs) and the panel's engine.
+With 20 worlds and 4 levels that is 160 games, so the panel defaults to 30,000 rounds.
+
+**Workers.** The panel runs its games on Web Workers: by default one fewer than the cores the browser reports (at most 8), so that the
+page and the viewer's own worker keep a core; the *Workers* box takes all of them (or any number from 1). Results do not depend on the
+number, only the time does. Not in the panel yet: a league with more brains than colonies, a chart averaged over several games, a sweep
+of two sliders (a grid), a sweep of the role mix.
 
 ## Not done
 

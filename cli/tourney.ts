@@ -9,25 +9,18 @@ import { availableParallelism } from 'node:os';
 import { basename } from 'node:path';
 import { parseArgs } from 'node:util';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { MATCH_ROUNDS, colourSplit, pairwise, playGame, schedule, standings, worldFor } from '../src/core/match.ts';
+import { MATCH_ROUNDS, colourSplit, pairwise, schedule, standings } from '../src/core/match.ts';
 import type { Game, Outcome, Task } from '../src/core/match.ts';
 import { RULESETS } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
-import type { WorldMap } from '../src/core/types.ts';
+import { headPlayer } from '../src/headtohead.ts';
 import { loadAnyBrain } from '../src/lang/index.ts';
 import { wilson } from '../src/stats.ts';
 
 interface Setup { texts: string[]; rules: RulesId; rounds: number; symmetric: boolean }
 
-/** Everything needed to play tasks: the brains compiled once, worlds cached by seed. */
-function engine(s: Setup): (t: Task) => Outcome {
-  const programs = s.texts.map((t) => loadAnyBrain(t, RULESETS[s.rules]).program), worlds = new Map<number, WorldMap>();
-  return (t) => {
-    let map = worlds.get(t.seed);
-    if (!map) { map = worldFor(t.seed, s.symmetric); worlds.set(t.seed, map); }
-    return playGame(map, programs[t.a], programs[t.b], t, s.rounds, RULESETS[s.rules]);
-  };
-}
+/** Everything needed to play tasks: the brains compiled once, worlds cached by seed (src/headtohead.ts). */
+const engine = (s: Setup): ((t: Task) => Outcome) => headPlayer(s.texts.map((t) => loadAnyBrain(t, RULESETS[s.rules]).program), s);
 
 if (!isMainThread) {
   const run = engine(workerData as Setup);
