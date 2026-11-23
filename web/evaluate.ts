@@ -1,7 +1,7 @@
 // The Evaluate panel, on Workers (web/pool.ts): one brain of the workshop against another on many worlds, both colours; one brain in
 // every colony of a world (is the world fair?); and a league of all the editors. The games are those of `cli/tourney.ts`,
 // `cli/fairness.ts` and `cli/league.ts` (the panel shows the command), so a number here can be reproduced and checked. A fourth part
-// charts one game over time (`cli/series.ts`): the match of the viewer.
+// charts one game over time (`cli/series.ts`): the match of the viewer; and a fifth sweeps one slider of a generated brain (`cli/sweep.ts`).
 import { generateWorld } from '../src/core/gen.ts';
 import { formatMap } from '../src/core/map.ts';
 import { MATCH_ROUNDS, schedule } from '../src/core/match.ts';
@@ -12,8 +12,11 @@ import type { WorldSpec } from '../src/fairness.ts';
 import { describe, headToHead, reproCommand } from '../src/headtohead.ts';
 import { leagueCommand, leagueHeader, leagueLines, leagueSummary, leagueTasks } from '../src/league.ts';
 import type { LeagueGame, LeagueWorld } from '../src/league.ts';
+import { parsePersonality } from '../src/lang/templates.ts';
 import { seriesCommand } from '../src/series.ts';
 import type { Series } from '../src/series.ts';
+import { sweepCommand, sweepHeader, sweepLines, sweepParams, sweepSummary, sweepTasks, sweepVariants } from '../src/sweep.ts';
+import type { SweepParam } from '../src/sweep.ts';
 import { drawChart } from './chart.ts';
 import { paletteFor } from './colonies.ts';
 import { BatchError, Cancelled, runBatch } from './pool.ts';
@@ -32,8 +35,9 @@ export interface EvalContext {
 
 const MAX_WORLDS = 200, MAX_GAMES = 5000, MAX_SEED = 0x3fffffff;
 const defaultWorker = (): WorkerLike => new Worker(new URL('./batch-worker.js', import.meta.url), { type: 'module' }) as unknown as WorkerLike;
-/** One core is left to the page. */
-const poolSize = (): number => Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 2) - 1));
+const cores = (): number => Math.max(1, navigator.hardwareConcurrency || 2);
+/** The default number of Workers: one core is left to the page (up to 8). The panel lets you take them all. */
+const defaultWorkers = (): number => Math.max(1, Math.min(8, cores() - 1));
 
 /** The worlds of a fairness run for the workshop's map: `thisMap` fixes it (only the simulator seed varies), else every game has its own
  * world of the same kind. A ring example or a loaded file is one map and cannot be generated again. */
@@ -67,6 +71,8 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     const v = Number(i.value); return Number.isInteger(v) && v >= lo && v <= hi ? v : undefined;
   };
 
+  const workersIn = num(defaultWorkers(), 1, cores());
+  const size = (): number => int(workersIn, 1, cores()) ?? defaultWorkers();
   // ---- two brains on many worlds
   const selX = select([]), selY = select([]);
   const worlds = select([['mirror', 'mirrored worlds (same terrain for both)'], ['contest', 'contest generator (lopsided map by map)']]);
@@ -87,8 +93,15 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
   const sLen = roundsBox(MATCH_ROUNDS), sShow = select([['food', 'nest food'], ['alive', 'ants alive']]);
   const sRun = el('button', 'Run'), sCancel = el('button', 'Cancel');
   const sProgress = el('span', '', 'note'), sChart = el('div'), sLegend = el('div', '', 'note'), sCommand = el('pre', '', 'evalout');
-  cancel.hidden = fCancel.hidden = lCancel.hidden = sCancel.hidden = copyMap.hidden = true;
+  // ---- one slider swept against a reference brain
+  const swBrain = select([]), swParam = select([]), swVs = select([]);
+  const swWorlds = select([['mirror', 'mirrored worlds (same terrain for both)'], ['contest', 'contest generator (lopsided map by map)']]);
+  const swSeeds = num(20, 1, MAX_WORLDS), swFrom = num(1, 0, MAX_SEED), swLen = roundsBox(30000);
+  const wRun = el('button', 'Run'), wCancel = el('button', 'Cancel');
+  const wProgress = el('span', '', 'note'), wResult = el('pre', '', 'evalout'), wCommand = el('pre', '', 'evalout');
+  cancel.hidden = fCancel.hidden = lCancel.hidden = sCancel.hidden = wCancel.hidden = copyMap.hidden = true;
   host.append(
+    row(labelled(`Workers (of ${cores()} core${cores() === 1 ? '' : 's'}) `, workersIn)),
     el('div', 'Two brains on many worlds', 'evalhead'),
     row(labelled('Brain ', selX), labelled('against ', selY)), row(labelled('Worlds ', worlds)),
     row(labelled('How many ', seeds), labelled('from seed ', from), labelled('Length ', rounds)), row(run, cancel, progress), result, command,
@@ -99,22 +112,37 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     row(labelled('Worlds ', lMode)), row(labelled('How many ', lSeeds), labelled('from seed ', lFrom), labelled('Length ', lRounds)),
     row(lRun, lCancel, lProgress), lResult, lCommand,
     el('div', 'Food over time: the match in the viewer', 'evalhead'),
-    row(labelled('Length ', sLen), labelled('Show ', sShow)), row(sRun, sCancel, sProgress), sChart, sLegend, sCommand, row(copyMap));
+    row(labelled('Length ', sLen), labelled('Show ', sShow)), row(sRun, sCancel, sProgress), sChart, sLegend, sCommand,
+    el('div', 'Sweep a slider against a reference brain', 'evalhead'),
+    row(labelled('Brain ', swBrain), labelled('slider ', swParam), labelled('against ', swVs)), row(labelled('Worlds ', swWorlds)),
+    row(labelled('How many ', swSeeds), labelled('from seed ', swFrom), labelled('Length ', swLen)), row(wRun, wCancel, wProgress), wResult, wCommand, row(copyMap));
 
   let names: string[] = [], batch: Batch<unknown> | undefined;
   function refresh(): void {
     const now = ctx.brains().names;
     if (now.length === names.length && now.every((n, i) => n === names[i])) return;
-    const x = selX.selectedIndex, y = selY.selectedIndex, f = fBrain.selectedIndex;
+    const x = selX.selectedIndex, y = selY.selectedIndex, f = fBrain.selectedIndex, sb = swBrain.selectedIndex, sv = swVs.selectedIndex;
     names = now;
-    for (const s of [selX, selY, fBrain]) { s.length = 0; names.forEach((n, i) => s.add(new Option(n, String(i)))); }
+    for (const s of [selX, selY, fBrain, swBrain, swVs]) { s.length = 0; names.forEach((n, i) => s.add(new Option(n, String(i)))); }
     selX.selectedIndex = x >= 0 && x < names.length ? x : 0;
     selY.selectedIndex = y >= 0 && y < names.length ? y : Math.min(1, names.length - 1);
     fBrain.selectedIndex = f >= 0 && f < names.length ? f : 0;
+    swBrain.selectedIndex = sb >= 0 && sb < names.length ? sb : 0;
+    swVs.selectedIndex = sv >= 0 && sv < names.length ? sv : Math.min(1, names.length - 1);
+    fillParams();
   }
-  const busy = (which: 'head' | 'fair' | 'league' | 'series' | null): void => {
-    run.disabled = fRun.disabled = lRun.disabled = sRun.disabled = which !== null;
-    cancel.hidden = which !== 'head'; fCancel.hidden = which !== 'fair'; lCancel.hidden = which !== 'league'; sCancel.hidden = which !== 'series';
+  /** The sliders of the chosen brain, when its text is a generated personality. */
+  function fillParams(): void {
+    const p = parsePersonality(ctx.brains().texts[swBrain.selectedIndex] ?? ''), params = p ? sweepParams(p) : [], keep = swParam.value;
+    swParam.length = 0;
+    for (const name of params) swParam.add(new Option(name, name));
+    if (params.length === 0) swParam.add(new Option('(not a generated personality)', ''));
+    swParam.disabled = params.length === 0;
+    if (params.includes(keep as SweepParam)) swParam.value = keep;
+  }
+  const busy = (which: 'head' | 'fair' | 'league' | 'series' | 'sweep' | null): void => {
+    run.disabled = fRun.disabled = lRun.disabled = sRun.disabled = wRun.disabled = which !== null;
+    cancel.hidden = which !== 'head'; fCancel.hidden = which !== 'fair'; lCancel.hidden = which !== 'league'; sCancel.hidden = which !== 'series'; wCancel.hidden = which !== 'sweep';
   };
   const failure = (e: unknown, brain: (i: number) => string): string => e instanceof Cancelled ? 'Cancelled.'
     : e instanceof BatchError && e.brain !== undefined ? `Brain ${brain(e.brain)}: ${e.message}` : e instanceof Error ? e.message : String(e);
@@ -128,7 +156,7 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     const tasks = schedule(2, Array.from({ length: n }, (_, k) => first + k)), rules = ctx.rules();
     result.textContent = ''; command.textContent = ''; progress.textContent = `0 / ${tasks.length} games`;
     const t0 = performance.now();
-    const b = runBatch(ctx.makeWorker ?? defaultWorker, poolSize(), { kind: 'head', texts: [texts[x], texts[y]], rules, rounds: len, symmetric }, tasks,
+    const b = runBatch(ctx.makeWorker ?? defaultWorker, size(), { kind: 'head', texts: [texts[x], texts[y]], rules, rounds: len, symmetric }, tasks,
       (done) => { progress.textContent = `${done} / ${tasks.length} games`; });
     batch = b;
     busy('head');
@@ -158,7 +186,7 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     mapShown = w.mapText; mapNote = fProgress;
     const tasks = Array.from({ length: n }, (_, k) => ({ seed: first + k })), t0 = performance.now();
     fProgress.textContent = `0 / ${n} games`;
-    const b = runBatch(ctx.makeWorker ?? defaultWorker, poolSize(), { kind: 'fair', text: ctx.brains().texts[x], rules, rounds: len, world: spec }, tasks,
+    const b = runBatch(ctx.makeWorker ?? defaultWorker, size(), { kind: 'fair', text: ctx.brains().texts[x], rules, rounds: len, world: spec }, tasks,
       (done) => { fProgress.textContent = `${done} / ${n} games`; });
     batch = b;
     busy('fair');
@@ -184,7 +212,7 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     const seedList = Array.from({ length: nWorlds }, (_, k) => first + k), tasks = leagueTasks(n, seedList), t0 = performance.now();
     lResult.textContent = ''; lCommand.textContent = ''; copyMap.hidden = true; mapShown = world.kind === 'map' ? world.mapText : ''; mapNote = lProgress;
     lProgress.textContent = `0 / ${tasks.length} games`;
-    const b = runBatch(ctx.makeWorker ?? defaultWorker, poolSize(), { kind: 'league', texts: ctx.brains().texts, rules, rounds: len, world }, tasks,
+    const b = runBatch(ctx.makeWorker ?? defaultWorker, size(), { kind: 'league', texts: ctx.brains().texts, rules, rounds: len, world }, tasks,
       (done) => { lProgress.textContent = `${done} / ${tasks.length} games`; });
     batch = b;
     busy('league');
@@ -239,6 +267,34 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     } finally { batch = undefined; busy(null); }
   };
   sCancel.onclick = () => batch?.cancel();
+
+  swBrain.onchange = fillParams;
+  swParam.onfocus = fillParams; // (the text may have changed since)
+  wRun.onclick = async () => {
+    refresh(); fillParams();
+    const n = int(swSeeds, 1, MAX_WORLDS), first = int(swFrom, 0, MAX_SEED), param = swParam.value as SweepParam;
+    if (n === undefined || first === undefined) { wResult.textContent = `How many: a whole number from 1 to ${MAX_WORLDS}; from seed: a whole number from 0.`; return; }
+    const { texts } = ctx.brains(), x = swBrain.selectedIndex, y = swVs.selectedIndex, len = Number(swLen.value), symmetric = swWorlds.value === 'mirror', rules = ctx.rules();
+    wResult.textContent = ''; wCommand.textContent = '';
+    let variants: ReturnType<typeof sweepVariants>;
+    try { variants = sweepVariants(texts[x], param); } catch (e) { wResult.textContent = `Brain ${names[x]}: ${e instanceof Error ? e.message : String(e)}`; return; }
+    const seedList = Array.from({ length: n }, (_, k) => first + k), tasks = sweepTasks(variants.length, seedList), t0 = performance.now();
+    wProgress.textContent = `0 / ${tasks.length} games`;
+    const b = runBatch(ctx.makeWorker ?? defaultWorker, size(), { kind: 'head', texts: [...variants.map((v) => v.text), texts[y]], rules, rounds: len, symmetric }, tasks,
+      (done) => { wProgress.textContent = `${done} / ${tasks.length} games`; });
+    batch = b;
+    busy('sweep');
+    try {
+      const outs = await b.done, games: Game[] = tasks.map((t, i) => ({ ...t, ...outs[i] }));
+      wResult.textContent = [sweepHeader(names[x], param, names[y], n, len, rules, symmetric, games.length), ...sweepLines(param, variants, sweepSummary(variants.length, games))].join('\n');
+      wCommand.textContent = `Reproduce (save editors ${names[x]} and ${names[y]} as ${names[x]}.brain and ${names[y]}.brain):\n` +
+        sweepCommand({ brain: `${names[x]}.brain`, reference: `${names[y]}.brain`, param, seeds: n, from: first, rounds: len, rules, symmetric });
+      wProgress.textContent = `${tasks.length} games in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+    } catch (e) {
+      wProgress.textContent = ''; wResult.textContent = failure(e, (i) => (i === variants.length ? names[y] : names[x]));
+    } finally { batch = undefined; busy(null); }
+  };
+  wCancel.onclick = () => batch?.cancel();
   refresh();
   return { refresh };
 }

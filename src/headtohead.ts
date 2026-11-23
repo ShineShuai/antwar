@@ -1,8 +1,10 @@
 // Two brains on the same worlds, both colours: the summary the workshop's Evaluate panel shows, and the command that reproduces it.
 // The games are those of `cli/tourney.ts A B` (docs/MATCH.md): schedule(2, seeds) played by playGame.
-import { colourSplit, standings } from './core/match.ts';
-import type { Game } from './core/match.ts';
+import { colourSplit, playGame, standings, worldFor } from './core/match.ts';
+import type { Game, Outcome, Task } from './core/match.ts';
+import { RULESETS } from './core/rules.ts';
 import type { RulesId } from './core/rules.ts';
+import type { Program, WorldMap } from './core/types.ts';
 import { wilson } from './stats.ts';
 
 export interface Side { points: number; wins: number; draws: number; losses: number; /** nest food won minus lost, summed over the games */ margin: number }
@@ -47,4 +49,20 @@ export function describe(h: HeadToHead, names: readonly [string, string]): strin
     `${h.games} games, both colours on every world; games on one world are not independent, so the interval is approximate.`,
     `wins by hill: first ${h.hills.first}, second ${h.hills.second}, draws ${h.hills.draws} (the first hill's ants act first in a round).`,
   ];
+}
+
+const WORLD_CACHE = 16; // the games of a world (both colours, and every variant of a sweep) are close together in a schedule
+
+/** Plays the games of a head-to-head batch: `t.a` and `t.b` are indices into `programs`; the world and the simulator seed come from `t.seed`. */
+export function headPlayer(programs: readonly Program[], o: { rules: RulesId; rounds: number; symmetric: boolean }): (t: Task) => Outcome {
+  const worlds = new Map<number, WorldMap>(), rules = RULESETS[o.rules];
+  return (t) => {
+    let map = worlds.get(t.seed);
+    if (!map) {
+      map = worldFor(t.seed, o.symmetric);
+      if (worlds.size >= WORLD_CACHE) worlds.delete(worlds.keys().next().value as number);
+      worlds.set(t.seed, map);
+    }
+    return playGame(map, programs[t.a], programs[t.b], t, o.rounds, rules);
+  };
 }
