@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": { "lib": ["ES2022", "WebWorker"], "types": [] },
-  "include": ["src", "web/sim-worker.ts", "web/engine.ts", "web/protocol.ts"]
+  "include": ["src", "web/sim-worker.ts", "web/engine.ts", "web/protocol.ts", "web/batch-worker.ts", "web/batch-engine.ts", "web/batch-protocol.ts"]
 }

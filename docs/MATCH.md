@@ -212,6 +212,16 @@ interval is approximate), the pairwise points matrix, and the wins by hill. `--j
 (`cli/replay.ts record` on the same world gives the same hash). `--jobs` uses worker threads; the output does not depend on it.
 Cost: about 0.6 s per 100,000-round game per core, so 3 brains x 20 worlds x 2 colours x 3 pairs is 120 games.
 
+## Evaluate panel (workshop)
+
+The workshop's **Evaluate** panel plays one editor against another on many worlds (`schedule(2, seeds)`, `playGame`: the games of
+`cli/tourney.ts A B`), on Web Workers (`web/pool.ts`, one core left to the page), and shows what the CLI shows for two brains: points,
+wins/draws/losses, food margin, the score with its 95% Wilson interval, a verdict (a brain is "ahead" only when its interval excludes
+50%) and the wins by hill. It also prints the `cli/tourney.ts` command that plays the same games, and a test checks that the two
+produce identical outcomes and hashes. Worlds are mirrored (same terrain for both colonies) or the contest generator's; at most
+200 worlds; 10,000, 30,000 or 100,000 rounds. Games are between two brains on two-hill worlds: more colonies are the league's job
+(`cli/league.ts`). Not in the panel yet: fairness of a world, a league of three or more brains, sweeps.
+
 ## Not done
 
 Hidden seeds (HMAC of a secret), the stored pairwise matrix and incremental runs, `--symmetric` in `cli/rc.ts`,
