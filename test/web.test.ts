@@ -81,6 +81,9 @@ test('cellAt inverts center for every cell, and tolerates offsets', () => {
     assert.equal(cellAt(L, W, H, cx, cy - L.h * 0.3), p);
   }
   assert.equal(cellAt(L, W, H, -50, -50), -1);
+  for (const bad of [Infinity, -Infinity, NaN]) { // (a click on a zero-size canvas: this used to loop forever)
+    assert.equal(cellAt(L, W, H, bad, 5), -1); assert.equal(cellAt(L, W, H, 5, bad), -1); assert.equal(cellAt(L, W, H, bad, bad), -1);
+  }
 });
 
 test('describeCell lists food, scents and ants', () => {

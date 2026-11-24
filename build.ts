@@ -8,9 +8,10 @@ import { createRequire } from 'node:module';
 const tsc = createRequire(import.meta.url).resolve('typescript/bin/tsc');
 rmSync('dist', { recursive: true, force: true });
 execFileSync(process.execPath, [tsc, '-p', 'tsconfig.build.json'], { stdio: 'inherit' });
-const page = readFileSync('web/workshop.html', 'utf8')
-  .replace('src="workshop.js"', 'src="web/workshop.js"')
-  .replace('href="../reference.html"', 'href="reference.html"');
 mkdirSync('dist', { recursive: true });
-writeFileSync('dist/index.html', page);
+// Each page is a plain HTML file importing the shared modules: the workshop is the home page (index.html), the others keep their names.
+for (const [from, to, script] of [['web/workshop.html', 'index.html', 'workshop'], ['web/arena.html', 'arena.html', 'arena']] as const) {
+  const page = readFileSync(from, 'utf8').replace(`src="${script}.js"`, `src="web/${script}.js"`).replace('href="../reference.html"', 'href="reference.html"');
+  writeFileSync(`dist/${to}`, page);
+}
 copyFileSync('reference.html', 'dist/reference.html');
