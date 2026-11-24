@@ -26,6 +26,7 @@ export const center = (L: Layout, x: number, y: number): [number, number] => [(x
 
 /** Cell under a pixel (nearest hex centre), or -1 outside the board. */
 export function cellAt(L: Layout, W: number, H: number, px: number, py: number): number {
+  if (!Number.isFinite(px) || !Number.isFinite(py)) return -1; // (a zero-size canvas gives Infinity or NaN: the row loop below would never end)
   const row = Math.round((py / L.h - 0.5) / 0.75);
   let best = -1, bestD = L.h * L.h;
   for (let y = row - 1; y <= row + 1; y++) {

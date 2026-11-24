@@ -64,16 +64,23 @@ const WORLD_CACHE = 16; // the games of a world are close together in the schedu
 /** The colonies of a world: one per hill, at least two. */
 const coloniesIn = (m: WorldMap): number => Math.max(2, 1 + Math.max(...m.hill));
 
+/** The world of a league game of `n` brains, from its seed: a given map, or a generated one (mirrored for two brains, fair for n). */
+export function leagueWorldOf(n: number, world: LeagueWorld, seed: number): WorldMap {
+  if (world.kind === 'map') return parseMap(world.mapText);
+  if (n === 2) return worldFor(seed, !world.contest);
+  if (world.contest) throw new RangeError('the contest generator is for two brains');
+  return generateFairWorld(n, seed);
+}
+
 /** Plays the games of a league of the given brains. `world(seed)` is the world of a seed (throws when it cannot be made). */
 export function leaguePlayer(programs: readonly Program[], o: { rules: RulesId; rounds: number; world: LeagueWorld }): { world(seed: number): WorldMap; play(t: LeagueTask): number[] } {
   const n = programs.length, rules = RULESETS[o.rules], worlds = new Map<number, WorldMap>();
   if (o.world.kind === 'gen' && o.world.contest && n !== 2) throw new RangeError('the contest generator is for two brains');
   const fixed = o.world.kind === 'map' ? parseMap(o.world.mapText) : undefined;
-  const make = (seed: number): WorldMap => (n === 2 ? worldFor(seed, !(o.world.kind === 'gen' && o.world.contest)) : generateFairWorld(n, seed));
   const world = (seed: number): WorldMap => {
     let map = fixed ?? worlds.get(seed);
     if (!map) {
-      map = make(seed);
+      map = leagueWorldOf(n, o.world, seed);
       if (worlds.size >= WORLD_CACHE) worlds.delete(worlds.keys().next().value as number);
       worlds.set(seed, map);
     }

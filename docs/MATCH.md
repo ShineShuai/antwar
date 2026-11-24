@@ -212,50 +212,53 @@ interval is approximate), the pairwise points matrix, and the wins by hill. `--j
 (`cli/replay.ts record` on the same world gives the same hash). `--jobs` uses worker threads; the output does not depend on it.
 Cost: about 0.6 s per 100,000-round game per core, so 3 brains x 20 worlds x 2 colours x 3 pairs is 120 games.
 
-## Evaluate panel (workshop)
+## The Arena (arena.html)
 
-The workshop's **Evaluate** panel plays one editor against another on many worlds (`schedule(2, seeds)`, `playGame`: the games of
-`cli/tourney.ts A B`), on Web Workers (`web/pool.ts`, one core left to the page), and shows what the CLI shows for two brains: points,
-wins/draws/losses, food margin, the score with its 95% Wilson interval, a verdict (a brain is "ahead" only when its interval excludes
-50%) and the wins by hill. It also prints the `cli/tourney.ts` command that plays the same games, and a test checks that the two
-produce identical outcomes and hashes. Worlds are mirrored (same terrain for both colonies) or the contest generator's; at most
-200 worlds; 10,000, 30,000 or 100,000 rounds. Games are between two brains on two-hill worlds: more colonies are the league's job
-(`cli/league.ts`).
+The site has separate pages, each a plain HTML file importing shared modules, with one bar at the top: the **Workshop** (`index.html`:
+write brains, watch a match, chart it), the **Arena** (`arena.html`: compare brains on many worlds) and the Reference. The pages share
+a project: the workshop's saved state in the browser (brains in colony order, the seed, the Rules and the map; `web/project.ts`). The
+Arena reads it (press *Reload*, or it follows the workshop's saves from another window) and never edits it: brains are edited in the
+workshop. The map and the match of the project are on screen at once, paused at round 0, in a viewer at the right of the page
+(`web/gameview.ts`, the workshop's replay engine and renderer).
 
-The panel's second part is the fairness check (`cli/fairness.ts`) for the map in the workshop, any number of colonies: one editor's
-brain in every colony, under the Rules chosen in the page (so `altorder` with 3 colonies can be measured), at most 5,000 games.
-"This map, other simulator seeds" fixes the map (a ring example or a loaded file is one map: `--world`; the generators use
-`--map-seed` with the seed box) and tests the map; "a new world per game" tests the generator (contest, mirrored or fair worlds only).
-It prints the table, the verdict and, below 10 expected wins per colony, the `thin` warning, plus the command. A test checks that the
-panel's engine and the CLI give identical foods, JSON and table for a fixed map, a map seed and a world per game.
+Every result of the Arena lists its games, and **Watch** loads that game into the viewer (`src/watch.ts`): the same world, the brain on each
+hill, the seed. The replay ends in exactly the numbers the batch recorded (food per hill and the state hash; `test/watch.test.ts`), so
+the score you read under the map is the number in the table. Drag the timeline, step with the speed box, click a cell for its contents.
 
-The third part is the league (`cli/league.ts`) of all the editors, one per colony: "this map" plays the map shown (the contest world
-of the seed box included, as text; the CLI needs it as `--world`, so the panel has a "Copy map text" button), "a new world per seed" is
-the CLI's default (mirrored worlds for two brains, fair worlds for n; none for 13, 17, 19, 23 and 26 colonies). Rotation cancels the
-value of a place on any map. Scoring is the n-colony ranking *proposal* above, not the contest's. The `+-` is the CLI's (z = 1.96 over the
-worlds: too narrow for few worlds). `src/league.ts` now holds the player, summary and report that both the CLI and the panel use; a test
-checks identical games and table lines against the CLI for 2 and 3 brains, a given map and the contest generator.
+The tools are tabs (the address carries the tab: `arena.html#league`), each backed by a CLI that plays the same games, shown under every
+result as the command that reproduces it (a test checks identical outcomes for each):
 
-The fourth part charts one game over time: nest food (or ants alive) of every colony, sampled 200 times, for the match of the viewer
-(the editors, the seed box, the map shown, the Rules chosen). `src/series.ts` plays and samples it, and `cli/series.ts` prints the
-same numbers (`node cli/series.ts A B [C ...] [--world FILE] --seed S --rounds N --every K --rules R [--what food|alive] [--json]`;
-without `--world` the world is the contest generator's world of the seed, as in the viewer); a test checks identical series, tables
-and `--what alive` rows against the CLI, and that the last sample is what a plain `playColonies` game gives. One game is one sample: it
-shows how a game went, not how a brain does (that is what the other parts measure).
+* **Head to head** (`cli/tourney.ts`): one brain against another on many worlds (`schedule(2, seeds)`, `playGame`), once per colour,
+  mirrored worlds (same terrain for both) or the contest generator's; points, wins/draws/losses, food margin, the score with its 95%
+  Wilson interval, a verdict (a brain is "ahead" only when its interval excludes 50%) and the wins by hill. At most 200 worlds; 10,000,
+  30,000 or 100,000 rounds.
+* **League** (`cli/league.ts`) of all the project's brains, one per colony: "this map" plays the map shown (the CLI needs it as
+  `--world`, so there is a "Copy map text" button), "a new world per seed" is the CLI's default (mirrored for two brains, fair worlds
+  for n; none for 13, 17, 19, 23 and 26 colonies). Rotation cancels the value of a place on any map. Scoring is the n-colony ranking
+  *proposal* above, not the contest's. The `+-` is the CLI's (z = 1.96 over the worlds: too narrow for few worlds).
+* **Sweep** (`cli/sweep.ts`): one slider of a generated brain (`src/sweep.ts`; sociability only for a trail-layer, raider or keeper,
+  settling only for a keeper, never for text edited by hand) at every level, each against a reference brain on the same worlds, both
+  colours, as one `cli/tourney.ts` batch. The table has `+`/`-` where the interval excludes 50% and `*` for the level the brain has
+  (against itself it should read about 50%: sweep a brain against itself first). It is the by-hand sweep of `docs/STEALING.md` in one
+  command; with 20 worlds and 4 levels that is 160 games, so it defaults to 30,000 rounds.
+* **Fairness** (`cli/fairness.ts`) of the map: one brain in every colony, under the project's Rules (so `altorder` with 3 colonies can be
+  measured), at most 5,000 games. "This map, other simulator seeds" tests the map (a ring example or a loaded file is one map:
+  `--world`; the generators use `--map-seed` with the seed), "a new world per game" tests the generator. It prints the table, the verdict
+  and, below 10 expected wins per colony, the `thin` warning. Fairness moves to the map designer's page when that exists.
 
-The fifth part sweeps one slider of a generated brain: the editor's text is written at every level of the slider (`src/sweep.ts`;
-sociability only for a trail-layer, raider or keeper, settling only for a keeper, never for text edited by hand), and each level
-plays a reference editor on the same worlds, both colours, as one `cli/tourney.ts` batch (variant, reference). The table has the
-score with its 95% Wilson interval, W-D-L and food margin per level, `+`/`-` where the interval excludes 50%, and `*` for the level the
-brain has (against itself it should read about 50%, which makes a reference line: sweep a brain against itself first). It is the
-by-hand sweep of `docs/STEALING.md` in one command: `node cli/sweep.ts BRAIN --vs REF --param settling --seeds 20 --rounds 30000
-[--symmetric] [--jobs N]`, and a test checks identical games and table lines for the CLI (1 or 2 jobs) and the panel's engine.
-With 20 worlds and 4 levels that is 160 games, so the panel defaults to 30,000 rounds.
+The numbers come from games on **Web Workers** (`web/pool.ts`): by default one fewer than the cores the browser reports (at most 8), so
+that the page and the viewer's worker keep a core; the *Workers* box takes all of them (or any number from 1). Results do not depend on
+the number, only the time does. A run stops when you leave the page: open the Arena in a window of its own to keep working in the
+workshop. `src/league.ts`, `src/sweep.ts`, `src/fairness.ts` and `src/headtohead.ts` hold the players, summaries and reports that both the CLIs
+and the page use.
 
-**Workers.** The panel runs its games on Web Workers: by default one fewer than the cores the browser reports (at most 8), so that the
-page and the viewer's own worker keep a core; the *Workers* box takes all of them (or any number from 1). Results do not depend on the
-number, only the time does. Not in the panel yet: a league with more brains than colonies, a chart averaged over several games, a sweep
-of two sliders (a grid), a sweep of the role mix.
+The **Workshop**'s "Chart this match" draws the nest food (or the ants alive) of every colony over time for the match above it, 200 samples
+(`src/series.ts`; `cli/series.ts` prints the same numbers: `node cli/series.ts A B [C ...] [--world FILE] --seed S --rounds N --every K
+--rules R [--what food|alive] [--json]`; without `--world` the world is the contest generator's world of the seed, as in the viewer).
+One game shows how it went, not how a brain does. The workshop also saves the map now, and gets it back on reload.
+
+Not yet: the map designer page, a league with more brains than colonies, a chart averaged over several games, a sweep of two sliders, a
+sweep of the role mix, and the workshop on the shared viewer component (it keeps its own richer viewer for now).
 
 ## Not done
 

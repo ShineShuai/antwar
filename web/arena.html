@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tinyminds arena</title>
+<style>
+  :root { --bg: #fafaf9; --fg: #1c1917; --mut: #78716c; --card: #fff; --line: #d6d3d1; --err: #b91c1c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1917; --fg: #fafaf9; --mut: #a8a29e; --card: #292524; --line: #44403c; --err: #f87171; }
+  }
+  body { margin: 0; padding: 12px; background: var(--bg); color: var(--fg); font: 14px system-ui, sans-serif; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 640px); gap: 16px; align-items: start; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  .viewer { position: sticky; top: 8px; display: grid; gap: 6px; }
+  .viewer canvas { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  h2 { font-size: 14px; margin: 12px 0 4px; }
+  a { color: inherit; }
+  code { font: 12px ui-monospace, monospace; }
+  label { display: inline-flex; gap: 4px; align-items: center; color: var(--mut); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 4px 0; }
+  input, select, button { font: inherit; padding: 4px 8px; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; }
+  button { cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .note { font-size: 12px; color: var(--mut); overflow-wrap: anywhere; }
+  .err { color: var(--err); }
+  .nav { display: flex; gap: 14px; margin: 0 0 8px; font-size: 13px; }
+  .nav a { color: var(--mut); text-decoration: none; }
+  .nav a.here { color: var(--fg); font-weight: 600; text-decoration: underline; }
+  .evaltabs { display: flex; gap: 4px; margin: 10px 0 6px; flex-wrap: wrap; }
+  .evaltabs button.on { font-weight: 600; border-color: var(--fg); }
+  .evalout { margin: 4px 0; font: 12px ui-monospace, monospace; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
+  table.games { border-collapse: collapse; font-size: 12px; width: 100%; }
+  table.games td { padding: 2px 6px; border-bottom: 1px solid var(--line); }
+  table.games button { padding: 0 8px; }
+  .gameswrap { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; margin-top: 4px; }
+  .brains { display: grid; gap: 2px; font-size: 13px; }
+  .brains b { display: inline-block; width: 1.5em; }
+  details { color: var(--mut); font-size: 13px; }
+</style>
+<nav id="nav"></nav>
+<h1>Tinyminds arena</h1>
+<main>
+  <div>
+    <div class="note">Compare brains on many worlds. The brains, the seed, the Rules and the map come from the <a href="index.html">Workshop</a>
+      (this page reads what it saved; edit there). Every result shows the command that reproduces it, and every game can be watched.</div>
+    <h2>The project</h2>
+    <div id="project"></div>
+    <div class="row"><button id="reload">Reload from the workshop</button><button id="match">Watch the workshop's match</button></div>
+    <div id="evalhost"></div>
+    <details>
+      <summary>About the numbers</summary>
+      <p>Games on one world are not independent (both colours play it), so intervals are approximate. A result of &ldquo;no clear
+        difference&rdquo; or &ldquo;no bias found&rdquo; is not proof. The league scores 2 points for each colony out-scored and 1 for each
+        tie, the n-colony ranking proposed in <code>docs/MATCH.md</code>, not the contest's. <em>Workers</em>: the games run on that many
+        Web Workers; the default leaves one core to the page.</p>
+    </details>
+  </div>
+  <div class="viewer"><div id="viewhost"></div></div>
+</main>
+<script type="module" src="arena.js"></script>

@@ -55,6 +55,9 @@
   #verify.err { color: var(--err); }
   @media (prefers-color-scheme: dark) { #verify.ok { color: #4ade80; } }
   #tl { width: 100%; box-sizing: border-box; padding: 0; }
+  .nav { display: flex; gap: 14px; margin: 0 0 8px; font-size: 13px; }
+  .nav a { color: var(--mut); text-decoration: none; }
+  .nav a.here { color: var(--fg); font-weight: 600; text-decoration: underline; }
   .evalhead { margin: 10px 0 2px; font-weight: 600; color: var(--fg); }
   .evalout { margin: 4px 0; font: 12px ui-monospace, monospace; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
   .note .warn { color: #a16207; }
@@ -82,6 +85,7 @@
   .pers .w { display: grid; gap: 2px; font-size: 11px; }
   .pers .w input { width: 4.2em; }
 </style>
+<nav id="nav"></nav>
 <h1 style="font-size:18px;margin:0 0 8px">Tinyminds workshop</h1>
 <main>
   <canvas id="view" width="900" height="800"></canvas>
@@ -154,22 +158,11 @@
       <p style="font-size:12px;color:var(--mut);margin:4px 0">Its recent rules, newest first (run to record). Click a line to jump to it in the editor.</p>
       <div id="trace"></div>
     </details>
-    <details id="evalbox">
-      <summary>Evaluate (two brains, many worlds)</summary>
-      <p>Plays one brain against another on many worlds, once per colour, on your cores. The numbers are those of
-        <code>cli/tourney.ts</code>, and the command that reproduces them is shown. Mirrored worlds give both colonies the same terrain;
-        the interval is approximate (the two games of a world are not independent).</p>
-      <p>The second part puts one brain in every colony of the map shown and asks whether each colony wins about 1 game in n
-        (<code>cli/fairness.ts</code>). It measures a map and a brain together, and a result of "no bias found" is not proof of fairness.</p>
-      <p>The third part is a league of all the editors (<code>cli/league.ts</code>): every world is played once per rotation, so each brain
-        takes each hill once and the value of a place cancels. A game scores 2 points for each colony out-scored and 1 for each tie, the
-        n-colony ranking proposed in <code>docs/MATCH.md</code> (not the contest's).</p>
-      <p>The last part draws the nest food (or the ants alive) of every colony over time for the match you are watching
-        (<code>cli/series.ts</code>). One game shows how it went, not how a brain does.</p>
-      <p>The sweep plays one brain written by the sliders at every level of one slider against a reference editor, on the same worlds,
-        both colours (<code>cli/sweep.ts</code>). <em>Workers</em>: the games run on that many Web Workers; the default leaves one core to
-        the page, and you can take them all.</p>
-      <div id="evalhost"></div>
+    <details id="chartbox">
+      <summary>Chart this match</summary>
+      <p>Draws the nest food (or the ants alive) of every colony over time for the match above (<code>cli/series.ts</code> gives the same
+        numbers). One game shows how it went, not how a brain does: compare brains on many worlds in the <a href="arena.html">Arena</a>.</p>
+      <div id="charthost"></div>
     </details>
     <details id="explain">
       <summary>Explain why (rules brains)</summary>

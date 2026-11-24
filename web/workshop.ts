@@ -6,7 +6,9 @@ import { RULESETS, RULESET_NAMES, canonicalRules } from '../src/core/rules.ts';
 import type { RulesId } from '../src/core/rules.ts';
 import { decodeShare, encodeShare } from './share.ts';
 import { describeBrain, fireRows, lineOfMessage, traceRows, whereIs } from './brain.ts';
-import { mountEvaluate } from './evaluate.ts';
+import { mountMatchChart } from './matchchart.ts';
+import { mountNav } from './nav.ts';
+import { PROJECT_KEY } from './project.ts';
 import { mountHighlight } from './highlight.ts';
 import { mountPersonality } from './personality.ts';
 import type { BrainInfo } from './brain.ts';
@@ -90,17 +92,21 @@ let infos: BrainInfo[] = []; // the brains as they were when the match was start
 baBox.value = bbBox.value = STARTER;
 
 // Edits survive a reload (per-browser convenience only); a share link, when present, wins over them.
-const KEY = 'tinyminds.workshop.v1';
+const KEY = PROJECT_KEY; // the saved project is shared with the other pages (web/project.ts)
 const save = (): void => {
-  try { localStorage.setItem(KEY, JSON.stringify({ seed: seedBox.value, a: baBox.value, b: bbBox.value, more: keepBrains(savedMore, boxes.slice(2).map((b) => b.value)), rules: rulesBox.value })); } catch { /* storage may be blocked */ }
+  try { localStorage.setItem(KEY, JSON.stringify({ seed: seedBox.value, a: baBox.value, b: bbBox.value, more: keepBrains(savedMore, boxes.slice(2).map((b) => b.value)), rules: rulesBox.value, world: { kind: worldKind, text: mapText } })); } catch { /* storage may be blocked */ }
 };
 const restore = (): void => {
   try {
-    const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { seed?: string; a?: string; b?: string; more?: unknown; rules?: string } | null;
+    const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { seed?: string; a?: string; b?: string; more?: unknown; rules?: string; world?: { kind?: unknown; text?: unknown } } | null;
     if (Array.isArray(s?.more)) savedMore = s.more.filter((t): t is string => typeof t === 'string').slice(0, MAX_COLONIES - 2);
     if (typeof s?.rules === 'string' && Object.hasOwn(RULESETS, s.rules)) rulesBox.value = canonicalRules(s.rules as RulesId);
     if (typeof s?.a === 'string' && typeof s.b === 'string') { baBox.value = s.a; bbBox.value = s.b; }
     if (typeof s?.seed === 'string' && s.seed !== '') seedBox.value = s.seed;
+    const w = s?.world; // the map comes back too (the other pages write it as well)
+    if (typeof w?.kind === 'string' && /^(|custom|mirror|fair\d+|\d+)$/.test(w.kind) && typeof w.text === 'string' && w.text.length <= 1 << 17 && (w.kind === '' ? w.text === '' : w.text !== '')) {
+      worldKind = w.kind; mapText = w.text; exWorld.value = worldKind;
+    }
   } catch { /* corrupt or blocked storage: keep the defaults */ }
 };
 async function fromHash(): Promise<boolean> {
@@ -172,7 +178,6 @@ function start(): void {
   }
   colNote.textContent = want > 2 ? `${want} colonies, one brain each. Ranking: more food ranks higher, and a colony scores 2 points for each colony it out-scores and 1 for each tie (docs/MATCH.md).` : '';
   setColonies(want);
-  evalPanel.refresh();
   infos = boxes.map((b) => describeBrain(b.value, RULESETS[rulesId()]));
   selected = null; wantTrack = undefined; wantSeek = undefined; check = null;
   verifyBox.textContent = ''; verifyBox.className = ''; tl.value = '0'; startedKey = keyNow();
@@ -313,7 +318,7 @@ boxes.forEach(bindBox);
 boxes.forEach(mountHighlight);
 $<HTMLInputElement>('world').onchange = async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
-  if (file) { mapText = await file.text(); worldKind = 'custom'; exWorld.value = worldKind; start(); }
+  if (file) { mapText = await file.text(); worldKind = 'custom'; exWorld.value = worldKind; save(); start(); }
 };
 document.querySelectorAll<HTMLSelectElement>('select.ex').forEach(fillExamples);
 const exWorld = $<HTMLSelectElement>('exworld');
@@ -339,9 +344,11 @@ function reseed(): void {
 exWorld.onchange = () => {
   worldKind = exWorld.value;
   mapText = worldText(worldKind, seedNumber());
+  save();
   start();
 };
-const evalPanel = mountEvaluate($('evalhost'), {
+mountNav($('nav'), 'workshop');
+mountMatchChart($('charthost'), {
   brains: () => ({ names: boxes.map((_, c) => letter(c)), texts: boxes.map((b) => b.value) }), rules: rulesId,
   world: () => ({ kind: worldKind, mapText, seed: seedNumber() }),
 });
