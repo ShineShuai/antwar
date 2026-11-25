@@ -219,7 +219,7 @@ write brains, watch a match, chart it), the **Arena** (`arena.html`: compare bra
 a project: the workshop's saved state in the browser (brains in colony order, the seed, the Rules and the map; `web/project.ts`). The
 Arena reads it (press *Reload*, or it follows the workshop's saves from another window) and never edits it: brains are edited in the
 workshop. The map and the match of the project are on screen at once, paused at round 0, in a viewer at the right of the page
-(`web/gameview.ts`, the workshop's replay engine and renderer).
+(`web/gameview.ts`: the workshop's replay engine and renderer, and the same replay loop, `web/replay-controller.ts`).
 
 Every result of the Arena lists its games, and **Watch** loads that game into the viewer (`src/watch.ts`): the same world, the brain on each
 hill, the seed. The replay ends in exactly the numbers the batch recorded (food per hill and the state hash; `test/watch.test.ts`), so
@@ -283,7 +283,7 @@ Open decision: the editor keeps wrapped maps and offers the border as a button; 
 Not yet: the fairness check inside this page (it is one click away in the Arena), the map thumbnails in the library, resizing a map.
 
 Not yet in the Arena: a league with more brains than colonies, a chart averaged over several games, a sweep of two sliders, a
-sweep of the role mix, and the workshop on the shared viewer component (it keeps its own richer viewer for now).
+sweep of the role mix.
 
 ## Not done
 
