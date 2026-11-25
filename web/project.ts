@@ -59,3 +59,11 @@ export function worldLabel(p: Project): string {
   if (/^fair\d+$/.test(k)) return `a fair world for ${k.slice(4)} colonies (seed ${p.seed})`;
   return `a ring example with ${k} colonies`;
 }
+
+/** Saves `world` into the project (the other saved fields stay): the workshop and the Arena show it next. Throws RangeError for a world the project does not take. */
+export function writeProjectWorld(storage: Pick<Storage, 'getItem' | 'setItem'>, world: ProjectWorld): void {
+  if (!KINDS.test(world.kind) || world.mapText.length > MAX_MAP_TEXT || (world.kind === '' ? world.mapText !== '' : world.mapText === '')) throw new RangeError('not a world the project can take');
+  let s: Record<string, unknown> = {};
+  try { const v = JSON.parse(storage.getItem(PROJECT_KEY) ?? 'null') as unknown; if (v && typeof v === 'object' && !Array.isArray(v)) s = v as Record<string, unknown>; } catch { /* a damaged project is replaced */ }
+  storage.setItem(PROJECT_KEY, JSON.stringify({ ...s, world: { kind: world.kind, text: world.mapText } }));
+}

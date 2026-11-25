@@ -11,7 +11,7 @@ const need = (from: string, spec: string): void => {
   else if (!existsSync(target)) problems.push(`${relative(root, from)}: missing ${spec}`);
 };
 
-for (const must of ['index.html', 'arena.html', 'reference.html', 'web/sim-worker.js', 'web/batch-worker.js', 'web/workshop.js', 'web/arena.js']) {
+for (const must of ['index.html', 'arena.html', 'maps.html', 'reference.html', 'web/sim-worker.js', 'web/batch-worker.js', 'web/workshop.js', 'web/arena.js', 'web/maps.js']) {
   if (!existsSync(join(root, must))) problems.push(`dist/${must} is missing`);
 }
 const files = existsSync(root) ? walk(root) : [];
@@ -20,7 +20,7 @@ for (const f of files) {
   if (f.endsWith('.js')) {
     for (const m of text.matchAll(/(?:from|import)\s*\(?\s*["'](\.{1,2}\/[^"']+)["']/g)) need(f, m[1]);
     for (const m of text.matchAll(/new URL\(\s*["'](\.{1,2}\/[^"']+)["']/g)) need(f, m[1]);
-  } else if (f.endsWith('index.html') || f.endsWith('arena.html')) {
+  } else if (f.endsWith('index.html') || f.endsWith('arena.html') || f.endsWith('maps.html')) {
     for (const m of text.matchAll(/(?:src|href)="([^"#:]+)"/g)) need(f, m[1]);
   }
 }

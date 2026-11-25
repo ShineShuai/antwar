@@ -257,7 +257,32 @@ The **Workshop**'s "Chart this match" draws the nest food (or the ants alive) of
 --rules R [--what food|alive] [--json]`; without `--world` the world is the contest generator's world of the seed, as in the viewer).
 One game shows how it went, not how a brain does. The workshop also saves the map now, and gets it back on reload.
 
-Not yet: the map designer page, a league with more brains than colonies, a chart averaged over several games, a sweep of two sliders, a
+## The map designer (maps.html)
+
+The **Maps** page draws a world and says what is wrong with it while you draw (`web/mapedit.ts` is the model, `web/maps.ts` the page).
+
+* **Brushes:** rock, food (1 to 9, what the map text can say), hill (A to Z) and erase, of 1, 7 or 19 cells, with undo and redo (100 steps).
+  Rock and food do not go onto a hill (erase it first); a hill clears the rock and food under it. *Rock border* adds the border the
+  contest's engine needs (the world wraps, so Tinyminds does not): hills on the edge stay, food on the edge goes.
+* **Symmetry:** *point mirror* (two colonies) draws every stroke twice, turned half a turn, and hill A makes hill B. *Tiles* (n
+  colonies; none for 13, 17, 19, 23 or 26) draws every stroke in all tiles of the layout `generateFairWorld` uses, and the hill of
+  tile t is colony t, so a drawn map is `isShiftSymmetric` by construction (tested for 3, 4 and 6 colonies). Choosing tiles starts a new empty map of the
+  right size.
+* **Checks** (live, after each stroke): colonies (hills A, B, C... without a gap), hill sizes, food (total, and the food nearest to
+  each hill by walking distance, shared at a tie), reachability (without wrapping, as the contest's engine; or only by wrapping),
+  point-mirror symmetry (`isSymmetric`), same terrain for every colony (`isShiftSymmetric`, which also requires the hills as a whole
+  to map onto themselves) and whether there is a rock border. A check says what it found; it never blocks you.
+* **Generate:** the contest, mirrored and fair generators, with the seed and the contest generator's parameters (size, hill radius,
+  rocks and their size, food blobs and cell amount); a generated map arrives with the matching symmetry on, so you can go on editing it.
+* **Files:** import and export `.world` (the contest's text format), copy the text, and a **library** of named maps in the browser (50
+  maps, 128 KiB each). The drawing itself is kept in the browser too, and comes back when you open the page.
+* **Use this map:** *Play in the workshop* and *Check fairness in the Arena* save the map as the project's map (`web/project.ts`) and
+  go there; the Arena's Fairness tab measures a map and a brain together.
+
+Open decision: the editor keeps wrapped maps and offers the border as a button; the contest generator's worlds (the workshop's default) have one.
+Not yet: the fairness check inside this page (it is one click away in the Arena), the map thumbnails in the library, resizing a map.
+
+Not yet in the Arena: a league with more brains than colonies, a chart averaged over several games, a sweep of two sliders, a
 sweep of the role mix, and the workshop on the shared viewer component (it keeps its own richer viewer for now).
 
 ## Not done

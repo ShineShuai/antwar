@@ -46,3 +46,45 @@ test('brainSummary and worldLabel', () => {
   assert.equal(worldLabel({ ...p, world: { kind: 'custom', mapText: 'm' } }), 'a custom map (a file or a link)');
   assert.equal(worldLabel({ ...p, world: { kind: '4', mapText: 'm' } }), 'a ring example with 4 colonies');
 });
+
+// ---- writing the world, and the library of maps
+import { LIB_KEY, MAX_MAPS, deleteMap, readLibrary, saveMap } from '../web/maplib.ts';
+import { writeProjectWorld } from '../web/project.ts';
+
+const mem = (init: Record<string, string> = {}): Pick<Storage, 'getItem' | 'setItem'> & { data: Record<string, string> } => {
+  const data = { ...init };
+  return { data, getItem: (k) => data[k] ?? null, setItem: (k, v) => { data[k] = v; } };
+};
+
+test('writeProjectWorld: the world is saved, the rest of the project stays, bad worlds are refused', () => {
+  const s = mem({ [PROJECT_KEY]: JSON.stringify({ seed: '5', a: 'A-text', more: ['C'], rules: 'altorder' }) });
+  writeProjectWorld(s, { kind: 'custom', mapText: 'MAP' });
+  const back = readProject(s);
+  assert.deepEqual(back.world, { kind: 'custom', mapText: 'MAP' }); assert.equal(back.seed, 5); assert.equal(back.rules, 'altorder'); assert.deepEqual(back.texts, ['A-text', STARTER, 'C']);
+  writeProjectWorld(s, { kind: '', mapText: '' }); assert.deepEqual(readProject(s).world, { kind: '', mapText: '' });
+  assert.throws(() => writeProjectWorld(s, { kind: 'custom', mapText: '' }), RangeError, 'a custom map has a text');
+  assert.throws(() => writeProjectWorld(s, { kind: '', mapText: 'x' }), RangeError, 'the contest generator has none');
+  assert.throws(() => writeProjectWorld(s, { kind: 'weird', mapText: 'x' }), RangeError);
+  assert.throws(() => writeProjectWorld(s, { kind: 'custom', mapText: 'x'.repeat((1 << 17) + 1) }), RangeError);
+  const fresh = mem(); writeProjectWorld(fresh, { kind: 'custom', mapText: 'M' }); assert.deepEqual(readProject(fresh).world, { kind: 'custom', mapText: 'M' });
+  const broken = mem({ [PROJECT_KEY]: '{oops' }); writeProjectWorld(broken, { kind: 'mirror', mapText: 'M' }); assert.equal(readProject(broken).world.kind, 'mirror');
+});
+
+test('the library: save, replace, delete, limits, damaged data', () => {
+  const s = mem();
+  assert.deepEqual(readLibrary(s), []);
+  saveMap(s, ' first ', 'T1', 10); saveMap(s, 'second', 'T2', 20);
+  assert.deepEqual(readLibrary(s).map((m) => [m.name, m.text, m.savedAt]), [['first', 'T1', 10], ['second', 'T2', 20]]);
+  saveMap(s, 'first', 'T1b', 30);
+  assert.deepEqual(readLibrary(s).map((m) => [m.name, m.text]), [['second', 'T2'], ['first', 'T1b']], 'the same name is replaced and moves to the end');
+  assert.deepEqual(deleteMap(s, 'second').map((m) => m.name), ['first']); assert.deepEqual(deleteMap(s, 'nope').map((m) => m.name), ['first']);
+  assert.throws(() => saveMap(s, '  ', 'T'), RangeError); assert.throws(() => saveMap(s, 'x'.repeat(41), 'T'), RangeError);
+  assert.throws(() => saveMap(s, 'big', 'x'.repeat((1 << 17) + 1)), RangeError);
+  const full = mem(); for (let k = 0; k < MAX_MAPS; k++) saveMap(full, `m${k}`, 't');
+  assert.throws(() => saveMap(full, 'one more', 't'), /holds 50/); assert.doesNotThrow(() => saveMap(full, 'm3', 'replaced'), 'replacing is allowed when full');
+  const heavy = mem(); for (let k = 0; k < 24; k++) saveMap(heavy, `h${k}`, 'x'.repeat(1 << 17));
+  assert.throws(() => saveMap(heavy, 'h99', 'x'.repeat(1 << 17)), /full/);
+  for (const bad of ['{oops', 'null', '{"a":1}', '[1,"x",{"name":"n"},{"name":"","text":"t","savedAt":1},{"name":"ok","text":"t","savedAt":2},{"name":"ok","text":"dup","savedAt":3}]'])
+    assert.ok(readLibrary(mem({ [LIB_KEY]: bad })).every((m) => m.name === 'ok'), bad);
+  assert.deepEqual(readLibrary(mem({ [LIB_KEY]: '[{"name":"ok","text":"t","savedAt":2},{"name":"ok","text":"dup","savedAt":3}]' })).map((m) => m.text), ['t'], 'the first of a duplicated name');
+});

@@ -28,7 +28,7 @@ Spec: `reference.html`.
 - `src/core/replay.ts` `createReplay()` (hash checkpoints every 1,000 rounds, keyframes every 2,000, `seek`), replay descriptor `record()`/`verify()`; `docs/REPLAY.md`
 - `src/core/sim.ts`    `createSim()`, canonical state stream `snapshot()`/`restore()`, `hash()` = FNV-1a of it; rulesets `CLASSIC` (the task, exactly) and `TINYMINDS` (carry two,
   direction/payload). v1: two colonies, no scare rule, no drop on blocked move
-- `web/`               the pages: `workshop.html` + `workshop.ts` (canvas viewer, `sim-worker.ts`, `engine.ts`, `colonies.ts`: 2 to 26 colonies) and `arena.html` + `arena.ts` (compare brains on many worlds: `evaluate.ts`, `pool.ts` and the batch Worker, `gameview.ts` to watch any game); shared: `project.ts` (the saved project), `nav.ts`
+- `web/`               the pages: `workshop.html` + `workshop.ts` (canvas viewer, `sim-worker.ts`, `engine.ts`, `colonies.ts`: 2 to 26 colonies) `arena.html` + `arena.ts` (compare brains on many worlds: `evaluate.ts`, `pool.ts` and the batch Worker, `gameview.ts` to watch any game) and `maps.html` + `maps.ts` (the map designer: `mapedit.ts`, `maplib.ts`); shared: `project.ts` (the saved project), `nav.ts`
 - `src/`              also the numbers behind the Arena, each with a CLI: `headtohead.ts` (`cli/tourney.ts`), `league.ts`, `sweep.ts`, `fairness.ts`, `series.ts`, and `watch.ts` (a game as the viewer needs it); see `docs/MATCH.md`
 - `src/lang/`         rules compiler (levels 1-2, trail kit): `compileRules(text)`; `node cli/rc.ts FILE.rules [--asm | --ant] [--fire-counts]`; see `docs/RULES.md`
 - `docs/STEALING.md`  nest stealing, measured twice (against the original and the retuned trail ant); the Keeper template

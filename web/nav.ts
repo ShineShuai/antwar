@@ -1,8 +1,9 @@
 // The bar at the top of every page: the pages of the site (each a plain HTML file, dist/ root) and the reference.
-export type Page = 'workshop' | 'arena';
+export type Page = 'workshop' | 'arena' | 'maps';
 const PAGES: { id: Page; href: string; label: string; help: string }[] = [
   { id: 'workshop', href: 'index.html', label: 'Workshop', help: 'write brains and watch a match' },
   { id: 'arena', href: 'arena.html', label: 'Arena', help: 'compare brains on many worlds: head to head, league, sweep' },
+  { id: 'maps', href: 'maps.html', label: 'Maps', help: 'design and check maps' },
 ];
 
 export function mountNav(host: HTMLElement, current: Page): void {
