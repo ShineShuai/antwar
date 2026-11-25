@@ -17,6 +17,10 @@ export interface Ctx {
 }
 export interface DrawData { food: Uint16Array; marks: Uint8Array; ants: Int32Array }
 
+/** How strongly a heat-map cell is tinted: from a faint 0.12 for the least busy to 0.8 for the busiest (square root, so that a few hot cells
+ * do not hide all the others); 0 for a cell with no count. */
+export const heatAlpha = (h: number, max: number): number => (h <= 0 || max <= 0 ? 0 : 0.12 + 0.68 * Math.sqrt(Math.min(1, h / max)));
+
 /** Pixel layout for pointy-top hexes, odd rows shifted right (as in the task spec). */
 export function layout(W: number, H: number, w: number): Layout {
   const h = (2 * w) / SQRT3;
@@ -65,10 +69,20 @@ export function createViewer(ctx: Ctx, { W, H, rock, hill }: Pick<WorldMap, 'W' 
   };
   const disc = (cx: number, cy: number, r: number): void => { ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill(); };
   return {
-    draw({ food, marks, ants }: DrawData, opts: { marks?: boolean; /** id of an ant to ring */ selected?: number | null } = {}): void {
+    draw({ food, marks, ants }: DrawData, opts: { marks?: boolean; /** id of an ant to ring */ selected?: number | null; /** a count per cell, tinted under the food and the ants */ heat?: Uint32Array } = {}): void {
       ctx.fillStyle = colors.bg;
       ctx.fillRect(0, 0, L.width, L.height);
       for (const [cx, cy, c] of fixed) { ctx.fillStyle = c; hex(cx, cy); }
+      if (opts.heat) {
+        let max = 0;
+        for (let p = 0; p < opts.heat.length; p++) if (opts.heat[p] > max) max = opts.heat[p];
+        for (let p = 0; p < opts.heat.length; p++) {
+          const a = heatAlpha(opts.heat[p], max);
+          if (!a || rock[p]) continue;
+          const [cx, cy] = center(L, p % W, (p / W) | 0);
+          ctx.fillStyle = `rgba(234, 88, 12, ${a.toFixed(3)})`; hex(cx, cy);
+        }
+      }
       ctx.fillStyle = colors.food;
       for (let p = 0; p < food.length; p++) {
         if (!food[p] || rock[p]) continue;

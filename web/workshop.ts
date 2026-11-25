@@ -1,5 +1,5 @@
 import { EXAMPLES, STARTER } from './default-ant.ts';
-import { describeCell } from './inspect.ts';
+import { describeCell, senses } from './inspect.ts';
 import { GENERATOR_VERSION, SYMMETRIC_WORLD, generateFairWorld, generateWorld } from '../src/core/gen.ts';
 import { formatMap, parseMap } from '../src/core/map.ts';
 import { RULESETS, RULESET_NAMES, canonicalRules } from '../src/core/rules.ts';
@@ -12,7 +12,7 @@ import { PROJECT_KEY } from './project.ts';
 import { mountHighlight } from './highlight.ts';
 import { mountPersonality } from './personality.ts';
 import type { BrainInfo } from './brain.ts';
-import type { Reply } from './protocol.ts';
+import type { HeatTarget, Reply } from './protocol.ts';
 import { createReplayController } from './replay-controller.ts';
 import type { ReplayWorker } from './replay-controller.ts';
 import { MAX_COLONIES, colonyCount, colonyName, exampleWorld, keepBrains, letter, paletteFor, statusLine } from './colonies.ts';
@@ -38,6 +38,9 @@ const noteEls: HTMLElement[] = [$('na'), $('nb')], moreHost = $('more'), colNote
 let savedMore: string[] = []; // brains of colonies C.. from the last session, offered again when the map brings those colonies back
 const explainBox = $<HTMLInputElement>('explainOn'), firesBox = $('fires'), antBox = $('ant'), traceBox = $('trace');
 let selected: number | null = null, selectedCol = 0; // id and colony of the ant being followed
+let world: { W: number; H: number; rock: Uint8Array; hill: Int8Array } | undefined; // what the replay engine reported when it was ready
+let heatTarget: HeatTarget | null = null; // what the board is tinted for (the engine counts it while it explains)
+const heatNote = $('heatnote'), sensesBox = $('senses'), breakRow = $('breakrow'), breakRule = $<HTMLSelectElement>('breakRule');
 let scrubbing = false;
 let expect: { round: number; hash: number } | null = null; // from a share link: seek there once the match is ready
 let check: { round: number; hash: number } | null = null; // being verified: compared with the frame at that round
@@ -141,6 +144,28 @@ let noteTimer: ReturnType<typeof setTimeout> | undefined;
 const updateNotes = (): void => boxes.forEach((b, c) => note(noteEls[c], describeBrain(b.value, RULESETS[rulesId()]), c));
 const updateNotesSoon = (): void => { clearTimeout(noteTimer); noteTimer = setTimeout(updateNotes, 250); };
 
+const sameHeat = (a: HeatTarget | null, b: HeatTarget): boolean => !!a && a.col === b.col && a.rule === b.rule;
+/** A small button that tints the board for a target, or clears it when it already is. Redrawn with the rows, so `on` follows the target. */
+function heatButton(t: HeatTarget, title: string): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.className = `hb${sameHeat(heatTarget, t) ? ' on' : ''}`; b.textContent = 'map'; b.title = `${title} (tints the board; needs the box above ticked)`;
+  b.onclick = (e) => { e.stopPropagation(); setHeat(sameHeat(heatTarget, t) ? null : t); };
+  return b;
+}
+function setHeat(t: HeatTarget | null): void {
+  heatTarget = t; rc.heat(t);
+  if (last) renderFires(last.fires);
+  describeHeat(last);
+}
+function describeHeat(f: Extract<Reply, { type: 'frame' }> | undefined): void {
+  if (!heatTarget) { heatNote.textContent = ''; return; }
+  const info = infos[heatTarget.col], rule = heatTarget.rule === undefined ? undefined : info?.ok ? info.rules.find((r) => r.id === heatTarget?.rule) : undefined;
+  const what = `${rule ? `rule \"${rule.mood}: ${rule.text}\"` : 'all acting ants'} of colony ${letter(heatTarget.col)}`;
+  let max = 0;
+  if (f?.heat) for (const h of f.heat) if (h > max) max = h;
+  heatNote.textContent = !explainBox.checked ? `Heat map: ${what}. Tick the box above: only rounds run with it ticked are counted.`
+    : max === 0 ? `Heat map: ${what}. Nothing counted yet: run some rounds.` : `Heat map: ${what}; the hottest cell has ${max} ant-rounds (since the last seek or Reset).`;
+}
 function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void {
   firesBox.replaceChildren();
   fires.forEach((f, c) => {
@@ -149,6 +174,7 @@ function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void 
     const head = document.createElement('div');
     head.className = 'fh';
     head.textContent = `Colony ${letter(c)}: ${f.total} acting ant-rounds counted`;
+    head.append(heatButton({ col: c }, 'where this colony\'s ants act'));
     firesBox.append(head);
     const hot = selected !== null && selectedColony() === c ? hereNow()?.rule : undefined;
     for (const row of fireRows(info.rules, f)) {
@@ -158,7 +184,9 @@ function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void 
       if (row.line) { const line = row.line; d.title = `go to line ${line}`; d.onclick = () => jumpTo(c, line); }
       t.style.width = `${row.test * 100}%`; a.style.width = `${row.act * 100}%`;
       pct.textContent = `${((row.test + row.act) * 100).toFixed(1)}%`; code.textContent = row.label;
-      bar.append(t, a); d.append(bar, pct, code); firesBox.append(d);
+      bar.append(t, a); d.append(bar, pct, code);
+      if (row.rule >= 0) d.append(heatButton({ col: c, rule: row.rule }, 'where this rule is run'));
+      firesBox.append(d);
     }
   });
 }
@@ -171,7 +199,7 @@ const rc = createReplayController({
 }, {
   ready(m) {
     const w = Math.max(4, Math.min(10, Math.floor(900 / (m.W + 1)))), L = layout(m.W, m.H, w);
-    canvas.width = L.width; canvas.height = L.height; geom = { L, W: m.W, H: m.H };
+    canvas.width = L.width; canvas.height = L.height; geom = { L, W: m.W, H: m.H }; world = { W: m.W, H: m.H, rock: m.rock, hill: m.hill };
     viewer = createViewer(ctx, m, L, paletteFor(boxes.length, matchMedia('(prefers-color-scheme: dark)').matches));
     if (expect && expect.round > 0) { check = expect; say(`Re-running to round ${expect.round} to check the link…`); }
     expect = null;
@@ -187,10 +215,11 @@ const rc = createReplayController({
         : `✗ unverified: the link says hash ${check.hash} at round ${cycle}, this run gives ${m.hash} (other version or edited link)`;
       check = null;
     }
-    viewer?.draw(m, { marks: marksBox.checked, selected });
+    viewer?.draw(m, { marks: marksBox.checked, selected, heat: m.heat });
     renderAnt(m);
     renderFires(m.fires);
-    say(statusLine(cycle, m.score, m.alive, MATCH));
+    describeHeat(m);
+    say(m.stopped && selected !== null ? `Stopped at round ${cycle}: ant #${selected} is about to run the rule you chose. ${statusLine(cycle, m.score, m.alive, MATCH)}` : statusLine(cycle, m.score, m.alive, MATCH));
   },
   error(message) { say(message, true); },
   running(on) { goBtn.textContent = on ? 'Pause' : 'Run'; },
@@ -204,7 +233,7 @@ function start(): void {
   colNote.textContent = want > 2 ? `${want} colonies, one brain each. Ranking: more food ranks higher, and a colony scores 2 points for each colony it out-scores and 1 for each tie (docs/MATCH.md).` : '';
   setColonies(want);
   infos = boxes.map((b) => describeBrain(b.value, RULESETS[rulesId()]));
-  selected = null; check = null;
+  selected = null; check = null; heatTarget = null; heatNote.textContent = '';
   verifyBox.textContent = ''; verifyBox.className = ''; tl.value = '0'; startedKey = keyNow();
   antBox.textContent = 'Click an ant to follow it.'; traceBox.replaceChildren();
   syncPanels();
@@ -225,10 +254,25 @@ function hereNow(): ReturnType<typeof whereIs> | undefined {
   const info = i < 0 ? undefined : infos[last?.ants[i + 2] ?? 0];
   return info && last ? whereIs(info, last.ants[i + 5]) : undefined;
 }
+/** The debugger under the ant: what it senses where it stands, and a break on a rule (rules brains). */
+function renderDebugger(f: Extract<Reply, { type: 'frame' }>, i: number): void {
+  sensesBox.replaceChildren(); breakRow.hidden = true;
+  if (i < 0 || !world) return;
+  for (const r of senses(f, world, i)) { const d = document.createElement('div'); d.textContent = `${r.name}: ${r.text}`; sensesBox.append(d); }
+  const info = infos[selectedCol];
+  if (!info?.ok || info.kind !== 'rules' || info.rules.length === 0) return;
+  const keep = breakRule.value;
+  if (breakRule.dataset.col !== String(selectedCol) || breakRule.length !== info.rules.length) {
+    breakRule.length = 0; info.rules.forEach((r) => breakRule.add(new Option(`${r.mood}: ${r.text}`, String(r.id)))); breakRule.dataset.col = String(selectedCol);
+    if (keep !== '' && Number(keep) < info.rules.length && breakRule.dataset.col === String(selectedCol)) breakRule.value = keep;
+  }
+  breakRow.hidden = false;
+}
 function renderAnt(f: Extract<Reply, { type: 'frame' }>): void {
   antBox.replaceChildren(); traceBox.replaceChildren();
-  if (selected === null) { antBox.textContent = 'Click an ant to follow it.'; return; }
+  if (selected === null) { antBox.textContent = 'Click an ant to follow it.'; renderDebugger(f, -1); return; }
   const i = selectedRow();
+  renderDebugger(f, i);
   const col = selectedCol;
   if (i < 0) { antBox.textContent = `ant #${selected} is dead (its last rules are below).`; }
   else {
@@ -254,7 +298,8 @@ function renderAnt(f: Extract<Reply, { type: 'frame' }>): void {
     d.append(rd, code); traceBox.append(d);
   }
 }
-marksBox.onchange = () => { if (last) viewer?.draw(last, { marks: marksBox.checked }); };
+explainBox.onchange = () => describeHeat(last);
+marksBox.onchange = () => { if (last) viewer?.draw(last, { marks: marksBox.checked, heat: last.heat }); };
 canvas.onclick = (e) => {
   if (!geom || !last) return;
   const r = canvas.getBoundingClientRect();
@@ -265,7 +310,7 @@ canvas.onclick = (e) => {
     if (last.ants[i + 1] !== p) continue;
     selected = last.ants[i]; selectedCol = last.ants[i + 2];
     rc.track(selected);
-    viewer?.draw(last, { marks: marksBox.checked, selected });
+    viewer?.draw(last, { marks: marksBox.checked, selected, heat: last.heat });
     renderAnt(last);
     break;
   }
@@ -283,6 +328,7 @@ addEventListener('keydown', (e) => { // reference, client UI: Space play/pause; 
   } else if (e.key === ' ' && !(t instanceof HTMLElement && t.tagName === 'BUTTON')) { e.preventDefault(); rc.toggle(); }
 });
 goBtn.onclick = () => rc.toggle();
+$('breakGo').onclick = () => { if (selected !== null && breakRule.value !== '') rc.runUntil({ ant: selected, rule: Number(breakRule.value) }); };
 $('step').onclick = () => rc.step();
 $('reset').onclick = start;
 $('rand').onclick = () => {

@@ -179,6 +179,20 @@ explain row, the "next:" line, or a lint warning or error with a line number sel
 row of the followed ant's current rule is highlighted. Reading a trace shows exactly where an ant's rounds go: in
 `trail.rules` a step is four food tests, two rounds of `follow trail` and then `explore`.
 
+**Debugger.** Under the followed ant the panel lists what it senses where it stands: *here*, *ahead*, *left ahead* and *right ahead*, each
+with its rock, hill (and whether it is the ant's own), food, its own scents and a foe's, and any other ant (`web/inspect.ts`,
+`senses`). For a rules brain a **break** is offered: pick a rule and *Run to break*, and the match runs until that ant is about to run
+the rule (the replay engine stops before the round, so the "next:" line shows the rule). The first round of a run is always made, so
+pressing it again goes on to the next time. The break counts the ant's acting rounds only (not the rounds it rests after a move), and
+`explain` keeps counting while it runs.
+
+**Heat map.** Every rule row of the explain panel, and every colony header, has a **map** button: the board is tinted where that colony's
+ants were in that rule (its test or its action), or, for the colony's button, wherever its ants acted. The tint grows with the count
+(square root, up to the hottest cell, whose count the note above the rows gives). The cells add up to the rule's row counts (a tested
+invariant), counting restarts at a seek, a Reset or a change of target, and it only counts rounds run with the explain box ticked.
+It answers "where on the map does this rule happen?": where food is taken, where an ant keeps trying a rule that cannot work, where
+the traffic is. Both tools are in the replay engine's protocol (`heat`, `until`), so they are tested without a page.
+
 **More than two colonies.** The colonies of a match are the hills of its map: a generated world has two, a **world file** with hills
 `a`, `b`, `c`... brings one editor per hill (Brain C (green), Brain D (amber), ... up to 26, each with its note, examples menu and
 personality controls), and the **Example world** menu loads a generated 3, 4, 6 or 8 colony world (`web/colonies.ts`; the hills
