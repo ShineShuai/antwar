@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tinyminds map designer</title>
+<style>
+  :root { --bg: #fafaf9; --fg: #1c1917; --mut: #78716c; --card: #fff; --line: #d6d3d1; --err: #b91c1c; --ok: #15803d; --warn: #a16207; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1917; --fg: #fafaf9; --mut: #a8a29e; --card: #292524; --line: #44403c; --err: #f87171; --ok: #4ade80; --warn: #facc15; }
+  }
+  body { margin: 0; padding: 12px; background: var(--bg); color: var(--fg); font: 14px system-ui, sans-serif; }
+  main { display: grid; grid-template-columns: 250px minmax(0, 1fr) 280px; gap: 14px; align-items: start; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  h2 { font-size: 13px; margin: 10px 0 4px; color: var(--mut); text-transform: uppercase; letter-spacing: .04em; }
+  a { color: inherit; }
+  label { display: inline-flex; gap: 4px; align-items: center; color: var(--mut); }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 4px 0; }
+  input, select, button { font: inherit; padding: 3px 7px; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; }
+  input[type=number] { width: 4.6em; }
+  button { cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  button.on { border-color: var(--fg); font-weight: 600; }
+  .note { font-size: 12px; color: var(--mut); overflow-wrap: anywhere; }
+  .err { color: var(--err); }
+  .nav { display: flex; gap: 14px; margin: 0 0 8px; font-size: 13px; }
+  .nav a { color: var(--mut); text-decoration: none; }
+  .nav a.here { color: var(--fg); font-weight: 600; text-decoration: underline; }
+  .stage { overflow: auto; max-height: 82vh; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+  canvas { display: block; touch-action: none; cursor: crosshair; }
+  .checks { display: grid; gap: 4px; font-size: 13px; }
+  .checks div { padding-left: 1.4em; text-indent: -1.4em; overflow-wrap: anywhere; }
+  .ok::before { content: "\2713 "; color: var(--ok); } .warn::before { content: "! "; color: var(--warn); }
+  .bad::before { content: "\2717 "; color: var(--err); } .info::before { content: "\00b7 "; color: var(--mut); }
+  details { color: var(--mut); font-size: 13px; }
+  ul.lib { list-style: none; padding: 0; margin: 4px 0; display: grid; gap: 2px; }
+</style>
+<nav id="nav"></nav>
+<h1>Tinyminds map designer</h1>
+<main>
+  <div id="tools">
+    <h2>Draw</h2>
+    <div class="row" id="toolrow"></div>
+    <div class="row">
+      <label>Brush <select id="radius"><option value="0">1 cell</option><option value="1">7 cells</option><option value="2">19 cells</option></select></label>
+      <label>Food <select id="foodamt"></select></label>
+      <label>Hill <select id="label"></select></label>
+    </div>
+    <div class="row">
+      <label>Symmetry <select id="symmode"><option value="none">none</option><option value="mirror">point mirror (2 colonies)</option><option value="shift">tiles (n colonies)</option></select></label>
+      <label id="symnbox" hidden>colonies <select id="symn"></select></label>
+    </div>
+    <div class="note" id="symnote"></div>
+    <div class="row"><button id="undo">Undo</button><button id="redo">Redo</button><button id="border">Rock border</button></div>
+    <h2>Generate</h2>
+    <div class="row">
+      <label>Kind <select id="genkind"><option value="contest">contest</option><option value="mirror">mirrored (2 colonies)</option><option value="fair">fair (n colonies)</option></select></label>
+      <label id="gennbox" hidden>colonies <select id="genn"></select></label>
+    </div>
+    <div class="row"><label>Seed <input id="seed" type="number" min="0" value="1"></label><button id="rand">Random</button><button id="gen">Generate</button></div>
+    <details id="genparams">
+      <summary>Parameters (contest and mirrored)</summary>
+      <div class="row"><label>width <input id="gW" type="number"></label><label>height <input id="gH" type="number"></label></div>
+      <div class="row"><label>hill radius <input id="gR" type="number"></label><label>rocks <input id="gRocks" type="number"></label></div>
+      <div class="row"><label>rock size <input id="gRs0" type="number"></label><label>to <input id="gRs1" type="number"></label></div>
+      <div class="row"><label>food blobs <input id="gBlobs" type="number"></label><label>per cell <input id="gPer" type="number"></label></div>
+      <div class="note">Mirrored worlds need an even height and even numbers of rocks and blobs.</div>
+    </details>
+    <h2>File</h2>
+    <div class="row"><label>New empty <input id="nW" type="number" value="60"> x <input id="nH" type="number" value="60"></label><button id="newdoc">New</button></div>
+    <div class="row"><label>Import <input id="import" type="file" accept=".world,.txt,text/plain"></label></div>
+    <div class="row"><button id="export">Export .world</button><button id="copytext">Copy text</button><button id="fromproject">Load the workshop's map</button></div>
+    <h2>Library</h2>
+    <div class="row"><input id="libname" placeholder="name" maxlength="40"><button id="libsave">Save</button></div>
+    <ul class="lib" id="lib"></ul>
+  </div>
+  <div>
+    <div class="stage" id="stage"><canvas id="board"></canvas></div>
+    <div class="note" id="cursor">&nbsp;</div>
+    <div class="note" id="msg"></div>
+  </div>
+  <div>
+    <h2>Checks</h2>
+    <div class="checks" id="checks"></div>
+    <h2>Use this map</h2>
+    <div class="row"><button id="play">Play in the workshop</button><button id="arena">Check fairness in the Arena</button></div>
+    <div class="note">Both save the map as the project's map: the workshop and the Arena show it next. Your drawing is also kept in this browser.</div>
+    <details>
+      <summary>About the checks</summary>
+      <p>A map is fair when every colony has the same terrain: <em>point mirror</em> (two colonies) or <em>tiles</em> (n colonies) make that so by
+        construction, and the checks say whether a map has it. Measure how much a difference matters with the fairness check in the Arena
+        (<code>docs/MATCH.md</code>). The world wraps round its edges; a rock border is only for the contest's engine.</p>
+    </details>
+  </div>
+</main>
+<script type="module" src="maps.js"></script>
