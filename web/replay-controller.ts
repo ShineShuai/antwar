@@ -1,7 +1,7 @@
 // The replay loop of a viewer, without the DOM: one Worker running the replay engine (web/engine.ts), at most one request in flight, the
 // newest seek and track request queued behind it, a pump that runs the match at `speed` rounds a frame. The workshop and the Arena's game
 // viewer both draw on top of it (the viewer, status line, timeline and inspector stay with the page), and Node tests drive it with the engine in-process.
-import type { Reply, Request } from './protocol.ts';
+import type { HeatTarget, Reply, Request } from './protocol.ts';
 
 export type Ready = Extract<Reply, { type: 'ready' }>;
 export type Frame = Extract<Reply, { type: 'frame' }>;
@@ -46,6 +46,10 @@ export interface ReplayController {
   seek(round: number): void;
   /** Follow an ant (its id), or none (null): the engine returns its trace with the frames. */
   track(ant: number | null): void;
+  /** Count a rule's (or a colony's) acting ant-rounds by cell for the heat map, or nothing (null): the frames carry `heat`. Counts only while the engine explains. */
+  heat(target: HeatTarget | null): void;
+  /** Pause and run until the ant is about to run the rule (a frame with `stopped`), or to the end of the match. Ignored while a request is in flight. */
+  runUntil(until: { ant: number; rule: number }): void;
   /** Stop and let go of the Worker. */
   destroy(): void;
   readonly cycle: number;
@@ -57,7 +61,7 @@ export function createReplayController(o: ReplayOptions, hooks: ReplayHooks): Re
   const schedule = o.schedule ?? ((cb: () => void) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(cb) : void setTimeout(cb, 0)));
   let worker: ReplayWorker | undefined, generation = 0;
   let rounds = 0, startAt = 0, cycle = 0, running = false, busy = false, last: Frame | undefined;
-  let wantSeek: number | undefined, wantTrack: number | null | undefined;
+  let wantSeek: number | undefined, wantTrack: number | null | undefined, wantHeat: HeatTarget | null | undefined;
 
   const send = (m: Request): void => { busy = true; worker?.postMessage(m); };
   const setRunning = (on: boolean): void => { if (running === on || (on && !worker)) return; running = on; hooks.running(on); if (on) pump(); }; // (nothing to play without a replay)
@@ -66,7 +70,7 @@ export function createReplayController(o: ReplayOptions, hooks: ReplayHooks): Re
     send({ type: 'run', n: Math.min(Math.max(1, Math.trunc(o.speed())), rounds - cycle), explain: o.explain?.() ?? false });
   }
   function onMessage(m: Reply): void {
-    if (m.type === 'error') { busy = false; wantSeek = undefined; wantTrack = undefined; setRunning(false); hooks.error(m.message); return; }
+    if (m.type === 'error') { busy = false; wantSeek = undefined; wantTrack = undefined; wantHeat = undefined; setRunning(false); hooks.error(m.message); return; }
     if (m.type === 'ready') {
       hooks.ready(m);
       const r = wantSeek ?? startAt; wantSeek = undefined;
@@ -76,6 +80,7 @@ export function createReplayController(o: ReplayOptions, hooks: ReplayHooks): Re
     busy = false; cycle = m.cycle; last = m;
     hooks.frame(m);
     if (wantTrack !== undefined) { const t = wantTrack; wantTrack = undefined; send({ type: 'track', ant: t }); return; }
+    if (wantHeat !== undefined) { const t = wantHeat; wantHeat = undefined; send({ type: 'heat', target: t }); return; }
     if (wantSeek !== undefined) { const r = wantSeek; wantSeek = undefined; send({ type: 'seek', round: r }); return; }
     if (cycle >= rounds) setRunning(false); else if (running) schedule(pump);
   }
@@ -85,7 +90,7 @@ export function createReplayController(o: ReplayOptions, hooks: ReplayHooks): Re
       worker?.terminate();
       const mine = ++generation;
       rounds = Math.max(0, Math.trunc(opts.rounds)); startAt = Math.max(0, Math.trunc(opts.startAt ?? 0));
-      cycle = 0; last = undefined; busy = false; wantSeek = undefined; wantTrack = undefined;
+      cycle = 0; last = undefined; busy = false; wantSeek = undefined; wantTrack = undefined; wantHeat = undefined;
       setRunning(false);
       worker = o.makeWorker();
       worker.onmessage = (e) => { if (mine === generation) onMessage(e.data); }; // (a Worker we have let go of may still have a message on its way)
@@ -101,7 +106,9 @@ export function createReplayController(o: ReplayOptions, hooks: ReplayHooks): Re
       if (busy) wantSeek = r; else if (worker) send({ type: 'seek', round: r });
     },
     track(ant) { if (busy) wantTrack = ant; else if (worker) send({ type: 'track', ant }); },
-    destroy() { generation++; worker?.terminate(); worker = undefined; busy = false; wantSeek = undefined; wantTrack = undefined; setRunning(false); },
+    heat(target) { if (busy) wantHeat = target; else if (worker) send({ type: 'heat', target }); },
+    runUntil(until) { setRunning(false); if (!busy && worker) send({ type: 'run', n: Math.max(0, rounds - cycle), until, explain: o.explain?.() ?? false }); },
+    destroy() { generation++; worker?.terminate(); worker = undefined; busy = false; wantSeek = undefined; wantTrack = undefined; wantHeat = undefined; setRunning(false); },
     get cycle() { return cycle; },
     get running() { return running; },
     get last() { return last; },

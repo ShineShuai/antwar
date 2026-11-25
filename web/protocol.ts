@@ -8,14 +8,22 @@ export interface Fires { test: number[]; act: number[]; glue: number; total: num
 /** The tracked ant's recent acting rounds: [round, pc] pairs, oldest first (flat). */
 export type Trace = number[];
 
+/** What the heat map counts: the acting ant-rounds, by the cell the ant stands on, of one colony's ants that are in `rule` (a rule id of that
+ * colony's rules brain: its test or its action), or of all of them when `rule` is left out (where the colony's ants are busy). */
+export interface HeatTarget { col: number; rule?: number }
+
 export type Request =
   | { type: 'init'; seed: number; mapText?: string; rules?: RulesId; brains: string[] }
   | { type: 'track'; /** ant id from the frame, or null to stop */ ant: number | null }
-  | { type: 'run'; n: number; /** count which rule each acting ant is in (rules brains only; slower) */ explain?: boolean }
+  | { type: 'run'; n: number; /** count which rule each acting ant is in (rules brains only; slower) */ explain?: boolean;
+      /** stop before the round in which this ant is about to run this rule (it must be a rules brain); the first round is always run */ until?: { ant: number; rule: number } }
+  | { type: 'heat'; /** what to count on the map from now on (needs explain while running), or null for nothing */ target: HeatTarget | null }
   | { type: 'seek'; /** go to this round, forwards or backwards (restores a keyframe, then re-runs < 2000 rounds) */ round: number }
   | { type: 'frame' };
 
 export type Reply =
   | { type: 'ready'; W: number; H: number; rock: Uint8Array; hill: Int8Array }
-  | ({ type: 'frame'; hash: number; /** per colony; null for brains that are not rules */ fires: (Fires | null)[]; /** pairs of the tracked ant, empty when none */ trace: Trace } & Frame)
+  | ({ type: 'frame'; hash: number; /** per colony; null for brains that are not rules */ fires: (Fires | null)[]; /** pairs of the tracked ant, empty when none */ trace: Trace;
+      /** per cell: the heat target's count since the last seek, init or change of target; absent without a target */ heat?: Uint32Array;
+      /** the run ended at its break (`until`), not at its length */ stopped?: boolean } & Frame)
   | { type: 'error'; message: string };

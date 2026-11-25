@@ -55,6 +55,8 @@
   #verify.err { color: var(--err); }
   @media (prefers-color-scheme: dark) { #verify.ok { color: #4ade80; } }
   #tl { width: 100%; box-sizing: border-box; padding: 0; }
+  .fire button.hb, .fh button.hb { margin-left: 6px; padding: 0 5px; font-size: 11px; }
+  button.hb.on { border-color: #ea580c; color: #ea580c; font-weight: 600; }
   .nav { display: flex; gap: 14px; margin: 0 0 8px; font-size: 13px; }
   .nav a { color: var(--mut); text-decoration: none; }
   .nav a.here { color: var(--fg); font-weight: 600; text-decoration: underline; }
@@ -155,6 +157,8 @@
     <details id="antbox" open>
       <summary>Selected ant</summary>
       <div id="ant">Click an ant to follow it.</div>
+      <div id="senses" class="note"></div>
+      <div class="row" id="breakrow" hidden><label>Break before rule <select id="breakRule"></select></label><button id="breakGo" title="run until this ant is about to run that rule">Run to break</button></div>
       <p style="font-size:12px;color:var(--mut);margin:4px 0">Its recent rules, newest first (run to record). Click a line to jump to it in the editor.</p>
       <div id="trace"></div>
     </details>
@@ -168,7 +172,9 @@
       <summary>Explain why (rules brains)</summary>
       <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="explainOn"> count which rule each ant acts in (slower)</label>
       <p>Where the acting ant-rounds go: grey = sensing the rule's conditions, blue = its action. Counts cover the rounds run
-        with the box ticked, since the last Reset.</p>
+        with the box ticked, since the last Reset. The <b>map</b> button of a rule (or of a colony) tints the board where its ants were in that
+        rule, as counted: the hotter, the more ant-rounds in that cell.</p>
+      <div id="heatnote" class="note"></div>
       <div id="fires"></div>
     </details>
   </aside>
