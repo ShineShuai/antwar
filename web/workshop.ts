@@ -12,7 +12,9 @@ import { PROJECT_KEY } from './project.ts';
 import { mountHighlight } from './highlight.ts';
 import { mountPersonality } from './personality.ts';
 import type { BrainInfo } from './brain.ts';
-import type { Reply, Request } from './protocol.ts';
+import type { Reply } from './protocol.ts';
+import { createReplayController } from './replay-controller.ts';
+import type { ReplayWorker } from './replay-controller.ts';
 import { MAX_COLONIES, colonyCount, colonyName, exampleWorld, keepBrains, letter, paletteFor, statusLine } from './colonies.ts';
 import { cellAt, createViewer, layout } from './viewer.ts';
 import type { Layout } from './viewer.ts';
@@ -25,8 +27,8 @@ for (const [id, name] of Object.entries(RULESET_NAMES)) rulesBox.add(new Option(
 const rulesId = (): RulesId => (Object.hasOwn(RULESETS, rulesBox.value) ? rulesBox.value : 'classic') as RulesId;
 const speedBox = $<HTMLSelectElement>('speed'), goBtn = $<HTMLButtonElement>('go'), statusBox = $('status');
 const tl = $<HTMLInputElement>('tl'), verifyBox = $('verify');
-let worker: Worker | undefined, viewer: ReturnType<typeof createViewer> | undefined;
-let mapText = '', running = false, busy = false, cycle = 0;
+let viewer: ReturnType<typeof createViewer> | undefined;
+let mapText = '';
 let worldKind = ''; // what mapText is, as the example-world picker lists it: '' contest generator, 'custom' file or link, else an entry of the picker
 let geom: { L: Layout; W: number; H: number } | undefined, last: Extract<Reply, { type: 'frame' }> | undefined;
 const marksBox = $<HTMLInputElement>('marks'), inspectBox = $('inspect');
@@ -36,8 +38,6 @@ const noteEls: HTMLElement[] = [$('na'), $('nb')], moreHost = $('more'), colNote
 let savedMore: string[] = []; // brains of colonies C.. from the last session, offered again when the map brings those colonies back
 const explainBox = $<HTMLInputElement>('explainOn'), firesBox = $('fires'), antBox = $('ant'), traceBox = $('trace');
 let selected: number | null = null, selectedCol = 0; // id and colony of the ant being followed
-let wantTrack: number | null | undefined; // a track request waiting for the Worker to be free (undefined = none)
-let wantSeek: number | undefined; // the newest seek request waiting for the Worker (scrubbing sends many; only the last matters)
 let scrubbing = false;
 let expect: { round: number; hash: number } | null = null; // from a share link: seek there once the match is ready
 let check: { round: number; hash: number } | null = null; // being verified: compared with the frame at that round
@@ -124,13 +124,6 @@ const say = (text: string, err = false): void => {
   statusBox.textContent = text;
   statusBox.classList.toggle('err', err);
 };
-const send = (msg: Request): void => worker?.postMessage(msg);
-const setRunning = (on: boolean): void => {
-  running = on;
-  goBtn.textContent = on ? 'Pause' : 'Run';
-  if (on) pump();
-};
-
 /** The note under an editor: size and lint warnings, or the error with its line number. */
 function note(box: HTMLElement, info: BrainInfo, side: number): void {
   box.replaceChildren();
@@ -170,26 +163,54 @@ function renderFires(fires: (Extract<Reply, { type: 'frame' }>['fires'])): void 
   });
 }
 
+/** The replay loop is web/replay-controller.ts (shared with the Arena's viewer); this page draws what it reports. */
+const rc = createReplayController({
+  makeWorker: () => new Worker(new URL('./sim-worker.js', import.meta.url), { type: 'module' }) as unknown as ReplayWorker,
+  speed: () => Number(speedBox.value),
+  explain: () => explainBox.checked,
+}, {
+  ready(m) {
+    const w = Math.max(4, Math.min(10, Math.floor(900 / (m.W + 1)))), L = layout(m.W, m.H, w);
+    canvas.width = L.width; canvas.height = L.height; geom = { L, W: m.W, H: m.H };
+    viewer = createViewer(ctx, m, L, paletteFor(boxes.length, matchMedia('(prefers-color-scheme: dark)').matches));
+    if (expect && expect.round > 0) { check = expect; say(`Re-running to round ${expect.round} to check the link…`); }
+    expect = null;
+  },
+  frame(m) {
+    last = m;
+    const cycle = m.cycle;
+    if (!scrubbing) tl.value = String(cycle);
+    if (check && cycle === check.round) {
+      const ok = m.hash === check.hash;
+      verifyBox.className = ok ? 'ok' : 'err';
+      verifyBox.textContent = ok ? `✓ verified locally: the state hash at round ${cycle} matches the link`
+        : `✗ unverified: the link says hash ${check.hash} at round ${cycle}, this run gives ${m.hash} (other version or edited link)`;
+      check = null;
+    }
+    viewer?.draw(m, { marks: marksBox.checked, selected });
+    renderAnt(m);
+    renderFires(m.fires);
+    say(statusLine(cycle, m.score, m.alive, MATCH));
+  },
+  error(message) { say(message, true); },
+  running(on) { goBtn.textContent = on ? 'Pause' : 'Run'; },
+});
+
 function start(): void {
-  worker?.terminate();
   let want = 2; // colonies = the hills of the map (a generated world has two)
   if (mapText) {
-    try { want = colonyCount(parseMap(mapText).hill); } catch (e) { say((e as Error).message, true); setRunning(false); return; }
+    try { want = colonyCount(parseMap(mapText).hill); } catch (e) { say((e as Error).message, true); rc.pause(); return; }
   }
   colNote.textContent = want > 2 ? `${want} colonies, one brain each. Ranking: more food ranks higher, and a colony scores 2 points for each colony it out-scores and 1 for each tie (docs/MATCH.md).` : '';
   setColonies(want);
   infos = boxes.map((b) => describeBrain(b.value, RULESETS[rulesId()]));
-  selected = null; wantTrack = undefined; wantSeek = undefined; check = null;
+  selected = null; check = null;
   verifyBox.textContent = ''; verifyBox.className = ''; tl.value = '0'; startedKey = keyNow();
   antBox.textContent = 'Click an ant to follow it.'; traceBox.replaceChildren();
   syncPanels();
   firesBox.replaceChildren();
   updateNotes();
-  busy = false; cycle = 0; setRunning(false);
-  worker = new Worker(new URL('./sim-worker.js', import.meta.url), { type: 'module' });
-  worker.onmessage = (e: MessageEvent<Reply>) => onMessage(e.data);
-  send({ type: 'init', seed: Number(seedBox.value), mapText, rules: rulesId(),
-    brains: boxes.map((b) => b.value) });
+  rc.load({ type: 'init', seed: Number(seedBox.value), mapText, rules: rulesId(), brains: boxes.map((b) => b.value) }, { rounds: MATCH, startAt: expect && expect.round > 0 ? expect.round : 0 });
 }
 
 /** The followed ant in the latest frame: its row (index into ants) or -1 when it is dead or gone. */
@@ -233,42 +254,6 @@ function renderAnt(f: Extract<Reply, { type: 'frame' }>): void {
     d.append(rd, code); traceBox.append(d);
   }
 }
-function onMessage(m: Reply): void {
-  if (m.type === 'error') { say(m.message, true); setRunning(false); busy = false; return; }
-  if (m.type === 'ready') {
-    const w = Math.max(4, Math.min(10, Math.floor(900 / (m.W + 1)))), L = layout(m.W, m.H, w);
-    canvas.width = L.width; canvas.height = L.height; geom = { L, W: m.W, H: m.H };
-    viewer = createViewer(ctx, m, L, paletteFor(boxes.length, matchMedia('(prefers-color-scheme: dark)').matches));
-    if (expect && expect.round > 0) { check = expect; busy = true; say(`Re-running to round ${expect.round} to check the link…`); send({ type: 'seek', round: expect.round }); } else send({ type: 'frame' });
-    expect = null;
-    return;
-  }
-  busy = false; cycle = m.cycle;
-  last = m;
-  if (!scrubbing) tl.value = String(cycle);
-  if (check && cycle === check.round) {
-    const ok = m.hash === check.hash;
-    verifyBox.className = ok ? 'ok' : 'err';
-    verifyBox.textContent = ok ? `✓ verified locally: the state hash at round ${cycle} matches the link`
-      : `✗ unverified: the link says hash ${check.hash} at round ${cycle}, this run gives ${m.hash} (other version or edited link)`;
-    check = null;
-  }
-  viewer?.draw(m, { marks: marksBox.checked, selected });
-  renderAnt(m);
-  renderFires(m.fires);
-  const done = cycle >= MATCH;
-  say(statusLine(cycle, m.score, m.alive, MATCH));
-  if (wantTrack !== undefined) { const t = wantTrack; wantTrack = undefined; busy = true; send({ type: 'track', ant: t }); return; }
-  if (wantSeek !== undefined) { const r = wantSeek; wantSeek = undefined; busy = true; send({ type: 'seek', round: r }); return; }
-  if (done) setRunning(false); else if (running) requestAnimationFrame(pump);
-}
-
-function pump(): void {
-  if (!running || busy) return;
-  busy = true;
-  send({ type: 'run', n: Math.min(Number(speedBox.value), MATCH - cycle), explain: explainBox.checked });
-}
-
 marksBox.onchange = () => { if (last) viewer?.draw(last, { marks: marksBox.checked }); };
 canvas.onclick = (e) => {
   if (!geom || !last) return;
@@ -279,19 +264,13 @@ canvas.onclick = (e) => {
   for (let i = 0; i < last.ants.length; i += 6) { // an ant on that cell: follow it
     if (last.ants[i + 1] !== p) continue;
     selected = last.ants[i]; selectedCol = last.ants[i + 2];
-    if (busy) wantTrack = selected; else { busy = true; send({ type: 'track', ant: selected }); }
+    rc.track(selected);
     viewer?.draw(last, { marks: marksBox.checked, selected });
     renderAnt(last);
     break;
   }
 };
-/** Jump to a round (clamped to the match): pauses, and queues behind a request in flight. */
-function seekTo(round: number): void {
-  const r = Math.max(0, Math.min(MATCH, Math.trunc(round)));
-  setRunning(false);
-  if (busy) wantSeek = r; else { busy = true; send({ type: 'seek', round: r }); }
-}
-tl.oninput = () => seekTo(Number(tl.value));
+tl.oninput = () => rc.seek(Number(tl.value));
 tl.onpointerdown = () => { scrubbing = true; };
 addEventListener('pointerup', () => { scrubbing = false; });
 addEventListener('keydown', (e) => { // reference, client UI: Space play/pause; left/right step 1 round (Shift = 100)
@@ -300,11 +279,11 @@ addEventListener('keydown', (e) => { // reference, client UI: Space play/pause; 
   if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
     if (t === tl) return; // the slider steps itself and its input event seeks
     e.preventDefault();
-    seekTo(cycle + (e.key === 'ArrowLeft' ? -1 : 1) * (e.shiftKey ? 100 : 1));
-  } else if (e.key === ' ' && !(t instanceof HTMLElement && t.tagName === 'BUTTON')) { e.preventDefault(); setRunning(!running); }
+    rc.seek(rc.cycle + (e.key === 'ArrowLeft' ? -1 : 1) * (e.shiftKey ? 100 : 1));
+  } else if (e.key === ' ' && !(t instanceof HTMLElement && t.tagName === 'BUTTON')) { e.preventDefault(); rc.toggle(); }
 });
-goBtn.onclick = () => setRunning(!running);
-$('step').onclick = () => { setRunning(false); if (!busy) { busy = true; send({ type: 'run', n: 1, explain: explainBox.checked }); } };
+goBtn.onclick = () => rc.toggle();
+$('step').onclick = () => rc.step();
 $('reset').onclick = start;
 $('rand').onclick = () => {
   seedBox.value = String(crypto.getRandomValues(new Uint32Array(1))[0] & 0x3fffffff);
@@ -355,7 +334,7 @@ mountMatchChart($('charthost'), {
 $('share').onclick = async () => {
   const link = `${location.href.split('#')[0]}#v1.${await encodeShare({
     seed: Number(seedBox.value), brains: boxes.map((b) => b.value), map: mapText || undefined, gen: GENERATOR_VERSION, rules: rulesId() === 'classic' ? undefined : rulesId(),
-    result: last && cycle > 0 && startedKey === keyNow() ? { round: cycle, hash: last.hash } : undefined })}`;
+    result: last && rc.cycle > 0 && startedKey === keyNow() ? { round: rc.cycle, hash: last.hash } : undefined })}`;
   history.replaceState(null, '', link);
   try { await navigator.clipboard.writeText(link); say(`Link copied (${link.length} characters).`); } catch { say('Link is in the address bar.'); }
 };
