@@ -243,9 +243,10 @@ neighbours) and the Keeper then beats both trail ants. The finding that matters 
 the Keeper scores 3.22 ± 0.27 with 63 first places of 90 (trail ants 1.43 and 1.34), and the default Keeper again comes last, 1.49 ± 0.18 with
 5 first places (trail ants 2.31 and 2.20). **In 2 colonies the optimum is the other way**: the default Keeper beats the 1-in-40 Keeper
 1.47 ± 0.23 to 0.53 ± 0.23 (44 wins of 60). So a Keeper written for two colonies is a poor 3-colony brain, and the dose should be rarer the
-more rivals there are. Reproduce: `node cli/personality.ts --template keeper --settling 0 > k.rules`, edit `when 1 in 20 -> switch sit`
-to `1 in 40`, `cp ants/trail.rules t2.rules`, then `node cli/league.ts k.rules ants/trail.rules t2.rules --seeds 30 --rounds 100000 --jobs 1`
-(about 2 minutes). Why a rarer dose is better is not known (candidates: the settlers are exposed to two rivals instead of one; the
+more rivals there are. Reproduce the slider's four levels in one command: `node cli/personality.ts --template keeper > k.rules`, `cp ants/trail.rules t2.rules`, `node cli/sweep.ts
+k.rules ants/trail.rules t2.rules --league --param settling --seeds 30 --rounds 100000 --jobs 1` (about 9 minutes; the Arena's Sweep tab does
+the same with *Against: all the other brains*). The 1 in 40 and 1 in 64 rows are outside the slider: edit `when 1 in 20 -> switch sit` in a
+level-0 text to `1 in 40` and run `node cli/league.ts k40.rules ants/trail.rules t2.rules --seeds 30 --rounds 100000 --jobs 1` (about 2 minutes). Why a rarer dose is better is not known (candidates: the settlers are exposed to two rivals instead of one; the
 production lost is a larger part of the total); the mechanism was not measured, only the dose-response. The slider's range stops at 1 in 20 and the
 language at 1 in 64, so the best 3-colony value is outside the slider; a colonies-aware default, or a longer slider, is a decision (see the
 handoff's open items). The Keeper's numbers here are for the trail ant and the forager as opponents only.

@@ -2,6 +2,8 @@
 // both colours. The by-hand sweeps of docs/STEALING.md as a table with intervals. The games are those of `cli/tourney.ts` (variant, reference).
 import type { Game, Task } from './core/match.ts';
 import { headToHead } from './headtohead.ts';
+import { leagueSummary } from './league.ts';
+import type { LeagueGame, LeagueStat, LeagueWorld } from './league.ts';
 import type { HeadToHead } from './headtohead.ts';
 import { LEVELS, SETTLE, SETTLE_DEFAULT, parsePersonality, personality, usesSociability } from './lang/templates.ts';
 import type { Personality } from './lang/templates.ts';
@@ -66,3 +68,40 @@ export const sweepHeader = (brain: string, param: SweepParam, reference: string,
 /** The `cli/sweep.ts` command that plays the same games. */
 export const sweepCommand = (o: { brain: string; reference: string; param: SweepParam; seeds: number; from: number; rounds: number; rules: RulesId; symmetric: boolean }): string =>
   `node cli/sweep.ts ${o.brain} --vs ${o.reference} --param ${o.param} --seeds ${o.seeds} --from ${o.from} --rounds ${o.rounds} --rules ${o.rules}${o.symmetric ? ' --symmetric' : ''}`;
+
+// ---------- a sweep in a league: each level plays all the other brains at once (n colonies)
+export interface LeagueSweepRow {
+  variant: Variant;
+  /** The variant's league statistics (entry 0 of its league): points per game with the 95% interval over the worlds, first places, mean rank. */
+  stat: LeagueStat;
+  /** The other brains' points per game in the same league, in the order they were given. */
+  refs: number[];
+}
+
+/** One row per variant: variant i played the league [variant i, ...the other brains] (`games[i]`, entry 0 is the variant). */
+export function leagueSweepRows(variants: readonly Variant[], games: readonly (readonly LeagueGame[])[], seeds: readonly number[], n: number): LeagueSweepRow[] {
+  if (games.length !== variants.length) throw new RangeError('one list of games per variant');
+  return variants.map((variant, i) => {
+    const { stats } = leagueSummary(n, games[i], seeds), mine = stats.find((r) => r.entry === 0) as LeagueStat;
+    return { variant, stat: mine, refs: Array.from({ length: n - 1 }, (_, k) => (stats.find((r) => r.entry === k + 1) as LeagueStat).mean) };
+  });
+}
+
+/** The table: `+` where the variant's points per game, with their interval, are above the fair share (n - 1), `-` where below, `*` the level it has. */
+export function leagueSweepLines(param: SweepParam, rows: readonly LeagueSweepRow[], n: number, refNames: readonly string[]): string[] {
+  const w = Math.max(5, ...rows.map((r) => r.variant.label.length)), fair = n - 1;
+  const out = [`  ${param.padEnd(w)}  points/game      1st   rank  ${refNames.join(', ')} (points/game)`];
+  for (const { variant: v, stat: r, refs } of rows) {
+    const mark = r.mean - r.ci > fair ? '+' : r.mean + r.ci < fair ? '-' : ' ', per = `${r.mean.toFixed(2)} +-${r.ci.toFixed(2)}`;
+    out.push(`${mark}${v.base ? '*' : ' '}${v.label.padEnd(w)}  ${per.padEnd(13)} ${String(r.firsts).padStart(4)}  ${r.rank.toFixed(2).padStart(5)}  ${refs.map((x) => x.toFixed(2)).join(' ')}`);
+  }
+  out.push('', `* the level the brain has; + / -: its points per game, with the 95% interval over the worlds, are above / below the fair share, ${fair} (a game gives ${n * (n - 1)} points in all).`);
+  return out;
+}
+
+export const leagueSweepHeader = (brain: string, param: SweepParam, refs: readonly string[], worlds: number, world: string, rounds: number, rules: RulesId, games: number): string =>
+  `${brain}, ${param} swept in a league with ${refs.join(', ')}: ${worlds} worlds (${world}), ${refs.length + 1} rotations each, ${rounds} rounds, rules ${rules}; ${games} games`;
+
+/** The `cli/sweep.ts` command for a league sweep (`brain` first, then the others, in colony order). */
+export const leagueSweepCommand = (o: { brain: string; refs: string[]; param: SweepParam; seeds: number; from: number; rounds: number; rules: RulesId; world?: LeagueWorld; worldFile: string }): string =>
+  `node cli/sweep.ts ${[o.brain, ...o.refs].join(' ')} --league --param ${o.param} --seeds ${o.seeds} --from ${o.from} --rounds ${o.rounds} --rules ${o.rules}${o.world?.kind === 'map' ? ` --world ${o.worldFile}` : ''}`;

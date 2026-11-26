@@ -269,7 +269,11 @@ result as the command that reproduces it (a test checks identical outcomes for e
   settling only for a keeper, never for text edited by hand) at every level, each against a reference brain on the same worlds, both
   colours, as one `cli/tourney.ts` batch. The table has `+`/`-` where the interval excludes 50% and `*` for the level the brain has
   (against itself it should read about 50%: sweep a brain against itself first). It is the by-hand sweep of `docs/STEALING.md` in one
-  command; with 20 worlds and 4 levels that is 160 games, so it defaults to 30,000 rounds.
+  command; with 20 worlds and 4 levels that is 160 games, so it defaults to 30,000 rounds. **In a league:** *Against: all the other brains* plays
+  each level in a league with every other editor, one colony each (`node cli/sweep.ts BRAIN REF1 REF2 --league --param settling --seeds 30
+  --rounds 100000 [--world FILE]`): the table gives the level's points per game with their interval (`+`/`-` against the fair share, n - 1),
+  first places, mean rank and the others' points, and every game can be watched. The best level can depend on the number of colonies (the
+  Keeper's settling dose: `docs/STEALING.md`), which a head-to-head sweep cannot show.
 * **Fairness** (`cli/fairness.ts`) of the map: one brain in every colony, under the project's Rules (so `altorder` with 3 colonies can be
   measured), at most 5,000 games. "This map, other simulator seeds" tests the map (a ring example or a loaded file is one map:
   `--world`; the generators use `--map-seed` with the seed), "a new world per game" tests the generator. It prints the table, the verdict
