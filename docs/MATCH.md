@@ -332,7 +332,7 @@ raiding (a big hill has more cells to rob), and against a brain that is built fo
 * **Use this map:** *Play in the workshop* and *Check fairness in the Arena* save the map as the project's map (`web/project.ts`) and
   go there; the Arena's Fairness tab measures a map and a brain together.
 
-Open decision: the editor keeps wrapped maps and offers the border as a button; the contest generator's worlds (the workshop's default) have one.
+Decided: unequal hills stay a warning (a handicap map can be intended), not an error. Open decision: the editor keeps wrapped maps and offers the border as a button; the contest generator's worlds (the workshop's default) have one.
 Not yet: the fairness check inside this page (it is one click away in the Arena), the map thumbnails in the library, resizing a map.
 
 Not yet in the Arena: a league with more brains than colonies, a chart averaged over several games, a sweep of two sliders, a

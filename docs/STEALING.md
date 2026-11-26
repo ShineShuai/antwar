@@ -223,9 +223,31 @@ ants/forager.rules --seeds 30 --rounds 100000 --jobs 1` (about 2 minutes; the co
 the tooling is sound: the two identical trail ants tie (2.22 and 2.18), and the control reproduces the head-to-head result (the Keeper wins
 46 of 60). So the flip is real at 100,000 rounds: in a 3-colony league the Keeper finishes last against two trail ants (it wins 3 of 90
 games), and against a trail ant and a forager it is second, behind the trail ant. At 30,000 rounds the gap to the trail ant is inside the
-noise (0.2 ± 0.18 points). Why is **not** known; candidates, untested: a raider that cannot tell which rival is worth robbing (the
-forager's nest is empty), two rivals close on a 3-tile torus so that the Keeper is the common target, and the cost of its settlers
-without enough to steal. The Keeper is therefore not a 3-colony brain (the open item "brains for 3 or more colonies" in the handoff):
-a version that chooses its victim, or one that only settles when a rival's nest is rich, is the thing to try, with this league as the
-score. Its fairness (the Keeper in every colony) was measured too: no order bias (`docs/MATCH.md`, *Does the move order favour a colony?*).
+noise (0.2 ± 0.18 points).
+
+**The cause is the settling dose, and its best value depends on the number of colonies.** The Keeper's settlers (a share `1 in N` of the
+ants coming home go and sit) cost production, and in 3-colony play they cost more than they take. Sweeping N against two trail ants (same
+30 worlds, seeds 1 to 30, 100,000 rounds, 90 games each; the Keeper's points per game, the trail ants' in brackets):
+
+| settling | Keeper | first places | trail ants |
+|---|---|---|---|
+| 1 in 7 (slider: often) | 1.28 ± 0.16 | 0 | 2.41, 2.31 |
+| 1 in 10 (the default) | 1.60 ± 0.21 | 3 | 2.22, 2.18 |
+| 1 in 15 (seldom) | 2.40 ± 0.26 | 28 | 1.87, 1.73 |
+| 1 in 20 (rarely, the slider's rarest) | 2.91 ± 0.24 | 47 | 1.82, 1.27 |
+| **1 in 40** (text edited) | **3.31 ± 0.25** | 66 | 1.53, 1.16 |
+| 1 in 64 (edited; the language's largest N) | 2.73 ± 0.25 | 45 | 1.77, 1.50 |
+
+The curve rises as settling gets rarer, peaks somewhere from 1 in 20 to 1 in 64 (the exact top, about 1 in 40, is within the noise of its
+neighbours) and the Keeper then beats both trail ants. The finding that matters was confirmed on 30 fresh worlds (seeds 31 to 60): at 1 in 40
+the Keeper scores 3.22 ± 0.27 with 63 first places of 90 (trail ants 1.43 and 1.34), and the default Keeper again comes last, 1.49 ± 0.18 with
+5 first places (trail ants 2.31 and 2.20). **In 2 colonies the optimum is the other way**: the default Keeper beats the 1-in-40 Keeper
+1.47 ± 0.23 to 0.53 ± 0.23 (44 wins of 60). So a Keeper written for two colonies is a poor 3-colony brain, and the dose should be rarer the
+more rivals there are. Reproduce: `node cli/personality.ts --template keeper --settling 0 > k.rules`, edit `when 1 in 20 -> switch sit`
+to `1 in 40`, `cp ants/trail.rules t2.rules`, then `node cli/league.ts k.rules ants/trail.rules t2.rules --seeds 30 --rounds 100000 --jobs 1`
+(about 2 minutes). Why a rarer dose is better is not known (candidates: the settlers are exposed to two rivals instead of one; the
+production lost is a larger part of the total); the mechanism was not measured, only the dose-response. The slider's range stops at 1 in 20 and the
+language at 1 in 64, so the best 3-colony value is outside the slider; a colonies-aware default, or a longer slider, is a decision (see the
+handoff's open items). The Keeper's numbers here are for the trail ant and the forager as opponents only.
+Its fairness (the Keeper in every colony) was measured too: no order bias (`docs/MATCH.md`, *Does the move order favour a colony?*).
 
