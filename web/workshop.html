@@ -55,6 +55,13 @@
   #verify.err { color: var(--err); }
   @media (prefers-color-scheme: dark) { #verify.ok { color: #4ade80; } }
   #tl { width: 100%; box-sizing: border-box; padding: 0; }
+  details.versions { margin: 4px 0; }
+  .vlist .row { margin: 2px 0; gap: 6px; }
+  .vlist button, details.versions button { padding: 0 6px; font-size: 12px; }
+  pre.diff { margin: 4px 0; padding: 4px 6px; font: 12px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 6px; max-height: 220px; overflow: auto; white-space: pre; }
+  pre.diff div { margin: 0; }
+  .d-add { color: #15803d; } .d-del { color: #b91c1c; } .d-gap { color: var(--mut); font-style: italic; }
+  @media (prefers-color-scheme: dark) { .d-add { color: #4ade80; } .d-del { color: #f87171; } }
   .fire button.hb, .fh button.hb { margin-left: 6px; padding: 0 5px; font-size: 11px; }
   button.hb.on { border-color: #ea580c; color: #ea580c; font-weight: 600; }
   .nav { display: flex; gap: 14px; margin: 0 0 8px; font-size: 13px; }
@@ -136,12 +143,14 @@
       <textarea id="ba" spellcheck="false"></textarea>
       <div class="note" id="na"></div>
       <div id="pa"></div>
+      <div id="va"></div>
     </div>
     <div class="brain">
       <div class="row"><label for="bb">Brain B (blue)</label><select class="ex" data-for="bb" aria-label="Load an example into B"></select></div>
       <textarea id="bb" spellcheck="false"></textarea>
       <div class="note" id="nb"></div>
       <div id="pb"></div>
+      <div id="vb"></div>
     </div>
     <div id="more"></div>
     <div class="row">

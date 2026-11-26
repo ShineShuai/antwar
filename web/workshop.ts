@@ -11,6 +11,8 @@ import { mountNav } from './nav.ts';
 import { PROJECT_KEY } from './project.ts';
 import { mountHighlight } from './highlight.ts';
 import { mountPersonality } from './personality.ts';
+import { mountVersions } from './versionpanel.ts';
+import type { VersionPanel } from './versionpanel.ts';
 import type { BrainInfo } from './brain.ts';
 import type { HeatTarget, Reply } from './protocol.ts';
 import { createReplayController } from './replay-controller.ts';
@@ -59,13 +61,22 @@ function jumpTo(side: number, line: number): void {
 }
 const changed = (restart: boolean): void => { save(); updateNotesSoon(); if (restart) start(); };
 const panels = [mountPersonality($('pa'), baBox, changed), mountPersonality($('pb'), bbBox, changed)];
+/** The versions box of editor c: its history is saved in the browser (web/versions.ts). */
+const versionsOf = (host: HTMLElement, c: number): VersionPanel => mountVersions(host, boxes[c], {
+  storage: localStorage, slot: letter(c), ignore: (t) => t === STARTER,
+  others: () => boxes.flatMap((b, i) => (i === c ? [] : [{ name: letter(i), text: b.value }])), onRestore: () => { save(); start(); },
+});
+const versions: VersionPanel[] = [];
+versions.push(versionsOf($('va'), 0), versionsOf($('vb'), 1));
 const bindBox = (b: HTMLTextAreaElement): void => { b.oninput = () => { save(); updateNotesSoon(); syncPanels(); }; }; // a shared link is never written over your saved brains until you edit
 function fillExamples(sel: HTMLSelectElement): void {
   sel.add(new Option('load example…', ''));
   EXAMPLES.forEach((e, i) => sel.add(new Option(e.name, String(i))));
   sel.onchange = () => {
     if (sel.value === '') return;
-    $<HTMLTextAreaElement>(sel.dataset.for ?? '').value = EXAMPLES[Number(sel.value)].text;
+    const target = $<HTMLTextAreaElement>(sel.dataset.for ?? '');
+    versions[boxes.indexOf(target)]?.snapshot(`before loading ${EXAMPLES[Number(sel.value)].name}`); // (the brain being replaced is kept)
+    target.value = EXAMPLES[Number(sel.value)].text;
     sel.value = '';
     save();
     start();
@@ -75,19 +86,19 @@ function fillExamples(sel: HTMLSelectElement): void {
 function setColonies(n: number): void {
   n = Math.max(2, Math.min(MAX_COLONIES, n));
   if (boxes.length > n) boxes.slice(2).forEach((b, i) => { savedMore[i] = b.value; }); // stash: the brains return with their colonies
-  while (boxes.length > n) { boxes.pop(); noteEls.pop(); panels.pop(); moreHost.lastElementChild?.remove(); }
+  while (boxes.length > n) { versions.pop()?.destroy(); boxes.pop(); noteEls.pop(); panels.pop(); moreHost.lastElementChild?.remove(); }
   while (boxes.length < n) {
     const c = boxes.length, wrap = document.createElement('div'), row = document.createElement('div');
     const lab = document.createElement('label'), sel = document.createElement('select'), ta = document.createElement('textarea');
-    const nt = document.createElement('div'), pn = document.createElement('div');
+    const nt = document.createElement('div'), pn = document.createElement('div'), vn = document.createElement('div');
     wrap.className = 'brain'; row.className = 'row';
     lab.htmlFor = ta.id = `b${c}`; lab.textContent = `Brain ${letter(c)} (${colonyName(c)})`;
     sel.className = 'ex'; sel.dataset.for = ta.id; sel.setAttribute('aria-label', `Load an example into ${letter(c)}`);
     ta.spellcheck = false; ta.value = savedMore[c - 2] ?? STARTER;
     nt.className = 'note'; nt.id = `n${c}`; pn.id = `p${c}`;
-    row.append(lab, sel); wrap.append(row, ta, nt, pn); moreHost.append(wrap);
+    row.append(lab, sel); wrap.append(row, ta, nt, pn, vn); moreHost.append(wrap);
     fillExamples(sel); bindBox(ta); mountHighlight(ta);
-    boxes.push(ta); noteEls.push(nt); panels.push(mountPersonality(pn, ta, changed));
+    boxes.push(ta); noteEls.push(nt); panels.push(mountPersonality(pn, ta, changed)); versions.push(versionsOf(vn, c));
   }
 }
 const syncPanels = (): void => panels.forEach((x) => x.sync());
@@ -226,6 +237,7 @@ const rc = createReplayController({
 });
 
 function start(): void {
+  versions.forEach((v) => v.snapshot('run')); // (a changed brain is kept when a match is started with it)
   let want = 2; // colonies = the hills of the map (a generated world has two)
   if (mapText) {
     try { want = colonyCount(parseMap(mapText).hill); } catch (e) { say((e as Error).message, true); rc.pause(); return; }

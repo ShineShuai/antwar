@@ -193,6 +193,14 @@ invariant), counting restarts at a seek, a Reset or a change of target, and it o
 It answers "where on the map does this rule happen?": where food is taken, where an ant keeps trying a rule that cannot work, where
 the traffic is. Both tools are in the replay engine's protocol (`heat`, `until`), so they are tested without a page.
 
+**Versions and diff.** Under each editor, *Versions* keeps the brain's history in the browser (`web/versions.ts`, up to 30 per editor
+and 2 MiB in all, the oldest go). A version is saved when you press *Save version* (with an optional label), when you start a match with a
+brain that changed, ten seconds after you stop typing, and just before a brain is replaced (by an example, or by *Restore*); the untouched
+starter ant and a text equal to the newest version are not saved again. Each version shows how it differs from the text now (+added
+-removed lines); **Diff** shows the changed lines with two lines of context (a longest-common-subsequence line diff: a moved line is one
+deletion and one addition), **Restore** puts a version back (the text now is saved first, so a restore can be undone), and *compare with*
+diffs the editor against another editor. Property tests check that the diff gives back both texts and is minimal.
+
 **More than two colonies.** The colonies of a match are the hills of its map: a generated world has two, a **world file** with hills
 `a`, `b`, `c`... brings one editor per hill (Brain C (green), Brain D (amber), ... up to 26, each with its note, examples menu and
 personality controls), and the **Example world** menu loads a generated 3, 4, 6 or 8 colony world (`web/colonies.ts`; the hills
