@@ -109,3 +109,18 @@ export function fairnessCommand(o: { brain: string; world: string; spec: WorldSp
   const seed = o.spec.mapSeed !== undefined ? `--map-seed ${o.spec.mapSeed}` : '';
   return ['node cli/fairness.ts', o.brain, w, seed, `--games ${o.games} --from ${o.from} --rounds ${o.rounds} --rules ${o.rules}`].filter(Boolean).join(' ');
 }
+
+export interface FoodVsOthers { colony: number; /** mean over the games of this colony's food minus the mean food of the others */ mean: number; /** standard error of that mean */ se: number; z: number }
+
+/** A more sensitive look than win chance: per game, each colony's nest food against the mean of the others (the world is the same for all,
+ * so the world's richness drops out). Under fair play every mean is 0. Several colonies are tested at once: compare |z| with the Bonferroni
+ * threshold, and confirm anything found on fresh seeds. Needs at least 2 games and 2 colonies. */
+export function foodVsOthers(foods: readonly (readonly number[])[]): FoodVsOthers[] {
+  const G = foods.length, n = foods[0]?.length ?? 0;
+  if (G < 2 || n < 2) throw new RangeError('needs at least 2 games of at least 2 colonies');
+  return Array.from({ length: n }, (_, colony) => {
+    const d = foods.map((f) => f[colony] - (f.reduce((a, x) => a + x, 0) - f[colony]) / (n - 1)), mean = d.reduce((a, x) => a + x, 0) / G;
+    const se = Math.sqrt(d.reduce((a, x) => a + (x - mean) ** 2, 0) / (G - 1) / G);
+    return { colony, mean, se, z: se > 0 ? mean / se : 0 };
+  });
+}

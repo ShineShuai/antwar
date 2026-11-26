@@ -103,3 +103,41 @@ test('cli/fairness.ts: a table or JSON; refuses what does not make sense', () =>
   assert.equal(run('--games', '0').status, 2);
   assert.equal(run('--rules', 'nope').status, 2);
 });
+
+import { foodVsOthers } from '../src/fairness.ts';
+test('foodVsOthers: zero under fair play, the size and z of a bias, refused for too little data', () => {
+  const fair = [[10, 12, 8], [9, 9, 12], [14, 10, 12], [8, 11, 9]];
+  const rows = foodVsOthers(fair.map((f) => [...f]));
+  assert.equal(rows.length, 3);
+  assert.ok(Math.abs(rows.reduce((a, r) => a + r.mean, 0)) < 1e-9, 'the means of "minus the others" cancel out');
+  const biased = Array.from({ length: 50 }, (_, g) => [20 + (g % 3), 10 + (g % 5), 10 + (g % 2)]); // colony A is 10 ahead of each of the others, on average
+  const b = foodVsOthers(biased);
+  assert.ok(b[0].mean > 9 && b[0].mean < 11 && b[0].z > 10, `${b[0].mean} ${b[0].z}`); assert.ok(b[1].mean < 0 && b[2].mean < 0);
+  assert.equal(foodVsOthers([[1, 1], [1, 1]])[0].z, 0, 'no spread: z is 0, not NaN');
+  const two = foodVsOthers([[5, 3], [4, 6], [9, 2]]); assert.deepEqual(two.map((r) => Math.round(r.mean * 100) / 100), [2.33, -2.33], 'for two colonies the others are one colony');
+  assert.throws(() => foodVsOthers([[1, 2]]), RangeError); assert.throws(() => foodVsOthers([[1], [2]]), RangeError); assert.throws(() => foodVsOthers([]), RangeError);
+});
+
+test('scripts/order-bias.ts: plays in pieces, resumes, and reports the same numbers as the library', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { mkdtempSync, readFileSync, rmSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = mkdtempSync(join(tmpdir(), 'order-')), root = (f: string): string => new URL(`../${f}`, import.meta.url).pathname;
+  try {
+    const brain = join(dir, 'A.brain'); writeFileSync(brain, readFileSync(root('ants/trail.rules'), 'utf8'));
+    const run = (...a: string[]) => spawnSync(process.execPath, [root('scripts/order-bias.ts'), ...a], { encoding: 'utf8' });
+    const first = run(brain, '--colonies', '3', '--games', '4', '--rounds', '300', '--budget', '0', '--out', dir);
+    assert.equal(first.status, 0, first.stderr); assert.match(first.stdout, /0\/4 games \(budget reached/);
+    const piece = (games: string) => run(brain, '--colonies', '3', '--games', games, '--rounds', '300', '--out', dir);
+    assert.match(piece('2').stdout, /2\/2 games/); assert.match(piece('4').stdout, /4\/4 games/, 'it goes on from the 2 games already played');
+    const file = join(dir, 'foods_3_classic_A.brain_from1.jsonl'), lines = readFileSync(file, 'utf8').trim().split('\n');
+    assert.equal(lines.length, 4);
+    const direct = spawnSync(process.execPath, [root('cli/fairness.ts'), brain, '--colonies', '3', '--games', '4', '--rounds', '300', '--json'], { encoding: 'utf8' });
+    const cli = JSON.parse(direct.stdout) as { rows: { share: number }[] }, mine = fairness(lines.map((l) => JSON.parse(l) as number[]));
+    assert.deepEqual(cli.rows.map((r) => r.share), mine.rows.map((r) => r.share), 'the same games as cli/fairness.ts');
+    const rep = run('--report', file);
+    assert.equal(rep.status, 0, rep.stderr); assert.match(rep.stdout, /^4 fair worlds/); assert.match(rep.stdout, /paired; Bonferroni \|z\| > 2.39 for 3 colonies/); assert.match(rep.stdout, /A: [+-]/);
+    assert.equal(run('--report').status, 2); assert.equal(run(brain).status, 2); assert.equal(run(brain, '--colonies', '13', '--games', '1', '--out', dir).status, 2, 'no fair world for 13 colonies');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
