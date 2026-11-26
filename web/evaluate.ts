@@ -13,7 +13,7 @@ import { describe, headToHead, reproCommand } from '../src/headtohead.ts';
 import { leagueCommand, leagueHeader, leagueLines, leagueSummary, leagueTasks, rotation } from '../src/league.ts';
 import type { LeagueGame, LeagueWorld } from '../src/league.ts';
 import { parsePersonality } from '../src/lang/templates.ts';
-import { sweepCommand, sweepHeader, sweepLines, sweepParams, sweepSummary, sweepTasks, sweepVariants } from '../src/sweep.ts';
+import { leagueSweepCommand, leagueSweepHeader, leagueSweepLines, leagueSweepRows, sweepCommand, sweepHeader, sweepLines, sweepParams, sweepSummary, sweepTasks, sweepVariants } from '../src/sweep.ts';
 import type { SweepParam } from '../src/sweep.ts';
 import { watchFair, watchHead, watchLeague } from '../src/watch.ts';
 import type { WatchSpec } from '../src/watch.ts';
@@ -92,6 +92,9 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
   // ---- one slider swept against a reference brain
   const swBrain = select([]), swParam = select([]), swVs = select([]);
   const swWorlds = select([['mirror', 'mirrored worlds (same terrain for both)'], ['contest', 'contest generator (lopsided map by map)']]);
+  const swMode = select([['ref', 'one reference brain (head to head)'], ['league', 'all the other brains (a league, one colony each)']]);
+  const swLWorld = select([['gen', 'a new world per seed (mirrored for 2 brains, fair for more)'], ['map', 'this map, other simulator seeds']]);
+  const lblVs = labelled('against ', swVs), lblWorlds = labelled('Worlds ', swWorlds), lblLWorld = labelled('Worlds ', swLWorld);
   const swSeeds = num(20, 1, MAX_WORLDS), swFrom = num(1, 0, MAX_SEED), swLen = roundsBox(30000);
   const wRun = el('button', 'Run'), wCancel = el('button', 'Cancel');
   const wProgress = el('span', '', 'note'), wResult = el('pre', '', 'evalout'), wCommand = el('pre', '', 'evalout');
@@ -106,8 +109,8 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     league: section(el('div', 'All the brains in one league: every world once per rotation, so each brain takes each hill once (cli/league.ts).', 'note'),
       row(labelled('Worlds ', lMode)), row(labelled('How many ', lSeeds), labelled('from seed ', lFrom), labelled('Length ', lRounds)),
       row(lRun, lCancel, lProgress), lResult, lCommand, gamesBox.league),
-    sweep: section(el('div', 'One slider of a generated brain at every level, each against a reference brain (cli/sweep.ts).', 'note'),
-      row(labelled('Brain ', swBrain), labelled('slider ', swParam), labelled('against ', swVs)), row(labelled('Worlds ', swWorlds)),
+    sweep: section(el('div', 'One slider of a generated brain at every level, each against a reference brain, or in a league with all the other brains (cli/sweep.ts). In a league the colonies are the editors: the best level can depend on the number of colonies.', 'note'),
+      row(labelled('Brain ', swBrain), labelled('slider ', swParam)), row(labelled('Against ', swMode), lblVs), row(lblWorlds, lblLWorld),
       row(labelled('How many ', swSeeds), labelled('from seed ', swFrom), labelled('Length ', swLen)), row(wRun, wCancel, wProgress), wResult, wCommand, gamesBox.sweep),
     fair: section(el('div', 'One brain in every colony of the map: does each colony win about 1 game in n? It measures a map and a brain together; "no bias found" is not proof of fairness (cli/fairness.ts).', 'note'),
       row(labelled('Brain ', fBrain), labelled('Worlds ', fMode)),
@@ -261,8 +264,45 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
   };
   lCancel.onclick = () => batch?.cancel();
 
+  const syncSweepMode = (): void => { const league = swMode.value === 'league'; lblVs.hidden = lblWorlds.hidden = league; lblLWorld.hidden = !league; };
+  swMode.onchange = syncSweepMode; syncSweepMode();
   swBrain.onchange = fillParams;
   swParam.onfocus = fillParams; // (the text may have changed since)
+  /** The levels of the slider, each in a league with all the other editors (one colony each): one batch of the league's games per level. */
+  async function leagueSweep(variants: ReturnType<typeof sweepVariants>, x: number, texts: string[], nWorlds: number, first: number, len: number, rules: RulesId): Promise<void> {
+    const others = names.map((_, i) => i).filter((i) => i !== x), nL = others.length + 1, nm = names.slice();
+    if (others.length < 1) { wResult.textContent = 'A league needs at least two brains: there is only one editor.'; return; }
+    const refTexts = others.map((i) => texts[i]), refNames = others.map((i) => nm[i]), w = ctx.world();
+    const world: LeagueWorld = swLWorld.value === 'map' ? { kind: 'map', mapText: mapTextOf(w) } : { kind: 'gen' };
+    const seedList = Array.from({ length: nWorlds }, (_, k) => first + k), tasks = leagueTasks(nL, seedList), total = tasks.length * variants.length, t0 = performance.now();
+    copyMap.hidden = true; mapShown = world.kind === 'map' ? world.mapText : ''; mapNote = wProgress;
+    wProgress.textContent = `0 / ${total} games`;
+    busy('sweep');
+    const all: LeagueGame[][] = [];
+    try {
+      for (const v of variants) {
+        const base = all.length * tasks.length;
+        const b = runBatch(ctx.makeWorker ?? defaultWorker, size(), { kind: 'league', texts: [v.text, ...refTexts], rules, rounds: len, world }, tasks, (d) => { wProgress.textContent = `${base + d} / ${total} games`; });
+        batch = b;
+        const outs = await b.done;
+        all.push(tasks.map((t, i) => ({ ...t, food: outs[i].food })));
+      }
+      const label = world.kind === 'map' ? 'W.world' : nL === 2 ? 'point-mirror worlds' : `fair worlds for ${nL} colonies`, param = swParam.value as SweepParam;
+      wResult.textContent = [leagueSweepHeader(nm[x], param, refNames, nWorlds, label, len, rules, total), ...leagueSweepLines(param, leagueSweepRows(variants, all, seedList, nL), nL, refNames)].join('\n');
+      const files = [nm[x], ...refNames].map((l) => `${l}.brain`);
+      wCommand.textContent = `Reproduce (save the editors as ${files.join(', ')}${world.kind === 'map' ? ' and the map as W.world' : ''}; ${nm[x]} first):\n` +
+        leagueSweepCommand({ brain: files[0], refs: files.slice(1), param, seeds: nWorlds, from: first, rounds: len, rules, world, worldFile: 'W.world' });
+      copyMap.hidden = world.kind !== 'map';
+      wProgress.textContent = `${total} games in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+      showGames(gamesBox.sweep, variants.flatMap((v, vi) => all[vi].map((g) => {
+        const entryNames = [`${nm[x]} ${v.label}`, ...refNames];
+        return { label: `${v.label}, world ${g.seed}, rotation ${g.rot}`, detail: rotation(nL, g.rot).map((e, h) => `${entryNames[e]} ${g.food[h]}`).join(', '),
+          watch: () => watchLeague(g, { texts: [v.text, ...refTexts], names: entryNames, rules, rounds: len, world }) };
+      })));
+    } catch (e) {
+      wProgress.textContent = ''; wResult.textContent = failure(e, (i) => (i === 0 ? nm[x] : refNames[i - 1]));
+    } finally { batch = undefined; busy(null); }
+  }
   wRun.onclick = async () => {
     refresh(); fillParams();
     const n = int(swSeeds, 1, MAX_WORLDS), first = int(swFrom, 0, MAX_SEED), param = swParam.value as SweepParam;
@@ -271,6 +311,7 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     wResult.textContent = ''; wCommand.textContent = ''; gamesBox.sweep.replaceChildren();
     let variants: ReturnType<typeof sweepVariants>;
     try { variants = sweepVariants(texts[x], param); } catch (e) { wResult.textContent = `Brain ${names[x]}: ${e instanceof Error ? e.message : String(e)}`; return; }
+    if (swMode.value === 'league') { await leagueSweep(variants, x, texts, n, first, len, rules); return; }
     const seedList = Array.from({ length: n }, (_, k) => first + k), tasks = sweepTasks(variants.length, seedList), t0 = performance.now();
     wProgress.textContent = `0 / ${tasks.length} games`;
     const b = runBatch(ctx.makeWorker ?? defaultWorker, size(), { kind: 'head', texts: [...variants.map((v) => v.text), texts[y]], rules, rounds: len, symmetric }, tasks,

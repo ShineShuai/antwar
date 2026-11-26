@@ -93,3 +93,72 @@ test('the panel and cli/sweep.ts: the same games and table, with 1 or 2 jobs; us
     assert.equal(cli(join(dir, 'A.brain'), '--vs', join(dir, 'B.brain'), '--param', 'curiosity', '--seeds', '0').status, 2);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+// ---- a sweep in a league (each level plays all the other brains, n colonies)
+import { leagueEngine, leagueSummary, leagueTasks } from '../src/league.ts';
+import type { LeagueGame, LeagueStat } from '../src/league.ts';
+import { leagueSweepCommand, leagueSweepHeader, leagueSweepLines, leagueSweepRows } from '../src/sweep.ts';
+import { readFileSync } from 'node:fs';
+
+const TRAIL = readFileSync(new URL('../ants/trail.rules', import.meta.url), 'utf8');
+
+/** The games of a league sweep, played in this process the way the CLI and the panel's engine play them. */
+function sweepGames(brain: string, param: SweepParam, refs: string[], seeds: number[], rounds: number): { variants: ReturnType<typeof sweepVariants>; games: LeagueGame[][] } {
+  const variants = sweepVariants(brain, param), n = refs.length + 1, tasks = leagueTasks(n, seeds);
+  return { variants, games: variants.map((v) => { const play = leagueEngine([v.text, ...refs], { rules: 'classic', rounds, world: { kind: 'gen' } }).play; return tasks.map((t) => ({ ...t, food: play(t) })); }) };
+}
+
+test('leagueSweepRows: one row per level with its own league statistics and the others\' points', () => {
+  const brain = personality(DEFAULTS.keeper), refs = [TRAIL, TRAIL], seeds = [1, 2], { variants, games } = sweepGames(brain, 'settling', refs, seeds, 400);
+  const rows = leagueSweepRows(variants, games, seeds, 3);
+  assert.equal(rows.length, 4);
+  rows.forEach((r, i) => {
+    const direct = leagueSummary(3, games[i], seeds).stats.find((x) => x.entry === 0) as LeagueStat;
+    assert.equal(r.stat.mean, direct.mean); assert.equal(r.stat.points, direct.points); assert.equal(r.refs.length, 2);
+    assert.ok(Math.abs(r.stat.mean + r.refs[0] + r.refs[1] - 6) < 1e-9, 'a game gives 6 points in all: the means add up to 6');
+  });
+  assert.deepEqual(rows.map((r) => r.variant.base), [false, false, true, false]);
+  assert.throws(() => leagueSweepRows(variants, games.slice(1), seeds, 3), RangeError);
+});
+
+test('leagueSweepLines: the fair share, marks, and the text of the header and the command', () => {
+  const stat = (mean: number, ci: number, firsts: number, rank: number): LeagueStat => ({ mean, ci, firsts, rank }) as unknown as LeagueStat;
+  const v = (label: string, base = false) => ({ value: 0, label, base, text: '' });
+  const rows = [{ variant: v('high'), stat: stat(3.3, 0.25, 66, 1.34), refs: [1.5, 1.2] }, { variant: v('mid', true), stat: stat(2.1, 0.4, 20, 1.9), refs: [2, 1.9] }, { variant: v('low'), stat: stat(1.28, 0.16, 0, 2.36), refs: [2.4, 2.3] }];
+  const lines = leagueSweepLines('settling', rows, 3, ['trail.rules', 'trail2.rules']);
+  assert.match(lines[0], /^ {2}settling\s+points\/game\s+1st\s+rank\s+trail\.rules, trail2\.rules \(points\/game\)$/);
+  assert.match(lines[1], /^\+ high\s+3\.30 \+-0\.25\s+66\s+1\.34\s+1\.50 1\.20$/); assert.match(lines[2], /^ \*mid\s+2\.10 \+-0\.40/); assert.match(lines[3], /^- low\s+1\.28 \+-0\.16\s+0\s+2\.36\s+2\.40 2\.30$/);
+  assert.match(lines.at(-1) ?? '', /fair share, 2 \(a game gives 6 points in all\)/);
+  assert.equal(leagueSweepHeader('A.brain', 'settling', ['B.brain', 'C.brain'], 30, 'fair worlds for 3 colonies', 100000, 'classic', 270),
+    'A.brain, settling swept in a league with B.brain, C.brain: 30 worlds (fair worlds for 3 colonies), 3 rotations each, 100000 rounds, rules classic; 270 games');
+  assert.equal(leagueSweepCommand({ brain: 'A.brain', refs: ['B.brain', 'C.brain'], param: 'settling', seeds: 30, from: 1, rounds: 100000, rules: 'classic', worldFile: 'W.world' }),
+    'node cli/sweep.ts A.brain B.brain C.brain --league --param settling --seeds 30 --from 1 --rounds 100000 --rules classic');
+  assert.ok(leagueSweepCommand({ brain: 'A', refs: ['B'], param: 'curiosity', seeds: 1, from: 1, rounds: 1, rules: 'altorder', world: { kind: 'map', mapText: 'M' }, worldFile: 'W.world' }).endsWith('--rules altorder --world W.world'));
+});
+
+test('cli/sweep.ts --league: the same games as playing the leagues in this process, with 1 or 2 jobs; usage errors exit 2', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { mkdtempSync, rmSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = mkdtempSync(join(tmpdir(), 'lsweep-'));
+  try {
+    const brain = personality(DEFAULTS.keeper);
+    writeFileSync(join(dir, 'K.brain'), brain); writeFileSync(join(dir, 'T.brain'), TRAIL); writeFileSync(join(dir, 'U.brain'), TRAIL);
+    const cmd = leagueSweepCommand({ brain: join(dir, 'K.brain'), refs: [join(dir, 'T.brain'), join(dir, 'U.brain')], param: 'settling', seeds: 2, from: 3, rounds: 300, rules: 'classic', worldFile: '' }).split(' ').slice(2);
+    const run = (...extra: string[]) => spawnSync(process.execPath, [root('cli/sweep.ts'), ...cmd, ...extra], { encoding: 'utf8' });
+    const j1 = run('--json', '--jobs', '1'), j2 = run('--json', '--jobs', '2'), table = run('--jobs', '2');
+    for (const r of [j1, j2, table]) assert.equal(r.status, 0, r.stderr);
+    assert.equal(j1.stdout, j2.stdout, 'results do not depend on the number of jobs');
+    const { variants, games } = sweepGames(brain, 'settling', [TRAIL, TRAIL], [3, 4], 300), rows = leagueSweepRows(variants, games, [3, 4], 3);
+    const parsed = JSON.parse(j1.stdout) as { variants: { games: unknown[] }[] };
+    assert.deepEqual(parsed.variants.map((v) => v.games), JSON.parse(JSON.stringify(games)));
+    const lines = table.stdout.trimEnd().split('\n');
+    assert.equal(lines[0], leagueSweepHeader('K.brain', 'settling', ['T.brain', 'U.brain'], 2, 'fair worlds for 3 colonies', 300, 'classic', 24));
+    assert.deepEqual(lines.slice(1), leagueSweepLines('settling', rows, 3, ['T.brain', 'U.brain']));
+    const cli = (...x: string[]) => spawnSync(process.execPath, [root('cli/sweep.ts'), ...x], { encoding: 'utf8' });
+    assert.equal(cli(join(dir, 'K.brain'), '--league', '--param', 'settling').status, 2, 'a league needs other brains');
+    assert.equal(cli(join(dir, 'K.brain'), join(dir, 'T.brain'), '--league', '--vs', join(dir, 'T.brain'), '--param', 'settling').status, 2, '--league and --vs do not go together');
+    assert.equal(cli(join(dir, 'K.brain'), join(dir, 'T.brain'), '--param', 'settling').status, 2, 'two files without --league');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
