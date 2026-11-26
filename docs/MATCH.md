@@ -290,6 +290,30 @@ One game shows how it went, not how a brain does. The workshop also saves the ma
 
 The **Maps** page draws a world and says what is wrong with it while you draw (`web/mapedit.ts` is the model, `web/maps.ts` the page).
 
+**The objects of a map** (also in a box on the Maps page):
+
+* **Rock:** a wall; ants cannot enter it, and a move into it fails.
+* **Food:** 1 to 9 packets in a cell; an ant carries one (two with `cap2`); it scores only when it lies on the ant's own hill; the food of a map is shared.
+* **Hill (A, B, ...):** one colony each. Ants start one per hill cell (a hill of 91 cells is a colony of 91 ants), and the score is the food lying
+  on the colony's own hill cells (`sim.score`: carried food does not count). `Home` is the ant's own hill, `FoeHome` another's. Anyone can
+  take food from a hill cell; food dropped on a hill counts for that hill's colony, and an ant that dies leaves 3 food and what it carried where it died.
+* **Not in a map file:** the ants (they start facing east) and the scents they lay (six per colony per cell). **Edges:** the world wraps; a rock border closes it.
+
+**Hill size decides games.** `node scripts/hill-size.ts ants/trail.rules 5,4,3,2 60 30000`: the trail ant in both colonies of 60 mirrored worlds,
+hill B cut to radius r while A keeps radius 5 (91 ants). Radius 5 against 5 is the control; a colony with fewer ants than the other loses
+every world:
+
+| hill B | ants (A vs B) | A wins | B wins | nest food A / B |
+|---|---|---|---|---|
+| radius 5 (control) | 91 vs 91 | 29 | 31 | 223 / 223 |
+| radius 4 | 91 vs 61 | 60 | 0 | 298 / 153 |
+| radius 3 | 91 vs 37 | 60 | 0 | 346 / 94 |
+| radius 2 | 91 vs 19 | 60 | 0 | 395 / 33 |
+
+Pro of a big hill: more foragers, more cells to deliver onto, and it takes more of the shared food. Con: it decides the game, so unequal
+hills make an unequal map (the Maps page warns), and it takes space on a fixed-size world. Not measured: how hill size trades against
+raiding (a big hill has more cells to rob), and against a brain that is built for small colonies.
+
 * **Brushes:** rock, food (1 to 9, what the map text can say), hill (A to Z) and erase, of 1, 7 or 19 cells, with undo and redo (100 steps).
   Rock and food do not go onto a hill (erase it first); a hill clears the rock and food under it. *Rock border* adds the border the
   contest's engine needs (the world wraps, so Tinyminds does not): hills on the edge stay, food on the edge goes.

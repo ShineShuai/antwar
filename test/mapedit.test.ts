@@ -139,3 +139,13 @@ test('nearestFood: the food nearest to each hill, shared at a tie, not through r
   paint(sym, at(sym, 2, 1), brush({ tool: 'hill', label: 0, sym: { mode: 'mirror' } })); paint(sym, at(sym, 5, 1), brush({ tool: 'food', food: 4, sym: { mode: 'mirror' } }));
   const [a, b] = nearestFood(sym, 2); assert.equal(a, b);
 });
+
+test('scripts/hill-size.ts: the control is about even and a much smaller hill loses (small run)', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const root = (f: string): string => new URL(`../${f}`, import.meta.url).pathname;
+  const r = spawnSync(process.execPath, [root('scripts/hill-size.ts'), root('ants/trail.rules'), '5,2', '4', '2500'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const lines = r.stdout.trim().split('\n');
+  assert.equal(lines.length, 2); assert.match(lines[0], /^hill B radius 5 \(91 ants vs 91\)/); assert.match(lines[1], /^hill B radius 2 \(19 ants vs 91\): A \(big hill\) wins \d+, B \d+/);
+  assert.equal(spawnSync(process.execPath, [root('scripts/hill-size.ts')], { encoding: 'utf8' }).status, 2);
+});

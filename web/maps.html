@@ -33,6 +33,7 @@
   .ok::before { content: "\2713 "; color: var(--ok); } .warn::before { content: "! "; color: var(--warn); }
   .bad::before { content: "\2717 "; color: var(--err); } .info::before { content: "\00b7 "; color: var(--mut); }
   details { color: var(--mut); font-size: 13px; }
+  ul.obj { padding-left: 1.1em; margin: 4px 0; display: grid; gap: 4px; }
   ul.lib { list-style: none; padding: 0; margin: 4px 0; display: grid; gap: 2px; }
 </style>
 <nav id="nav"></nav>
@@ -85,6 +86,17 @@
     <h2>Use this map</h2>
     <div class="row"><button id="play">Play in the workshop</button><button id="arena">Check fairness in the Arena</button></div>
     <div class="note">Both save the map as the project's map: the workshop and the Arena show it next. Your drawing is also kept in this browser.</div>
+    <details open>
+      <summary>What the objects do</summary>
+      <ul class="obj">
+        <li><b>Rock</b>: a wall. Ants cannot enter it; a move into it fails. It shapes the paths, and holds nothing.</li>
+        <li><b>Food</b>: 1 to 9 packets in a cell. An ant picks up one packet (two with a ruleset that allows it) and carries it; it scores only when it lies on the ant's own hill. The food of a map is shared: whoever gets there first takes it.</li>
+        <li><b>Hill</b> (A, B, ...): one colony each. <em>Every hill cell holds one ant at the start</em>, so a hill of 91 cells is a colony of 91 ants. A colony's score is the food lying on its own hill cells (food being carried does not count). Brains sense it as Home (their own) and FoeHome (another's). Anyone can take food from any hill cell; food dropped on a hill counts for that hill's colony.</li>
+        <li><b>Hill size is the strongest lever of a map.</b> With the same brain, a colony of 61 ants lost every one of 60 worlds against 91 ants (<code>scripts/hill-size.ts</code>). Pro of a big hill: more foragers and more cells to deliver onto. Con: it decides the game, so unequal hills make an unequal map, and a big hill takes space and sits nearer the food and the others.</li>
+        <li><b>Not in a map file</b>: the ants themselves (they start facing east) and the scents they lay (six per colony per cell).</li>
+        <li><b>Edges</b>: the world wraps round; a border of rock closes it (the contest's worlds have one).</li>
+      </ul>
+    </details>
     <details>
       <summary>About the checks</summary>
       <p>A map is fair when every colony has the same terrain: <em>point mirror</em> (two colonies) or <em>tiles</em> (n colonies) make that so by

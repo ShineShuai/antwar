@@ -159,7 +159,7 @@ export function checks(d: Doc): Check[] {
   if (gaps.length) { out.push({ id: 'colonies', level: 'bad', text: `hill ${gaps.map(letter).join(', ')} is missing: the colonies are the hills A, B, C... without a gap` }); return out; }
   out.push({ id: 'colonies', level: 'ok', text: `${colonies} colonies (hills ${Array.from({ length: colonies }, (_, c) => letter(c)).join(', ')})` });
   const sizes = Array.from({ length: colonies }, (_, c) => counts.get(c) as number);
-  out.push(new Set(sizes).size === 1 ? { id: 'hills', level: 'ok', text: `every hill has ${sizes[0]} cells` } : { id: 'hills', level: 'warn', text: `hill sizes differ: ${sizes.map((s, c) => `${letter(c)} ${s}`).join(', ')}` });
+  out.push(new Set(sizes).size === 1 ? { id: 'hills', level: 'ok', text: `every hill has ${sizes[0]} cells` } : { id: 'hills', level: 'warn', text: `hill sizes differ: ${sizes.map((s, c) => `${letter(c)} ${s}`).join(', ')} (ants start one per hill cell: with the same brain the colony with more ants wins almost always)` });
   const total = d.food.reduce((a, f) => a + f, 0), near = nearestFood(d, colonies), even = near.every((f) => Math.abs(f - near[0]) < 1e-9);
   out.push(total === 0 ? { id: 'food', level: 'bad', text: 'no food' } : { id: 'food', level: even ? 'ok' : 'warn',
     text: `food ${total}; nearest to each hill: ${near.map((f, c) => `${letter(c)} ${Math.round(f * 10) / 10}`).join(', ')}${even ? '' : ' (not equal)'}` });
