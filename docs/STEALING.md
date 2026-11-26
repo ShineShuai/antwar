@@ -205,3 +205,27 @@ Killing thieves (an ant dies with 5 foes around it; a stash guard would need a s
 camping next to the foe's piles to take each packet the moment its carrier leaves (a camper squad that takes no food and a raider squad
 that returns were both tried and are worse), making the first delivery cells unattractive to
 explorers, a delay K beyond 3 (needs a smaller program), and a joint sweep of the sitting dose with the explore and eating settings.
+
+## The Keeper in 3 colonies (measured with the league)
+
+The Keeper was only ever tested head to head. On fair 3-colony worlds (`generateFairWorld(3, seed)`, a new world per seed, every brain on
+every hill once per world: `cli/league.ts`) its two-colony advantage does not carry over:
+
+| league | rounds | games | points per game (95% over the worlds) | first places |
+|---|---|---|---|---|
+| keeper, trail, forager | 100,000 | 90 (30 worlds) | trail 3.53 ± 0.19, **keeper 2.47 ± 0.19**, forager 0.00 | 69, 21, 0 |
+| keeper, trail, a copy of trail | 100,000 | 90 (30 worlds) | trail 2.22 ± 0.43, copy 2.18 ± 0.43, **keeper 1.60 ± 0.21** | 44, 43, 3 |
+| keeper, trail, forager | 30,000 | 180 (60 worlds) | trail 3.10 ± 0.13, keeper 2.90 ± 0.13, forager 0.00 | 99, 81, 0 |
+| keeper, trail (2 colonies, mirrored; the control) | 100,000 | 60 (30 worlds) | **keeper 1.53 ± 0.20**, trail 0.47 ± 0.20 | 46, 14 |
+
+Reproduce: `node cli/personality.ts --template keeper > keeper.rules`, then `node cli/league.ts keeper.rules ants/trail.rules
+ants/forager.rules --seeds 30 --rounds 100000 --jobs 1` (about 2 minutes; the copy of the trail ant is any file with the same text). Two checks say
+the tooling is sound: the two identical trail ants tie (2.22 and 2.18), and the control reproduces the head-to-head result (the Keeper wins
+46 of 60). So the flip is real at 100,000 rounds: in a 3-colony league the Keeper finishes last against two trail ants (it wins 3 of 90
+games), and against a trail ant and a forager it is second, behind the trail ant. At 30,000 rounds the gap to the trail ant is inside the
+noise (0.2 ± 0.18 points). Why is **not** known; candidates, untested: a raider that cannot tell which rival is worth robbing (the
+forager's nest is empty), two rivals close on a 3-tile torus so that the Keeper is the common target, and the cost of its settlers
+without enough to steal. The Keeper is therefore not a 3-colony brain (the open item "brains for 3 or more colonies" in the handoff):
+a version that chooses its victim, or one that only settles when a rival's nest is rich, is the thing to try, with this league as the
+score. Its fairness (the Keeper in every colony) was measured too: no order bias (`docs/MATCH.md`, *Does the move order favour a colony?*).
+

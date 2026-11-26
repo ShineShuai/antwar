@@ -231,8 +231,13 @@ others (z = -2.42, just past the Bonferroni threshold of 2.39 for three colonies
 configurations, so it was confirmed on fresh seeds first, the way every pick is: 600 new worlds (seeds 301 to 900) gave A minus C of
 -1.8 ± 6.5 (z -0.54, the wrong sign), and the 900 pooled worlds give A +0.9, C -3.1 (z -1.34). It was noise.
 
+The Keeper (`cli/personality.ts --template keeper`, default sliders) in every colony of 3-colony fair worlds, same method: classic order,
+900 worlds (seeds 1 to 900): A 32.0%, B 33.9%, C 34.0% (p = 1.0), food vs the others A -1.1, B +1.1, C +0.0 (each ±3.0); `altorder`, 300
+worlds: 32.3 / 34.3 / 33.3%, food within ±0.3 (each ±5.3). Here too the first 300 worlds showed something (A -5.6 ± 5.3, z -2.06, below
+the Bonferroni threshold) that did not replicate on the 600 fresh worlds (A +1.1, z 0.63). None detectable.
+
 What this does not say: a bias below the resolution (about ±3% of win chance and ±4.5 food at 900 worlds; ±5% and ±8 at 300) cannot be
-excluded; only the trail ant was measured (not the Keeper, the raider, or brains that use the flags' senses); 30,000 rounds, not
+excluded; only the trail ant, and for 3 colonies the Keeper, were measured (not the raider, or brains that use the flags' senses); 30,000 rounds, not
 100,000; fair (shift-symmetric) worlds only. `fairness()` gives the win chances with a Bonferroni z-test; `foodVsOthers()` is the paired
 food statistic (it removes the richness of the world, so it is the more sensitive of the two).
 
