@@ -117,8 +117,8 @@ world; 4 colonies are 2 x 2 tiles of 50 x 50 (a 100 x 100 world with hills of 91
   They are not files for the official engine.
 * Fair terrain does not make the move order fair (ids still run colony by colony). `altorder` combines with any number of colonies, but it
   only reverses the id order every other round, so it swaps the two ends of the order: for 3 or more colonies the ones in the middle are
-  never first or last in a round, and the first-colony bias measured for two colonies (52.5% classic, 51.1% altorder) says nothing about
-  them. Not measured; a rotating order would be the fair one (not implemented).
+  never first or last in a round. Does that matter? Measured for the trail ant, no bias is detectable (section *Does the move order
+  favour a colony?* below); a rotating order is not needed on that evidence.
 
 Measured: the plain trail ant on every hill, 400 games of 30,000 rounds each, under `colonies` (then the name of Classic with up to 26 colonies; now just Classic). The ring example world of
 the workshop (`exampleWorld(n)`, similar hills but not the same places) is one world, so its 400 games are 400 simulation seeds; the
@@ -211,6 +211,30 @@ interval is approximate), the pairwise points matrix, and the wins by hill. `--j
 (`a, b, seed, swap, food, alive, hash`): the hash is the final state hash, so any game can be re-run and checked
 (`cli/replay.ts record` on the same world gives the same hash). `--jobs` uses worker threads; the output does not depend on it.
 Cost: about 0.6 s per 100,000-round game per core, so 3 brains x 20 worlds x 2 colours x 3 pairs is 120 games.
+
+## Does the move order favour a colony?
+
+One brain in every colony of fair worlds (identical terrain for all, so only the order can matter), 30,000 rounds, `ants/trail.rules`, a
+new world per game, under classic order and under `altorder`. Reproduce with `node scripts/order-bias.ts ants/trail.rules --colonies 3
+--rules altorder --games 600 --from 301` (resumable and time-boxed: run it again to go on) and `node scripts/order-bias.ts --report
+FILES`; the games are those of `cli/fairness.ts`, and the raw foods of every run below are in `docs/data/order-bias/`.
+
+| colonies | order | worlds | win chances | nest food vs the others, per world | verdict |
+|---|---|---|---|---|---|
+| 3 | classic | 900 | A 33.2%, B 35.0%, C 31.8% (p = 0.87) | A +0.9 ± 4.6, B +2.1 ± 4.5, C -3.1 ± 4.5 | none detectable |
+| 3 | altorder | 900 | A 32.1%, B 36.4%, C 31.4% (p = 0.14) | A -0.0 ± 4.5, B +3.1 ± 4.8, C -3.1 ± 4.7 | none detectable |
+| 4 | classic | 300 | A 24.3%, B 26.8%, C 25.0%, D 23.8% (p = 1.0) | all within ±3 (|z| < 0.8) | none detectable |
+| 4 | altorder | 300 | A 29.7%, B 23.8%, C 25.3%, D 21.2% (p = 0.25) | A +6.5 ± 7.9, D +1.1 ± 7.1 | none detectable |
+
+The first 300 worlds of the 3-colony classic run looked like an effect: the paired food statistic had colony C 9.7 ± 7.8 behind the
+others (z = -2.42, just past the Bonferroni threshold of 2.39 for three colonies), and A ahead. That was the exploratory look at four
+configurations, so it was confirmed on fresh seeds first, the way every pick is: 600 new worlds (seeds 301 to 900) gave A minus C of
+-1.8 ± 6.5 (z -0.54, the wrong sign), and the 900 pooled worlds give A +0.9, C -3.1 (z -1.34). It was noise.
+
+What this does not say: a bias below the resolution (about ±3% of win chance and ±4.5 food at 900 worlds; ±5% and ±8 at 300) cannot be
+excluded; only the trail ant was measured (not the Keeper, the raider, or brains that use the flags' senses); 30,000 rounds, not
+100,000; fair (shift-symmetric) worlds only. `fairness()` gives the win chances with a Bonferroni z-test; `foodVsOthers()` is the paired
+food statistic (it removes the richness of the world, so it is the more sensitive of the two).
 
 ## The Arena (arena.html)
 
