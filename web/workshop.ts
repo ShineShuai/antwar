@@ -60,7 +60,7 @@ function jumpTo(side: number, line: number): void {
   box.scrollTop = Math.max(0, (line - 3) * (parseFloat(getComputedStyle(box).lineHeight) || 15));
 }
 const changed = (restart: boolean): void => { save(); updateNotesSoon(); if (restart) start(); };
-const panels = [mountPersonality($('pa'), baBox, changed), mountPersonality($('pb'), bbBox, changed)];
+const panels = [mountPersonality($('pa'), baBox, changed, () => boxes.length), mountPersonality($('pb'), bbBox, changed, () => boxes.length)];
 /** The versions box of editor c: its history is saved in the browser (web/versions.ts). */
 const versionsOf = (host: HTMLElement, c: number): VersionPanel => mountVersions(host, boxes[c], {
   storage: localStorage, slot: letter(c), ignore: (t) => t === STARTER,
@@ -98,7 +98,7 @@ function setColonies(n: number): void {
     nt.className = 'note'; nt.id = `n${c}`; pn.id = `p${c}`;
     row.append(lab, sel); wrap.append(row, ta, nt, pn, vn); moreHost.append(wrap);
     fillExamples(sel); bindBox(ta); mountHighlight(ta);
-    boxes.push(ta); noteEls.push(nt); panels.push(mountPersonality(pn, ta, changed)); versions.push(versionsOf(vn, c));
+    boxes.push(ta); noteEls.push(nt); panels.push(mountPersonality(pn, ta, changed, () => boxes.length)); versions.push(versionsOf(vn, c));
   }
 }
 const syncPanels = (): void => panels.forEach((x) => x.sync());
