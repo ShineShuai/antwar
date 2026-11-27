@@ -69,6 +69,13 @@ generator wrote).
   sometimes, and its text is the same as before the slider existed (the `# personality:` line only carries `settling=N` when
   it is not the default). Against the shipped Keeper (`docs/STEALING.md`) 1 in 15 loses 58-102 and 1 in 20 loses 21-58, and the cliff
   lies between 1 in 7 and 1 in 5. Sitters at the end of a game on seed 1, rarely to often: 13, 18, 30, 30 of 91.
+  **The dose follows the colonies.** That tuning is for two colonies. With three the same Keeper comes last against two trail ants and 1 in 40
+  comes first (`docs/STEALING.md`, *The Keeper in 3 colonies*), while in two colonies 1 in 40 loses to 1 in 10. So a Keeper can be *made for*
+  three or more colonies: `colonies=N` (3 to 26) in the `# personality:` line, `--colonies N` in `cli/personality.ts`, and it settles
+  1 in 40 (`SETTLE_MANY`); a Keeper made for two colonies has no `colonies` and its text is exactly what it always was (tested byte for byte).
+  A settling level and `colonies` do not go together (the level decides), and no other template has it. In the workshop a Keeper you pick
+  on a map with three or more colonies is made for them; a Keeper you already have gets a one-line tip with a button when the map has three
+  or more (and the other way round when it goes back to two): the text is never changed behind your back, because a text is what you play.
 * Role mix (trail and raider): worker = the template, scout = trail-layer with curiosity 3 that lays but never follows
   trails, guard = the guard; percentages compile to the `mix` flip chain (801 instructions for 70/20/10). The control starts at
   90/10/0 because every share given to guards or scouts measured as a loss (`docs/STEALING.md`).

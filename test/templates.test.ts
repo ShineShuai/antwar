@@ -150,3 +150,36 @@ test('a guard sitting on food does not move: nobody else can stand there to take
   assert.equal(s.ant(0).pos, 1 * W + 1);
   assert.equal(s.food[1 * W + 1], 4);
 });
+
+// ---- the keeper's dose follows the colonies
+import { SETTLE_MANY, keeperDose } from '../src/lang/templates.ts';
+
+test('colonies dose: a keeper made for 3+ colonies settles 1 in 40; the two-colony text does not change by a byte', () => {
+  const two = personality(DEFAULTS.keeper), many = personality({ ...DEFAULTS.keeper, colonies: 3 });
+  assert.match(two.split('\n')[0], /^# personality: template=keeper curiosity=0 boldness=1 sociability=1$/); assert.ok(two.includes('when 1 in 10 -> switch sit'));
+  assert.match(many.split('\n')[0], /^# personality: template=keeper curiosity=0 boldness=1 sociability=1 colonies=3$/); assert.ok(many.includes(`when 1 in ${SETTLE_MANY} -> switch sit`));
+  assert.equal(SETTLE_MANY, 40);
+  assert.equal(many.replace(' colonies=3', '').replace('1 in 40 -> switch sit', '1 in 10 -> switch sit'), two, 'nothing else differs');
+  assert.equal(personality({ ...DEFAULTS.keeper, colonies: 26 }).replace(' colonies=26', ''), many.replace(' colonies=3', ''), 'every colony count from 3 gives the same dose');
+  assert.deepEqual([keeperDose(DEFAULTS.keeper), keeperDose({ ...DEFAULTS.keeper, colonies: 5 }), keeperDose({ ...DEFAULTS.keeper, settling: 0 })], [10, 40, 20]);
+});
+
+test('colonies dose: it comes back from the text; a hand edit, a level, another template and bad counts are refused', () => {
+  const p = { ...DEFAULTS.keeper, colonies: 4 }, text = personality(p);
+  assert.deepEqual(parsePersonality(text), p);
+  assert.equal(parsePersonality(text.replace('1 in 40', '1 in 39')), null, 'edited by hand');
+  assert.equal(parsePersonality(text.replace('colonies=4', 'colonies=2')), null, 'two colonies is the default: it is left out');
+  assert.equal(parsePersonality(text.replace('colonies=4', 'colonies=4 settling=1')), null);
+  const withMix = personality({ ...DEFAULTS.keeper, colonies: 3 });
+  assert.deepEqual(parsePersonality(withMix), { ...DEFAULTS.keeper, colonies: 3 });
+  assert.throws(() => personality({ ...DEFAULTS.keeper, colonies: 3, settling: 1 }), /do not go together/);
+  for (const bad of [2, 27, 3.5, 0, -1, Number.NaN]) assert.throws(() => personality({ ...DEFAULTS.keeper, colonies: bad }), RangeError, String(bad));
+  for (const t of ['forager', 'guard', 'trail', 'raider'] as const) assert.throws(() => personality({ ...DEFAULTS[t], colonies: 3 }), /no colonies dose/, t);
+});
+
+test('colonies dose: the text compiles without warnings, for 3 and 26 colonies and with the other sliders moved', () => {
+  for (const colonies of [3, 26]) for (const curiosity of [0, 4]) for (const boldness of [0, 3]) {
+    const c = compileRules(personality({ ...DEFAULTS.keeper, curiosity, boldness, colonies }));
+    assert.equal(c.warnings.length, 0, `${colonies} colonies, curiosity ${curiosity}, boldness ${boldness}: ${c.warnings.join(' | ')}`); assert.ok(c.instructions < 2000);
+  }
+});

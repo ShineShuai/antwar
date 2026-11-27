@@ -5,7 +5,7 @@ import { headToHead } from './headtohead.ts';
 import { leagueSummary } from './league.ts';
 import type { LeagueGame, LeagueStat, LeagueWorld } from './league.ts';
 import type { HeadToHead } from './headtohead.ts';
-import { LEVELS, SETTLE, SETTLE_DEFAULT, parsePersonality, personality, usesSociability } from './lang/templates.ts';
+import { LEVELS, SETTLE, SETTLE_DEFAULT, SETTLE_MANY, parsePersonality, personality, usesSociability } from './lang/templates.ts';
 import type { Personality } from './lang/templates.ts';
 import type { RulesId } from './core/rules.ts';
 
@@ -32,10 +32,14 @@ export function sweepVariants(text: string, param: SweepParam): Variant[] {
   const p = parsePersonality(text);
   if (!p) throw new RangeError('the brain is not a generated personality (a template with sliders, not edited by hand)');
   if (!sweepParams(p).includes(param)) throw new RangeError(`a ${p.template} has no ${param} slider`);
-  return LEVELS[param].map((name, value) => ({
-    value, base: value === levelOf(p, param), text: personality({ ...p, [param]: value }),
+  // a keeper whose dose follows the colonies has no slider level: the levels are written with the level deciding, and its own dose is one more row
+  const own = param === 'settling' && p.colonies !== undefined, { colonies: _c, ...free } = p;
+  const levels: Variant[] = LEVELS[param].map((name, value) => ({
+    value, base: !own && value === levelOf(p, param), text: personality({ ...(own ? free : p), [param]: value }),
     label: name + (param === 'settling' ? ` (1 in ${SETTLE[value]})` : ''),
   }));
+  if (own) levels.push({ value: LEVELS.settling.length, base: true, text, label: `${p.colonies} colonies (1 in ${SETTLE_MANY})` });
+  return levels;
 }
 
 /** Every game of a sweep of `variants` brains against the reference (entry `variants`), on the given world seeds: variant, seed, colour. */

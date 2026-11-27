@@ -248,7 +248,7 @@ k.rules ants/trail.rules t2.rules --league --param settling --seeds 30 --rounds 
 the same with *Against: all the other brains*). The 1 in 40 and 1 in 64 rows are outside the slider: edit `when 1 in 20 -> switch sit` in a
 level-0 text to `1 in 40` and run `node cli/league.ts k40.rules ants/trail.rules t2.rules --seeds 30 --rounds 100000 --jobs 1` (about 2 minutes). Why a rarer dose is better is not known (candidates: the settlers are exposed to two rivals instead of one; the
 production lost is a larger part of the total); the mechanism was not measured, only the dose-response. The slider's range stops at 1 in 20 and the
-language at 1 in 64, so the best 3-colony value is outside the slider; a colonies-aware default, or a longer slider, is a decision (see the
-handoff's open items). The Keeper's numbers here are for the trail ant and the forager as opponents only.
+language at 1 in 64, so the best 3-colony value is outside the slider. That is now handled by a colonies-aware default (`colonies=N` in the personality line,
+1 in 40 for three or more colonies; `docs/RULES.md`), which reproduces the 1 in 40 row exactly (3.31 points a game, 66 first places). The Keeper's numbers here are for the trail ant and the forager as opponents only.
 Its fairness (the Keeper in every colony) was measured too: no order bias (`docs/MATCH.md`, *Does the move order favour a colony?*).
 

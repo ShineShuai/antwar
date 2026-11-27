@@ -162,3 +162,23 @@ test('cli/sweep.ts --league: the same games as playing the leagues in this proce
     assert.equal(cli(join(dir, 'K.brain'), join(dir, 'T.brain'), '--param', 'settling').status, 2, 'two files without --league');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('sweepVariants for a keeper whose dose follows the colonies: the four levels with the level deciding, and its own dose as the level it has', () => {
+  const own = personality({ ...DEFAULTS.keeper, colonies: 3 }), v = sweepVariants(own, 'settling');
+  assert.deepEqual(v.map((x) => x.label), ['rarely (1 in 20)', 'seldom (1 in 15)', 'sometimes (1 in 10)', 'often (1 in 7)', '3 colonies (1 in 40)']);
+  assert.deepEqual(v.map((x) => x.base), [false, false, false, false, true]);
+  assert.equal(v[4].text, own); assert.ok(v.slice(0, 4).every((x) => !x.text.includes('colonies=')), 'a level has no colonies dose');
+  v.slice(0, 4).forEach((x, i) => assert.deepEqual(parsePersonality(x.text), i === 2 ? DEFAULTS.keeper : { ...DEFAULTS.keeper, settling: i }));
+  const cur = sweepVariants(own, 'curiosity');
+  assert.equal(cur.length, 5); assert.ok(cur.every((x) => x.text.includes('colonies=3')), 'another slider keeps the dose');
+  assert.deepEqual(sweepVariants(personality(DEFAULTS.keeper), 'settling').map((x) => x.base), [false, false, true, false], 'two colonies: as before');
+});
+
+test('cli/personality.ts --colonies: the text of the library; errors exit 2', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const run = (...a: string[]) => spawnSync(process.execPath, [root('cli/personality.ts'), ...a], { encoding: 'utf8' });
+  assert.equal(run('--template', 'keeper', '--colonies', '3').stdout, personality({ ...DEFAULTS.keeper, colonies: 3 }));
+  assert.equal(run('--template', 'keeper').stdout, personality(DEFAULTS.keeper));
+  for (const bad of [['--template', 'keeper', '--colonies', '2'], ['--template', 'keeper', '--colonies', '3', '--settling', '1'], ['--template', 'trail', '--colonies', '3'], ['--template', 'keeper', '--colonies', '27']])
+    assert.equal(run(...bad).status, 2, bad.join(' '));
+});
