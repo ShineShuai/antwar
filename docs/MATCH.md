@@ -20,6 +20,13 @@ That is a property of play, so it is measured: `cli/fairness.ts`, with the stati
 generator** (a new world every game). The two differ: the contest generator is fair on average, because colony labels are arbitrary, and
 unfair on almost every single map (below).
 
+**Scope: two colonies.** Fairness is what is measured and claimed for two colonies for now: the point-mirror worlds (0 of 12 maps flagged),
+the contest generator (11 of 12 flagged map by map, fair on average) and the map designer's test. A world for three or more colonies is
+checked for its structure (`isShiftSymmetric`) and `cli/fairness.ts` and the Arena's Fairness tab still play it, but nothing is promised
+beyond the measurements recorded below (move order: 3 and 4 colonies, none found). For two colonies the report also gives the paired nest
+food, A minus B per game: win chance is coarse, nest food sees a lean sooner. It is a hint beside the verdict (the win chance), and says
+so when |z| reaches 2.58 while win chance has not flagged the map.
+
 Terrain symmetry is how fair worlds are made. It is a sufficient condition and not the definition; each gives every colony the same terrain:
 
 * `isSymmetric(map)`: the point mirror, two hills, with a rock border (`SYMMETRIC_WORLD`, next section).
@@ -333,11 +340,19 @@ raiding (a big hill has more cells to rob), and against a brain that is built fo
   rocks and their size, food blobs and cell amount); a generated map arrives with the matching symmetry on, so you can go on editing it.
 * **Files:** import and export `.world` (the contest's text format), copy the text, and a **library** of named maps in the browser (50
   maps, 128 KiB each). The drawing itself is kept in the browser too, and comes back when you open the page.
+* **Mirror a half** (two colonies): *Mirror top half* and *Mirror bottom half* make a map point-symmetric by copying one half onto the other,
+  turned half a turn (hill A becomes hill B there); the half you keep must have a hill, and only hills A and B are allowed. A hill that
+  lies across the middle row is cut there and completed from the other half. It is undoable. The mirror check counts the cells that
+  differ from their twin, and *Show asymmetry* outlines them on the board.
+* **Fairness (two colonies):** the same brain, one of the project's, in both colonies of this map, many games that differ only in the
+  simulator seed (`cli/fairness.ts --world`; the result shows the command). It needs a map of two colonies; any change of the map drops
+  the result. A symmetric map is fair by construction, the test then measures the move order and the brain; an asymmetric map is where
+  it matters. "No bias found" is not a proof: the result says what size of bias the number of games could not show.
 * **Use this map:** *Play in the workshop* and *Check fairness in the Arena* save the map as the project's map (`web/project.ts`) and
   go there; the Arena's Fairness tab measures a map and a brain together.
 
 Decided: unequal hills stay a warning (a handicap map can be intended), not an error. Open decision: the editor keeps wrapped maps and offers the border as a button; the contest generator's worlds (the workshop's default) have one.
-Not yet: the fairness check inside this page (it is one click away in the Arena), the map thumbnails in the library, resizing a map.
+Not yet: the map thumbnails in the library, resizing a map; the fairness test only handles two colonies.
 
 Not yet in the Arena: a league with more brains than colonies, a chart averaged over several games, a sweep of two sliders, a
 sweep of the role mix.

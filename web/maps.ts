@@ -1,9 +1,10 @@
 // The Maps page: draw a world with brushes and symmetry, see what is wrong with it as you draw, generate one, keep a library, and take the map to the
 // workshop or the Arena. The model and the checks are web/mapedit.ts; this file draws it and turns pointer events into strokes.
 import { CLASSIC_WORLD } from '../src/core/gen.ts';
-import { History, MAX_FOOD, addBorder, checks, docFromText, generate, newDoc, paint, shiftFor, sizeOfShift, textOf } from './mapedit.ts';
+import { History, MAX_FOOD, addBorder, checks, copyDoc, docFromText, generate, mirrorHalf, mirrorMismatch, newDoc, paint, shiftFor, sizeOfShift, textOf } from './mapedit.ts';
 import type { Brush, Doc, Symmetry, Tool } from './mapedit.ts';
 import { deleteMap, readLibrary, saveMap } from './maplib.ts';
+import { mountMapFairness } from './mapfair.ts';
 import { mountNav } from './nav.ts';
 import { paletteFor } from './colonies.ts';
 import { readProject, writeProjectWorld } from './project.ts';
@@ -21,6 +22,7 @@ const msg = (t: string, err = false): void => { $('msg').textContent = t; $('msg
 // ---- state
 let doc: Doc = newDoc(60, 60), sym: Symmetry = { mode: 'none' }, tool: Tool = 'rock', L: Layout = layout(60, 60, 8);
 const history = new History();
+const showAsym = $<HTMLInputElement>('showasym');
 const dark = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
 
 // ---- controls
@@ -47,11 +49,12 @@ function fit(): void {
   const avail = Math.max(320, $('stage').clientWidth || 760), w = Math.max(3, Math.min(14, Math.floor(avail / (doc.W + 1))));
   L = layout(doc.W, doc.H, w); canvas.width = L.width; canvas.height = L.height;
 }
-function hex(cx: number, cy: number): void {
+function hexPath(cx: number, cy: number): void {
   ctx.beginPath();
   for (let k = 0; k < 6; k++) { const a = (Math.PI / 180) * (60 * k - 30), x = cx + (L.h / 2) * Math.cos(a), y = cy + (L.h / 2) * Math.sin(a); if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
-  ctx.closePath(); ctx.fill();
+  ctx.closePath();
 }
+function hex(cx: number, cy: number): void { hexPath(cx, cy); ctx.fill(); }
 function drawCell(p: number): void {
   const pal = paletteFor(26, dark()), [cx, cy] = center(L, p % doc.W, (p / doc.W) | 0);
   ctx.fillStyle = doc.rock[p] ? pal.rock : doc.hill[p] >= 0 ? pal.hill[doc.hill[p]] : pal.bg; hex(cx, cy);
@@ -61,10 +64,16 @@ function drawCell(p: number): void {
 function drawAll(): void {
   ctx.fillStyle = paletteFor(26, dark()).bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
   for (let p = 0; p < doc.W * doc.H; p++) if (doc.rock[p] || doc.hill[p] >= 0 || doc.food[p]) drawCell(p); // (the empty cells are the background)
+  if (showAsym.checked) { // the cells that differ from their twin under the point mirror, outlined
+    ctx.strokeStyle = '#d946ef'; ctx.lineWidth = Math.max(1, L.w / 5);
+    for (const p of mirrorMismatch(doc) ?? []) { const [cx, cy] = center(L, p % doc.W, (p / doc.W) | 0); hexPath(cx, cy); ctx.stroke(); }
+  }
 }
 
 // ---- checks, draft, buttons
 function refresh(): void {
+  fair.invalidate();
+  if (showAsym.checked) drawAll();
   const list = $('checks'); list.replaceChildren();
   for (const c of checks(doc)) { const d = document.createElement('div'); d.className = c.level; d.textContent = c.text; list.append(d); }
   $<HTMLButtonElement>('undo').disabled = !history.canUndo; $<HTMLButtonElement>('redo').disabled = !history.canRedo;
@@ -90,6 +99,20 @@ function setSymmetry(): void {
 }
 $('symmode').onchange = setSymmetry; $('symn').onchange = setSymmetry;
 $('genkind').onchange = () => { $('gennbox').hidden = $<HTMLSelectElement>('genkind').value !== 'fair'; };
+showAsym.onchange = () => {
+  drawAll();
+  if (showAsym.checked) { const off = mirrorMismatch(doc); msg(off === null ? 'An odd height has no point mirror.' : off.length ? `${off.length} cells differ from their twin under the point mirror (outlined).` : 'The map is point-symmetric: nothing to mark.'); }
+};
+/** Turns one half of the map into the other, so a two-colony map is fair by construction (undoable). */
+function mirror(keep: 'first' | 'last'): void {
+  if (mirrorMismatch(doc)?.length === 0) { msg('The map is point-symmetric already.'); return; }
+  const before = copyDoc(doc);
+  try {
+    const changed = mirrorHalf(doc, keep);
+    history.push(before); drawAll(); refresh(); msg(`Mirrored the ${keep === 'first' ? 'top' : 'bottom'} half: ${changed.length} cells changed.`);
+  } catch (e) { msg(e instanceof Error ? e.message : String(e), true); }
+}
+$('mirfirst').onclick = () => mirror('first'); $('mirlast').onclick = () => mirror('last');
 $('undo').onclick = () => { const d = history.undo(doc); if (d) show(d); };
 $('redo').onclick = () => { const d = history.redo(doc); if (d) show(d); };
 $('border').onclick = () => { history.push(doc); const ch = addBorder(doc); if (ch.length === 0) { msg('The map has a rock border already.'); return; } ch.forEach(drawCell); refresh(); msg('A rock border was added.'); };
@@ -184,6 +207,12 @@ canvas.onpointermove = (e) => {
 const endStroke = (): void => { if (!stroking) return; stroking = false; last = undefined; refresh(); };
 canvas.onpointerup = endStroke; canvas.onpointercancel = endStroke;
 addEventListener('pointerup', endStroke);
+
+// ---- fairness (two colonies)
+const fair = mountMapFairness($('fair'), () => {
+  const hills = new Set<number>(); for (const h of doc.hill) if (h >= 0) hills.add(h);
+  return { text: textOf(doc), colonies: hills.size, problem: checks(doc).find((c) => c.id === 'colonies' && c.level === 'bad')?.text };
+});
 
 // ---- start: the draft, else the workshop's map, else a mirrored world of the workshop's seed
 try {

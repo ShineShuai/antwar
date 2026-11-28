@@ -112,7 +112,7 @@ export function mountEvaluate(host: HTMLElement, ctx: EvalContext): { refresh():
     sweep: section(el('div', 'One slider of a generated brain at every level, each against a reference brain, or in a league with all the other brains (cli/sweep.ts). In a league the colonies are the editors: the best level can depend on the number of colonies.', 'note'),
       row(labelled('Brain ', swBrain), labelled('slider ', swParam)), row(labelled('Against ', swMode), lblVs), row(lblWorlds, lblLWorld),
       row(labelled('How many ', swSeeds), labelled('from seed ', swFrom), labelled('Length ', swLen)), row(wRun, wCancel, wProgress), wResult, wCommand, gamesBox.sweep),
-    fair: section(el('div', 'One brain in every colony of the map: does each colony win about 1 game in n? It measures a map and a brain together; "no bias found" is not proof of fairness (cli/fairness.ts).', 'note'),
+    fair: section(el('div', 'One brain in every colony of the map: does each colony win about 1 game in n? It measures a map and a brain together; "no bias found" is not proof of fairness. Fairness is measured for two colonies for now; for more it is a rough check (docs/MATCH.md, cli/fairness.ts).', 'note'),
       row(labelled('Brain ', fBrain), labelled('Worlds ', fMode)),
       row(labelled('Games ', fGames), labelled('from seed ', fFrom), labelled('Length ', fRounds)), row(fRun, fCancel, fProgress), fResult, fCommand, gamesBox.fair),
   };

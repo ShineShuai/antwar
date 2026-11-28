@@ -26,7 +26,7 @@ export function docFromText(text: string): Doc {
   if (lines.length < 3 || !/^\d+$/.test(lines[0].trim()) || !/^\d+$/.test(lines[1].trim())) throw new RangeError('this is not a world file: the first two lines are the width and the height, then one line per row');
   return docOf(parseMap(text));
 }
-const copyDoc = (d: Doc): Doc => ({ W: d.W, H: d.H, rock: d.rock.slice(), food: d.food.slice(), hill: d.hill.slice() });
+export const copyDoc = (d: Doc): Doc => ({ W: d.W, H: d.H, rock: d.rock.slice(), food: d.food.slice(), hill: d.hill.slice() });
 
 // ---------- symmetry
 /** none; the point mirror (x, y) -> (W-1-x, H-1-y), which swaps hills A and B; or tiles: the world is across x down tiles of w x h cells, and
@@ -167,9 +167,42 @@ export function checks(d: Doc): Check[] {
     : reachableOnTorus(m) ? { id: 'reach', level: 'warn', text: 'every hill and food cell can be reached only by wrapping round the world (not in the contest engine)' }
       : { id: 'reach', level: 'bad', text: 'some food or hill cannot be reached from hill A (rock is in the way)' });
   const mirror = colonies === 2 && isSymmetric(m), shift = isShiftSymmetric(m);
-  out.push(colonies === 2 ? { id: 'mirror', level: mirror ? 'ok' : 'info', text: mirror ? 'point-mirror symmetric (rock, food, hills)' : 'not point-mirror symmetric' } : { id: 'mirror', level: 'info', text: 'the point mirror is for two colonies' });
+  const off = colonies === 2 && !mirror ? mirrorMismatch(d) : null;
+  out.push(colonies === 2 ? { id: 'mirror', level: mirror ? 'ok' : 'info', text: mirror ? 'point-mirror symmetric (rock, food, hills)'
+    : off ? `not point-mirror symmetric: ${off.length} of ${N} cells differ from their twin (Show asymmetry marks them; Mirror top or bottom half fixes it)` : 'not point-mirror symmetric (an odd height has no point mirror)' }
+    : { id: 'mirror', level: 'info', text: 'the point mirror is for two colonies' });
   out.push({ id: 'shift', level: shift ? 'ok' : mirror ? 'info' : 'warn', text: shift ? 'same terrain for every colony (a shift of the wrapped world maps each hill onto the others)'
     : mirror ? 'not shift symmetric (the mirror is enough for two colonies)' : 'colonies see different terrain: measure how much it matters with the fairness check' });
   out.push(hasBorder(d) ? { id: 'border', level: 'info', text: 'rock border: yes (a world file for the contest engine)' } : { id: 'border', level: 'info', text: 'rock border: no (fine here: the world wraps; the contest engine needs one)' });
   return out;
+}
+
+// ---------- the point mirror of a two-colony map
+/** The cells whose content differs from their twin under the point mirror (rock, food, hill A <-> B): both cells of a pair are listed. Empty for
+ * a symmetric map. A height that is odd has no point mirror: `null`. Hills beyond A and B have no twin, so they count as different. */
+export function mirrorMismatch(d: Doc): number[] | null {
+  if (d.H % 2) return null;
+  const N = d.W * d.H, out: number[] = [];
+  for (let p = 0; p < N; p++) {
+    const q = N - 1 - p, h = d.hill[p];
+    if (d.rock[p] !== d.rock[q] || d.food[p] !== d.food[q] || d.hill[q] !== (h < 0 ? -1 : h > 1 ? -2 : 1 - h)) out.push(p);
+  }
+  return out;
+}
+
+/** Makes the map point-symmetric by copying one half onto the other: `keep` 'first' keeps the top half of the rows and rewrites the bottom
+ * half as its half turn (hill A becomes hill B there), 'last' the other way round. Returns the cells that changed. Needs an even height and only hills
+ * A and B, and a hill in the half that is kept (a RangeError says otherwise). A hill that lies in both halves is cut at the middle row and
+ * completed from the other colony's half. */
+export function mirrorHalf(d: Doc, keep: 'first' | 'last'): number[] {
+  if (d.H % 2) throw new RangeError('the height must be even for a point mirror');
+  if (d.hill.some((h) => h > 1)) throw new RangeError('the point mirror is for two colonies: only hills A and B');
+  const N = d.W * d.H, changed: number[] = [], lo = keep === 'first' ? 0 : N / 2;
+  if (!d.hill.subarray(lo, lo + N / 2).some((h) => h >= 0)) throw new RangeError(`the ${keep === 'first' ? 'top' : 'bottom'} half has no hill: keep the other half, or draw a hill first`);
+  for (let p = 0; p < N / 2; p++) {
+    const from = keep === 'first' ? p : N - 1 - p, to = N - 1 - from, h = d.hill[from];
+    const r = d.rock[from], f = d.food[from], hh = h < 0 ? -1 : 1 - h;
+    if (d.rock[to] !== r || d.food[to] !== f || d.hill[to] !== hh) { d.rock[to] = r; d.food[to] = f; d.hill[to] = hh; changed.push(to); }
+  }
+  return changed;
 }

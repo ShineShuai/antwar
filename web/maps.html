@@ -52,6 +52,8 @@
       <label id="symnbox" hidden>colonies <select id="symn"></select></label>
     </div>
     <div class="note" id="symnote"></div>
+    <div class="row"><button id="mirfirst" title="Keep the top half of the rows and turn it half a turn into the bottom half (hill A becomes hill B there)">Mirror top half</button><button id="mirlast" title="Keep the bottom half and turn it into the top half">Mirror bottom half</button></div>
+    <div class="row"><label><input type="checkbox" id="showasym"> Show asymmetry</label></div>
     <div class="row"><button id="undo">Undo</button><button id="redo">Redo</button><button id="border">Rock border</button></div>
     <h2>Generate</h2>
     <div class="row">
@@ -83,6 +85,8 @@
   <div>
     <h2>Checks</h2>
     <div class="checks" id="checks"></div>
+    <h2>Fairness (two colonies)</h2>
+    <div id="fair"></div>
     <h2>Use this map</h2>
     <div class="row"><button id="play">Play in the workshop</button><button id="arena">Check fairness in the Arena</button></div>
     <div class="note">Both save the map as the project's map: the workshop and the Arena show it next. Your drawing is also kept in this browser.</div>
@@ -100,8 +104,8 @@
     <details>
       <summary>About the checks</summary>
       <p>A map is fair when every colony has the same terrain: <em>point mirror</em> (two colonies) or <em>tiles</em> (n colonies) make that so by
-        construction, and the checks say whether a map has it. Measure how much a difference matters with the fairness check in the Arena
-        (<code>docs/MATCH.md</code>). The world wraps round its edges; a rock border is only for the contest's engine.</p>
+        construction, and the checks say whether a map has it. Measure how much a difference matters with the fairness test here, or in the Arena
+        (<code>docs/MATCH.md</code>); fairness is measured for two colonies for now. The world wraps round its edges; a rock border is only for the contest's engine.</p>
     </details>
   </div>
 </main>

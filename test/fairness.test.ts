@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { generateFairWorld } from '../src/core/gen.ts';
 import { playColonies } from '../src/core/match.ts';
 import { RULESETS } from '../src/core/rules.ts';
-import { fairness, normalTwoSidedP } from '../src/fairness.ts';
+import { FOOD_LEAN_Z, fairness, fairnessLines, normalTwoSidedP } from '../src/fairness.ts';
 import { compileRules } from '../src/lang/index.ts';
 
 const near = (a: number, b: number, tol: number, what: string): void => assert.ok(Math.abs(a - b) <= tol, `${what}: ${a} is not within ${tol} of ${b}`);
@@ -140,4 +140,26 @@ test('scripts/order-bias.ts: plays in pieces, resumes, and reports the same numb
     assert.equal(rep.status, 0, rep.stderr); assert.match(rep.stdout, /^4 fair worlds/); assert.match(rep.stdout, /paired; Bonferroni \|z\| > 2.39 for 3 colonies/); assert.match(rep.stdout, /A: [+-]/);
     assert.equal(run('--report').status, 2); assert.equal(run(brain).status, 2); assert.equal(run(brain, '--colonies', '13', '--games', '1', '--out', dir).status, 2, 'no fair world for 13 colonies');
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('two colonies: the paired nest food comes with the verdict; other numbers of colonies have none', () => {
+  // A and B take turns at winning, A by 6 and B by 2: win chance is exactly fair, but the food leans to A by 2 a game
+  const turns = Array.from({ length: 40 }, (_, g) => (g % 2 ? [3, 5] : [8, 2]));
+  const f = fairness(turns), p = f.pair;
+  assert.ok(p && f.fair && f.rows.every((r) => r.share === 0.5));
+  near(p.mean, 2, 1e-9, 'mean of A - B: (6 - 2) / 2'); assert.ok(p.z > FOOD_LEAN_Z, `z ${p.z}`);
+  const lines = fairnessLines(f);
+  assert.match(lines.find((l) => l.startsWith('nest food A - B')) ?? '', /^nest food A - B per game: \+2\.0 \+-\d\.\d \(95%\), z = \d+\.\d\d$/);
+  assert.ok(lines.some((l) => l.startsWith('nest food leans to A')), 'a lean that win chance does not show is called out');
+  // B ahead: the sign and the colony turn round
+  const rev = fairnessLines(fairness(turns.map(([a, b]) => [b, a])));
+  assert.ok(rev.some((l) => /^nest food A - B per game: -2\.0 /.test(l))); assert.ok(rev.some((l) => l.startsWith('nest food leans to B')));
+  // fair play: the line is there, the lean is not
+  const even = fairness(Array.from({ length: 40 }, (_, g) => (g % 2 ? [7, 3] : [3, 7])));
+  near(even.pair?.mean ?? 1, 0, 1e-12, 'mean'); assert.ok(!fairnessLines(even).some((l) => l.includes('leans')));
+  assert.ok(fairnessLines(even).some((l) => l.startsWith('nest food A - B per game: +0.0 ')));
+  // one game is not enough for a spread; three colonies have no A - B
+  assert.equal(fairness([[5, 3]]).pair, undefined);
+  assert.equal(fairness([[5, 3, 1], [1, 3, 5]]).pair, undefined);
+  assert.ok(!fairnessLines(fairness([[5, 3, 1], [1, 3, 5]])).some((l) => l.startsWith('nest food')));
 });
