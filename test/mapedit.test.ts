@@ -1,9 +1,9 @@
 // The map designer's model (web/mapedit.ts): brushes and symmetry, undo, generators, and the checks.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateFairWorld, generateWorld, isShiftSymmetric, isSymmetric, SYMMETRIC_WORLD } from '../src/core/gen.ts';
+import { CLASSIC_WORLD, generateFairWorld, generateWorld, isShiftSymmetric, isSymmetric, SYMMETRIC_WORLD } from '../src/core/gen.ts';
 import { formatMap, parseMap } from '../src/core/map.ts';
-import { History, addBorder, brushCells, checks, copies, docFromText, docOf, generate, hasBorder, mapOf, nearestFood, newDoc, paint, shiftFor, sizeOfShift, textOf } from '../web/mapedit.ts';
+import { History, addBorder, brushCells, checks, copies, docFromText, docOf, generate, hasBorder, mapOf, mirrorHalf, mirrorMismatch, nearestFood, newDoc, paint, shiftFor, sizeOfShift, textOf } from '../web/mapedit.ts';
 import type { Brush, Doc, Symmetry } from '../web/mapedit.ts';
 
 const NONE: Symmetry = { mode: 'none' };
@@ -148,4 +148,39 @@ test('scripts/hill-size.ts: the control is about even and a much smaller hill lo
   const lines = r.stdout.trim().split('\n');
   assert.equal(lines.length, 2); assert.match(lines[0], /^hill B radius 5 \(91 ants vs 91\)/); assert.match(lines[1], /^hill B radius 2 \(19 ants vs 91\): A \(big hill\) wins \d+, B \d+/);
   assert.equal(spawnSync(process.execPath, [root('scripts/hill-size.ts')], { encoding: 'utf8' }).status, 2);
+});
+
+test('mirrorMismatch and mirrorHalf: the cells that break the point mirror, and the half that fixes them', () => {
+  const sym = docOf(generateWorld(3, SYMMETRIC_WORLD));
+  assert.deepEqual(mirrorMismatch(sym), [], 'a mirrored world has no mismatch');
+  assert.equal(mirrorHalf(sym, 'first').length, 0, 'and nothing to mirror');
+  // a contest world is not symmetric: keep the half that has a hill and it is, by construction, symmetric with equal hills
+  const halfHas = (d: Doc, keep: 'first' | 'last'): boolean => d.hill.subarray(keep === 'first' ? 0 : d.W * d.H / 2).slice(0, d.W * d.H / 2).some((h) => h >= 0);
+  let kept = 0;
+  for (const keep of ['first', 'last'] as const) {
+    const d = docOf(generateWorld(3, CLASSIC_WORLD)), off = mirrorMismatch(d) as number[];
+    assert.ok(off.length > 0 && off.length % 2 === 0, 'both cells of a pair are listed');
+    if (!halfHas(d, keep)) { assert.throws(() => mirrorHalf(d, keep), /half has no hill/); assert.deepEqual(mirrorMismatch(d), off, 'a refusal changes nothing'); continue; }
+    kept++;
+    const changed = mirrorHalf(d, keep);
+    assert.ok(changed.length > 0 && changed.every((p) => (keep === 'first' ? p >= d.W * d.H / 2 : p < d.W * d.H / 2)), 'only the other half is rewritten');
+    assert.deepEqual(mirrorMismatch(d), []); assert.ok(isSymmetric(mapOf(d)));
+    const sizes = [0, 1].map((c) => d.hill.filter((h) => h === c).length); assert.equal(sizes[0], sizes[1], 'hills have the same size');
+  }
+  assert.ok(kept >= 1, 'a half with a hill exists');
+  // the kept half is untouched; hill A of the kept half becomes hill B in the other
+  const d = newDoc(6, 4); d.hill[at(d, 1, 0)] = 0; d.rock[at(d, 2, 1)] = 1; d.food[at(d, 4, 3)] = 7; d.hill[at(d, 0, 3)] = 0;
+  mirrorHalf(d, 'first');
+  assert.equal(d.hill[at(d, 1, 0)], 0, 'kept'); assert.equal(d.hill[at(d, 4, 3)], 1, 'twin of (1,0) is hill B'); assert.equal(d.food[at(d, 4, 3)], 0, 'the food that was there is replaced');
+  assert.equal(d.rock[at(d, 3, 2)], 1, 'twin of the rock'); assert.equal(d.hill[at(d, 0, 3)], -1, 'the old hill A of the other half is gone');
+  // errors: a third hill, an odd height
+  const t = newDoc(6, 4); t.hill[0] = 2; assert.throws(() => mirrorHalf(t, 'first'), /two colonies/); assert.ok(mirrorMismatch(t)?.includes(0), 'hill C has no twin');
+  assert.equal(mirrorMismatch({ ...newDoc(6, 4), H: 3 }), null); assert.throws(() => mirrorHalf({ ...newDoc(6, 4), H: 3 }, 'last'), /even/);
+});
+
+test('checks: an asymmetric two-colony map says how many cells differ from their twin', () => {
+  const d = docOf(generateWorld(3, CLASSIC_WORLD)), mirror = checks(d).find((c) => c.id === 'mirror');
+  assert.equal(mirror?.level, 'info'); assert.match(mirror?.text ?? '', /^not point-mirror symmetric: \d+ of 10000 cells differ from their twin/);
+  assert.equal(checks(d).find((c) => c.id === 'mirror')?.text.includes(String((mirrorMismatch(d) as number[]).length)), true);
+  mirrorHalf(d, 'first'); assert.equal(checks(d).find((c) => c.id === 'mirror')?.text, 'point-mirror symmetric (rock, food, hills)');
 });

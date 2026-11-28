@@ -101,3 +101,72 @@ test('"Play in the workshop" needs two hills and saves the map as the project wo
 });
 
 test('canvas was drawn', () => assert.ok(w.__ops > 100));
+
+// ---- fairness for two colonies: the point mirror tools and the measured test
+const fresh = async (f) => {
+  const q = await openPage('maps', { storage: { [KEYS.workshop]: { seed: '5' } } });
+  try { await f(q); } finally { q.close(); }
+};
+const strokeAt = (q, x, y) => { // a rock stroke on the 100 x 100 map
+  const c = viewer.center(viewer.layout(100, 100, Math.max(3, Math.min(14, Math.floor(760 / 101)))), x, y), b = q.$('board');
+  [...q.$('toolrow').querySelectorAll('button')].find((t) => t.textContent === 'Rock').click(); q.set(q.$('radius'), '0');
+  for (const t of ['pointerdown', 'pointerup']) b.dispatchEvent(new q.w.MouseEvent(t, { clientX: c[0], clientY: c[1], button: 0, buttons: 1, bubbles: true }));
+};
+const checksOf = (q) => [...q.$('checks').querySelectorAll('div')].map((d) => `${d.className}: ${d.textContent}`);
+
+test('a contest world is not point-symmetric: the check counts the cells, the mirror buttons fix it, undo brings it back', () => fresh(async (q) => {
+  q.set(q.$('genkind'), 'contest'); q.$('seed').value = '3'; q.$('gen').click();
+  const off = checksOf(q).find((c) => /point-mirror/.test(c)); assert.match(off, /^info: not point-mirror symmetric: \d+ of 10000 cells differ from their twin/);
+  q.$('showasym').checked = true; q.fire(q.$('showasym'), 'change'); assert.match(q.$('msg').textContent, /^\d+ cells differ from their twin under the point mirror \(outlined\)\.$/);
+  const ops = q.w.__ops; q.$('showasym').checked = false; q.fire(q.$('showasym'), 'change'); assert.ok(q.w.__ops > ops, 'the board is drawn again without the outlines');
+  q.$('mirfirst').click(); assert.match(q.$('msg').textContent, /^Mirrored the top half: \d+ cells changed\.$/);
+  assert.ok(checksOf(q).some((c) => /^ok: point-mirror symmetric/.test(c))); assert.ok(checksOf(q).some((c) => /^ok: every hill has \d+ cells/.test(c)));
+  q.$('mirfirst').click(); assert.equal(q.$('msg').textContent, 'The map is point-symmetric already.');
+  q.$('undo').click(); assert.ok(checksOf(q).some((c) => /not point-mirror symmetric/.test(c)));
+  q.$('mirfirst').click(); assert.match(q.$('msg').textContent, /^Mirrored the top half/); assert.ok(checksOf(q).some((c) => /^ok: point-mirror symmetric/.test(c)));
+  q.$('showasym').checked = true; q.fire(q.$('showasym'), 'change'); assert.equal(q.$('msg').textContent, 'The map is point-symmetric: nothing to mark.');
+}));
+
+test('a hand-drawn half: the half without a hill is refused, the half with it is mirrored into hill B', () => fresh(async (q) => {
+  q.set(q.$('symmode'), 'none'); q.$('nW').value = '24'; q.$('nH').value = '20'; q.$('newdoc').click();
+  const at = (x, y) => viewer.center(viewer.layout(24, 20, Math.max(3, Math.min(14, Math.floor(760 / 25)))), x, y);
+  const stroke = (x, y) => { const c = at(x, y), ev = (t) => $q.dispatchEvent(new q.w.MouseEvent(t, { clientX: c[0], clientY: c[1], button: 0, buttons: 1, bubbles: true })); ev('pointerdown'); ev('pointerup'); };
+  const $q = q.$('board'), tool = (name) => [...q.$('toolrow').querySelectorAll('button')].find((b) => b.textContent === name).click();
+  tool('Hill'); q.set(q.$('radius'), '1'); stroke(5, 4); tool('Rock'); q.set(q.$('radius'), '0'); stroke(10, 6);
+  assert.ok(checksOf(q).some((c) => /^bad: one hill/.test(c)));
+  q.$('mirlast').click(); assert.equal(q.$('msg').className, 'note err'); assert.match(q.$('msg').textContent, /^the bottom half has no hill/);
+  q.$('mirfirst').click(); assert.match(q.$('msg').textContent, /^Mirrored the top half: \d+ cells changed\.$/);
+  assert.ok(checksOf(q).some((c) => /^ok: 2 colonies \(hills A, B\)/.test(c))); assert.ok(checksOf(q).some((c) => /^ok: every hill has 7 cells/.test(c))); assert.ok(checksOf(q).some((c) => /^ok: point-mirror symmetric/.test(c)));
+}));
+
+test('the mirror buttons refuse a map of three colonies', () => fresh(async (q) => {
+  q.set(q.$('genkind'), 'fair'); q.set(q.$('genn'), '3'); q.$('gen').click();
+  q.$('mirfirst').click(); assert.equal(q.$('msg').className, 'note err'); assert.match(q.$('msg').textContent, /two colonies/);
+}));
+
+test('Measure: the same brain in both colonies of the map; the result names the command; a change of the map drops it', () => fresh(async (q) => {
+  const host = q.$('fair'), run = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Measure'), result = host.querySelectorAll('pre')[0];
+  assert.deepEqual([...host.querySelector('select').options].map((o) => o.text), ['brain A', 'brain B']);
+  const [games] = host.querySelectorAll('input'); games.value = '4'; [...host.querySelectorAll('select')][1].value = '10000';
+  run.click(); assert.equal(run.disabled, true); await q.wait(() => !run.disabled, 60000);
+  const lines = result.textContent.split('\n');
+  assert.match(lines[0], /^brain A in every colony \| map W\.world \| 4 games of 10000 rounds \| rules classic$/);
+  assert.ok(lines.some((l) => /^A\s+\d+(\.\d)?%/.test(l)) && lines.some((l) => /^B\s+\d+(\.\d)?%/.test(l)), 'a row per colony');
+  assert.ok(lines.some((l) => /^nest food A - B per game: [+-]\d+\.\d \+-\d+\.\d \(95%\), z = -?\d+\.\d\d$/.test(l)));
+  assert.ok(lines.some((l) => /^warning: under 10 expected wins per colony \(4 games, 2 colonies\)/.test(l)), 'too few games is said');
+  assert.match(host.querySelectorAll('pre')[1].textContent, /\nnode cli\/fairness\.ts A\.brain --world W\.world --games 4 --from 1 --rounds 10000 --rules classic$/);
+  assert.match(host.textContent, /4 games in [\d.]+ s/);
+  strokeAt(q, 40, 40); assert.equal(result.textContent, '', 'the map changed: the old verdict goes');
+  games.value = '1'; run.click(); assert.match(result.textContent, /^Games: a whole number from 2 to 1000\.$/);
+}));
+
+test('Measure: needs a playable map of two colonies; a stroke during a run cancels it', () => fresh(async (q) => {
+  const host = q.$('fair'), run = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Measure'), result = host.querySelectorAll('pre')[0];
+  q.$('newdoc').click(); run.click(); assert.match(result.textContent, /no hills: a match needs at least two/);
+  q.set(q.$('genkind'), 'fair'); q.set(q.$('genn'), '3'); q.$('gen').click(); run.click();
+  assert.equal(result.textContent, 'Fairness is measured for two colonies for now; this map has 3. The checks above say whether every colony has the same terrain.');
+  q.set(q.$('genkind'), 'mirror'); q.$('gen').click(); const [games] = host.querySelectorAll('input'); games.value = '30'; [...host.querySelectorAll('select')][1].value = '100000';
+  run.click(); assert.equal(run.disabled, true);
+  strokeAt(q, 40, 40); assert.equal(run.disabled, false, 'the run was cancelled by the change'); assert.equal(result.textContent, '');
+  await sleep(100); assert.equal(result.textContent, '', 'and no result arrives late');
+}));

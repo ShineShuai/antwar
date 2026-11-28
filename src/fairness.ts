@@ -42,6 +42,8 @@ export interface Fairness {
   /** Fewer than MIN_EXPECTED expected wins per colony (games < MIN_EXPECTED * colonies): the normal approximation of the z-test is
    * poor there and false alarms exceed `alpha` (14% for 26 colonies and 100 games, simulated). Play more games before trusting `fair`. */
   thin: boolean;
+  /** Two colonies and at least two games: colony A's nest food minus colony B's per game (`foodVsOthers`), a finer look than win chance. */
+  pair?: FoodVsOthers;
 }
 
 /** Rule of thumb for the normal approximation of a win count: at least this many expected wins per colony. */
@@ -64,7 +66,8 @@ export function fairness(foods: readonly (readonly number[])[], alpha = 0.05): F
     return { colony, wins: w, share: w / games, z, p: normalTwoSidedP(z), points: points[colony] / games, food: food[colony] / games };
   });
   const p = Math.min(1, n * Math.min(...rows.map((r) => r.p)));
-  return { games, colonies: n, rows, p, resolution: 1.96 * Math.sqrt(((1 / n) * (1 - 1 / n)) / games), fair: p >= alpha, thin: games < MIN_EXPECTED * n };
+  return { games, colonies: n, rows, p, resolution: 1.96 * Math.sqrt(((1 / n) * (1 - 1 / n)) / games), fair: p >= alpha, thin: games < MIN_EXPECTED * n,
+    ...(n === 2 && games >= 2 ? { pair: foodVsOthers(foods)[0] } : {}) };
 }
 
 /** Where the worlds of a fairness run come from. `mapSeed` fixes the map (only the simulator seed varies, which tests the map); without
@@ -94,11 +97,19 @@ export const fairnessHeader = (brain: string, spec: WorldSpec, file: string, gam
   `${brain} in every colony | ${worldLabel(spec, file)} | ${games} games of ${rounds} rounds | rules ${rules}`;
 
 /** The table, the verdict and, for too few games, the warning: what `cli/fairness.ts` prints under its first line. */
+/** z of the nest-food lean that is called out beside "no bias found" (two-sided p = 0.01): win chance is coarse, nest food sees a lean sooner. */
+export const FOOD_LEAN_Z = 2.58;
+
 export function fairnessLines(r: Fairness): string[] {
   const n = r.colonies, pct = (x: number): string => `${(100 * x).toFixed(1)}%`;
   const out = ['colony  win chance  z       mean points  mean food'];
   for (const row of r.rows) out.push(`${String.fromCharCode(65 + row.colony).padEnd(7)} ${pct(row.share).padEnd(11)} ${row.z.toFixed(2).padStart(5)}   ${row.points.toFixed(2).padStart(11)}  ${row.food.toFixed(1).padStart(9)}`);
   out.push(`fair would be ${pct(1 / n)} each and ${n - 1} point${n === 2 ? '' : 's'}. ${r.fair ? 'No bias found' : 'BIASED'} (p = ${r.p.toFixed(3)}, Bonferroni over ${n} colonies); a bias below +-${pct(r.resolution)} of win chance cannot be seen with ${r.games} games.`);
+  if (r.pair) { // two colonies: the paired nest food. A hint, not a verdict: the verdict is the win chance
+    const a = r.pair;
+    out.push(`nest food A - B per game: ${a.mean >= 0 ? '+' : '-'}${Math.abs(a.mean).toFixed(1)} +-${(1.96 * a.se).toFixed(1)} (95%), z = ${a.z.toFixed(2)}`);
+    if (Math.abs(a.z) >= FOOD_LEAN_Z) out.push(`nest food leans to ${a.z > 0 ? 'A' : 'B'} (z = ${a.z.toFixed(2)}): the map may favour that colony a little; play more games to see whether win chance follows.`);
+  }
   if (r.thin) out.push(`warning: under ${MIN_EXPECTED} expected wins per colony (${r.games} games, ${n} colonies): the test raises false alarms; use at least ${MIN_EXPECTED * n} games.`);
   return out;
 }
