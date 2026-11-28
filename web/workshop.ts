@@ -11,6 +11,9 @@ import { mountNav } from './nav.ts';
 import { PROJECT_KEY } from './project.ts';
 import { mountHighlight } from './highlight.ts';
 import { mountPersonality } from './personality.ts';
+import { buildProjectFile, formatProjectFile, parseProjectFile } from './projectfile.ts';
+import type { ProjectFile } from './projectfile.ts';
+import { mergeVersions, readAllVersions } from './versions.ts';
 import { mountVersions } from './versionpanel.ts';
 import type { VersionPanel } from './versionpanel.ts';
 import type { BrainInfo } from './brain.ts';
@@ -395,6 +398,33 @@ $('share').onclick = async () => {
     result: last && rc.cycle > 0 && startedKey === keyNow() ? { round: rc.cycle, hash: last.hash } : undefined })}`;
   history.replaceState(null, '', link);
   try { await navigator.clipboard.writeText(link); say(`Link copied (${link.length} characters).`); } catch { say('Link is in the address bar.'); }
+};
+// The project file (web/projectfile.ts): the brains, seed, Rules, map and version histories in one file.
+$('export').onclick = () => {
+  try {
+    const all = readAllVersions(localStorage), file = buildProjectFile({ brains: boxes.map((b) => b.value), seed: seedBox.value, rules: rulesBox.value, worldKind, mapText, versions: all, generator: GENERATOR_VERSION });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([formatProjectFile(file)], { type: 'application/json' })); a.download = 'antwar-project.json'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    say(`Project exported: ${file.brains.length} brains and ${Object.values(file.versions).reduce((n, l) => n + l.length, 0)} saved versions.`);
+  } catch (e) { say(`Cannot export: ${e instanceof Error ? e.message : String(e)}.`, true); }
+};
+$('import').onclick = () => $('projfile').click();
+/** Opens a project file: the editors, seed, Rules and map become the file's; the brains replaced are kept as versions; the file's histories are merged in. */
+function openProject(p: ProjectFile): void {
+  boxes.forEach((_, c) => versions[c]?.snapshot('before importing a project'));
+  const added = mergeVersions(localStorage, p.versions);
+  setColonies(p.brains.length); savedMore = [];
+  p.brains.forEach((t, c) => { boxes[c].value = t; });
+  seedBox.value = String(p.seed); rulesBox.value = p.rules; mapText = p.world.map; worldKind = p.world.kind; exWorld.value = worldKind; expect = null;
+  save(); versions.forEach((v) => v.refresh()); syncPanels(); start();
+  say(`Project opened: ${p.brains.length} brains, ${added} saved versions added.` + (p.generator !== undefined && p.generator !== GENERATOR_VERSION ? ' Made with another world generator: the contest world of the seed may differ.' : ''), p.generator !== undefined && p.generator !== GENERATOR_VERSION);
+}
+($('projfile') as HTMLInputElement).onchange = async (ev) => {
+  const input = ev.target as HTMLInputElement, f = input.files?.[0];
+  if (!f) return;
+  try { openProject(parseProjectFile(await f.text())); } catch (e) { say(`Cannot open ${f.name}: ${e instanceof Error ? e.message : String(e)}.`, true); }
+  input.value = '';
 };
 addEventListener('hashchange', () => { void fromHash().then((ok) => { if (ok) start(); }); });
 if (!(await fromHash())) restore();

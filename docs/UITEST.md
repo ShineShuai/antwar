@@ -16,6 +16,7 @@ saved project is how the Arena and Maps get their input), `hash` is a share link
 | `maps.test.mjs` | strokes with the point mirror and tiles, the live checks, undo/redo, generators and their errors, library, import, hand-off to the workshop |
 | `workshop-world.test.mjs` | the example-world picker follows the map, brains kept across colony counts, the Rules choice, the saved project, "Chart this match" |
 | `workshop-replay.test.mjs` | play, pause, step, seek, keys, following an ant, the share link (loaded verified in a fresh page), heat map, debugger |
+| `workshop-project.test.mjs` | Export project (the Blob is caught: jsdom makes no download), Import project: the editors, seed, Rules, map, versions merged, the brains replaced kept, bad files refused, the round trip |
 | `workshop-brains.test.mjs` | versions and diff, the personality panel (the Keeper's dose follows the colonies) |
 | `arena.test.mjs` | tabs, head to head with the docked viewer, league, sweep (reference and league) |
 
@@ -29,4 +30,5 @@ Each test was checked by breaking the page code it covers (the test then fails).
   ant, the heat map, a break on a rule; versions (save, diff, restore).
 - Arena: run each tab with small numbers; Watch a game; the Workers box.
 - Maps: draw with the mirror and with tiles; read the checks; Play in the workshop; the fairness test.
+- Export project downloads a file (the name, the save dialog) and Import project… opens it (the file picker); jsdom only catches the Blob.
 - Dark mode, a narrow window, and that the pointer lands on the cell it is over.
