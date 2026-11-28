@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.core.json && tsc -p tsconfig.web.json && tsc -p tsconfig.worker.json && tsc -p tsconfig.node.json",
     "lint": "node scripts/lint-core.ts",
-    "test": "npm run typecheck && npm run lint && node --test \"test/**/*.test.ts\"",
+    "test": "npm run typecheck && npm run lint && node --test \"test/**/*.test.ts\" \"test-ui/**/*.test.mjs\"",
+    "test:ui": "node --test \"test-ui/**/*.test.mjs\"",
     "build": "node build.ts",
     "bench": "node bench/run.ts",
     "check": "node build.ts && node scripts/check-dist.ts",
@@ -20,6 +21,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "esbuild": "^0.28.2",
+    "jsdom": "^31.0.1",
     "typescript": "6.0.3"
   }
 }
