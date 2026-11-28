@@ -123,3 +123,39 @@ worlds).
 
 The roam and wander rules and the rest of the kit's step logic. The joint check of explore, sidestep, eating and the Keeper's dose
 is in `docs/STEALING.md` (nothing moved except the dose).
+
+## Automatic tuning (`cli/tune.ts`)
+
+The sweeps above were done by hand, one constant at a time. `cli/tune.ts` does the same for a generated brain (the Level 0 sliders, `docs/RULES.md`)
+as a hill climb: `node cli/tune.ts BRAIN --vs REFERENCE`. Each step plays the brain and every brain one move away against the reference on
+`--seeds` (12) **fresh** mirrored worlds, both colours, and takes the move with the biggest gain whose paired z is at least `--z` (2). It stops
+when no move passes (a local optimum at that noise level) or after `--max-steps` (6). The moves (`src/tune.ts`, `neighbors`): each slider one level
+up or down; for a Keeper that follows the colonies (`colonies=N`) every level of settling; with `--mix`, 10 points of the role mix moved from one
+role to another (trail-layer and raider). Last, the tuned brain and the start each play `--confirm` (40) worlds no step saw, and the report says
+whether the gain holds there. `--out FILE` writes the tuned brain; `--json` prints everything.
+
+**Score.** `--objective margin` (default) climbs the relative nest-food margin of a game, (own - foe) / (own + foe), averaged over the two
+colours of a world. It is fine-grained, so a small gain shows in a few worlds; wins and draws (`--objective points`, 2 and 1 points as a share of
+the most) are what is finally wanted but coarse. The confirmation reports both. Gain and z are paired by world (the richness of a world drops out).
+
+**Resuming.** One command lasts at most about 5 minutes here, and a 100,000-round step is several minutes. With `--state FILE` every game is kept
+in FILE, and `--budget SECONDS` stops before the next evaluation once that time has passed (exit 3); run the same command again to go on. The state
+belongs to its reference, ruleset, length and kind of world; `--jobs` does not change a game. A step is a function of the cached games, so a
+resumed run prints the same steps again from the cache, at no cost.
+
+**Why it is built so.** Several moves are tried at once, so the best of them is flattered by luck (the largest of 8 null z-values is about 1.5;
+hence `--z 2`). Fresh worlds every step keep a step from fitting the last one's luck, and the confirmation on unseen worlds is the check that
+counts: do not keep a tuned brain without it. The z is a normal approximation; with fewer than about 12 worlds it is rough.
+
+**Runs** (mirrored worlds, classic rules, both colours):
+
+| start | against | length, worlds a step | result |
+|---|---|---|---|
+| trail-layer, curiosity *curious* | the shipped trail-layer | 30,000 rounds, 12 | curiosity curious -> steady (z 5.5) -> focused (z 3.4), then no move: the shipped sliders. On 30 fresh worlds: start 18.3% [10.6, 29.9], tuned 50.0% (it is the same brain: 30-0-30 and food +0 by the mirror), paired gain +0.317 of points share (z 5.6) |
+| the shipped Keeper | the shipped trail-layer | 100,000 rounds, 10 | no move has a clear gain; the best, settling *seldom* (1 in 15), is +0.044 (z 1.4). At 30,000 rounds the Keeper scores +0.002 against the trail-layer, at 100,000 +0.121: it settles late, so **tune at the length you play** |
+
+**Limits.** Head to head and two colonies only (a climb on the league's points is not built). It tunes the Level 0 text: the settling dose moves
+between its four levels, not through the `1 in N` timers (N up to 64) of a hand-written brain, and a brain edited by hand cannot be tuned (the
+sliders no longer describe it). The result is the best against **that reference**: a brain tuned against one opponent is not best against all.
+A local optimum is not the best brain; the moves are single steps. Every score is of a world generator (mirrored, or `--contest`), not of the map you
+will play.
