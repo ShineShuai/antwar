@@ -6,7 +6,8 @@ Spec: `reference.html`.
 
     npm ci                       # typescript, @types/node (package-lock.json is committed)
     npm run trace:fetch          # optional: the official ICFP 2004 trace into traces/official/ (docs/TRACE.md); npm test then checks it
-    npm test                     # 4 strict typechecks (core/web/worker/node) + lint-core + node --test
+    npm test                     # 4 strict typechecks (core/web/worker/node) + lint-core + node --test (test/ and the jsdom page tests, test-ui/)
+    npm run test:ui              # only the page tests: Workshop, Arena, Maps in jsdom (docs/UITEST.md)
     npm run build                # tsc emit (rewriteRelativeImportExtensions) -> dist/ (index.html = workshop, arena.html, reference.html, web/, src/)
     npm run check                # build, then verify every relative URL in dist/ resolves
     npm start                    # build, then serve http://localhost:8080/
