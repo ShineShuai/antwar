@@ -41,6 +41,7 @@ Spec: `reference.html`.
 - `web/brain.ts`      what the workshop shows under an editor (size, lint, errors), the explain-why rows, and `whereIs`/`traceRows`: a pc pointed back at a rule or source line (click an ant to follow it)
 - `cli/tourney.ts`    `node cli/tourney.ts A B C [--seeds 20] [--symmetric] [--jobs 4]`: round-robin, both colours, 2/1/0, standings with intervals, pairwise matrix
 - `cli/replay.ts`     `record`, `verify`, `seek` replay descriptors (JSON: inputs + hashes)
+- `web/projectfile.ts` the project file (brains, seed, Rules, map, version histories in one JSON file): the workshop's Export/Import project buttons; `docs/PROJECT.md`
 - `cli/tune.ts`       `node cli/tune.ts BRAIN --vs REF [--state FILE --budget 240]`: hill climb over a generated brain's sliders against one reference, fresh worlds each step, confirmed on unseen worlds (`docs/TUNING.md`); `src/tune.ts`
 - `cli/eval.ts`       `npm run eval -- --ant FILE [--rules R]` (any brain format): food home, time to 25/50/90%, carrier statistics over generated worlds; `--vs` plays two brains and counts the packets each steals from the other's nest (`docs/STEALING.md`)
 - `ants/`             hand-designed trail ants (generators + generated `.asm`; results in `docs/TRAILS.md`) and the same ants as `.rules`

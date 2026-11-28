@@ -63,6 +63,11 @@ type All = Record<string, Version[]>;
 function readAll(storage: Pick<Storage, 'getItem'>): All {
   let raw: unknown;
   try { raw = JSON.parse(storage.getItem(VERSIONS_KEY) ?? '{}'); } catch { return {}; }
+  return clean(raw);
+}
+
+/** `raw` (parsed JSON of unknown origin) as a history: only slots A to Z, only well-formed versions, the newest 30 of each, labels cut. */
+export function clean(raw: unknown): All {
   const out: All = {};
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   for (const [slot, list] of Object.entries(raw as Record<string, unknown>)) {
@@ -85,15 +90,38 @@ export function snapshot(storage: Store, slot: string, text: string, label = '',
   list.push({ t: now, text, label: label.slice(0, MAX_LABEL) });
   while (list.length > MAX_VERSIONS) list.shift();
   all[slot] = list;
+  fit(all, slot);
+  storage.setItem(VERSIONS_KEY, JSON.stringify(all));
+  return true;
+}
+
+/** Drops the oldest version of the slot with the most text until the whole history is within 2 MiB; never the only version of `keep`. */
+function fit(all: All, keep = ''): void {
   const size = (): number => Object.values(all).reduce((a, l) => a + l.reduce((b, v) => b + v.text.length, 0), 0);
-  while (size() > MAX_TOTAL) { // drop the oldest version of the slot with the most text, never the one just saved
-    const slots = Object.keys(all).filter((s) => all[s].length > (s === slot ? 1 : 0));
+  while (size() > MAX_TOTAL) {
+    const slots = Object.keys(all).filter((s) => all[s].length > (s === keep ? 1 : 0));
     if (slots.length === 0) break;
     const big = slots.reduce((b, s) => (all[s].reduce((a, v) => a + v.text.length, 0) > all[b].reduce((a, v) => a + v.text.length, 0) ? s : b));
     all[big].shift();
   }
+}
+
+/** All the saved versions, slot by slot, oldest first. */
+export const readAllVersions = (storage: Pick<Storage, 'getItem'>): Record<string, Version[]> => readAll(storage);
+
+/** Adds `incoming` (a project file's history) to the saved one: a version already there (same time and text) is not added twice; each slot keeps its
+ * newest 30, in time order, and the whole stays within 2 MiB. Returns the number of versions added. */
+export function mergeVersions(storage: Store, incoming: Record<string, Version[]>): number {
+  const all = readAll(storage), incomingClean = clean(incoming);
+  let added = 0;
+  for (const [slot, list] of Object.entries(incomingClean)) {
+    const mine = all[slot] ?? [];
+    for (const v of list) if (!mine.some((m) => m.t === v.t && m.text === v.text)) { mine.push(v); added++; }
+    all[slot] = mine.sort((x, y) => x.t - y.t).slice(-MAX_VERSIONS);
+  }
+  fit(all);
   storage.setItem(VERSIONS_KEY, JSON.stringify(all));
-  return true;
+  return added;
 }
 
 export function removeVersion(storage: Store, slot: string, t: number): Version[] {
