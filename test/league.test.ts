@@ -2,10 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { leagueTable, leagueTasks, rotation } from '../src/league.ts';
+import { leagueSummary, leagueTable, leagueTasks, rotation } from '../src/league.ts';
+import { tCritical95 } from '../src/stats.ts';
 import type { LeagueGame } from '../src/league.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+const near = (a: number, b: number, tol: number, what = ''): void => assert.ok(Math.abs(a - b) <= tol, `${what} ${a} is not within ${tol} of ${b}`);
 
 test('rotation: the brains take each hill once over n games (a Latin square), for 2 to 26 brains', () => {
   assert.deepEqual(rotation(4, 0), [0, 1, 2, 3]);
@@ -102,4 +104,18 @@ test('cli/league.ts: refuses what does not make sense', () => {
   assert.equal(league(trail, crumb, '--seeds', '0').status, 2);
   const mism = league(trail, crumb, forager, '--world', 'test/fixtures/tiny.world', '--seeds', '1', '--rounds', '100', '--jobs', '1');
   assert.equal(mism.status, 2); assert.match(mism.stderr, /the world has 2 colonies but 3 brains were given/);
+});
+
+test("a league's interval is Student's t over the worlds: wide for few worlds, 1.96 for many", () => {
+  assert.deepEqual([1, 2, 5, 10, 30].map((d) => tCritical95(d)), [12.706, 4.303, 2.571, 2.228, 2.042]);
+  near(tCritical95(40), 2.021, 6e-4); near(tCritical95(60), 2.0, 6e-4); near(tCritical95(120), 1.98, 6e-4); near(tCritical95(100000), 1.96, 1e-3);
+  assert.ok([1, 2, 29, 30, 31, 100].every((d, i, a) => i === 0 || tCritical95(d) < tCritical95(a[i - 1])), 'decreasing, and continuous at the table end');
+  assert.throws(() => tCritical95(0), RangeError); assert.throws(() => tCritical95(2.5), RangeError);
+  // two brains, three worlds: entry 0 wins both games of world 1, loses both of world 2, ties world 3: per world 2, 0, 1; mean 1, sd 1
+  const g = (seed: number, rot: number, food: number[]) => ({ seed, rot, food });
+  const games = [g(1, 0, [9, 1]), g(1, 1, [1, 9]), g(2, 0, [1, 9]), g(2, 1, [9, 1]), g(3, 0, [5, 5]), g(3, 1, [5, 5])];
+  const [a, b] = leagueSummary(2, games, [1, 2, 3]).stats.sort((x, y) => x.entry - y.entry);
+  near(a.mean, 1, 1e-12); near(b.mean, 1, 1e-12);
+  near(a.ci, (4.303 * 1) / Math.sqrt(3), 1e-9, 't with 2 degrees of freedom, not 1.96');
+  assert.equal(leagueSummary(2, games.slice(0, 2), [1]).stats[0].ci, 0, 'one world: no spread to estimate');
 });

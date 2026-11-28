@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { loadBrain } from '../src/core/asm.ts';
 import { generateWorld } from '../src/core/gen.ts';
 import { CLASSIC, createSim } from '../src/core/sim.ts';
@@ -78,4 +80,18 @@ test('eval CLI: theft counters (a stash on a nest cell can be picked up by anyon
   assert.deepEqual([solo.rows[0].stole, solo.rows[0].lost], [0, 0]);
   const duel = run(['--vs', 'ants/trail.rules']);
   assert.ok(duel.rows[0].stole > 0 && duel.rows[0].lost > 0, `${JSON.stringify(duel.rows[0])}`); // in a mirror match both sides take from each other
+});
+
+test('cli/eval.ts: a brain in any format (the content decides, not the file name) and --rules', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'eval-')), run = (...a: string[]) => spawnSync(process.execPath, ['cli/eval.ts', '--seeds', '1', '--rounds', '2000', '--json', ...a], { cwd: root, encoding: 'utf8' });
+  try {
+    const summary = (r: ReturnType<typeof run>) => { assert.equal(r.status, 0, r.stderr); return (JSON.parse(r.stdout) as { summary: Record<string, unknown> }).summary; };
+    assert.equal(summary(run('--ant', 'ants/starter.script')).seeds, 1, 'a .script brain');
+    writeFileSync(join(dir, 'odd.txt'), readFileSync(join(root, 'ants/trail.rules'), 'utf8'));
+    assert.deepEqual(summary(run('--ant', join(dir, 'odd.txt'))), summary(run('--ant', 'ants/trail.rules')), 'rules text under another name');
+    const vs = ['--ant', 'ants/trail.rules', '--vs', 'ants/crumb.asm'], alt = summary(run(...vs, '--rules', 'altorder')), classic = summary(run(...vs));
+    assert.equal(alt.rules, 'altorder'); assert.equal(classic.rules, undefined, 'classic is not named');
+    assert.notDeepEqual({ ...alt, rules: 0 }, { ...classic, rules: 0 }, 'the ruleset reaches the simulator (the move order changes the game)');
+    const bad = run('--ant', 'ants/crumb.asm', '--rules', 'nope'); assert.equal(bad.status, 2); assert.match(bad.stderr, /unknown ruleset "nope"/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
