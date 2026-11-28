@@ -176,7 +176,7 @@ then nest food. Worlds: two brains play point-mirror worlds (`--contest`: the co
 (13, 17, 19, 23 and 26 have none: give `--world FILE`), or one `--world FILE` whose hills are the brains and only the simulator seed changes.
 Rules are classic (`--rules`); any ruleset plays any number of colonies. Results do not depend on `--jobs`.
 
-"per game" is the mean points, n - 1 for an average brain, with the 95% interval over the worlds (the n games of a world are not independent).
+"per game" is the mean points, n - 1 for an average brain, with the 95% interval over the worlds (Student's t; the n games of a world are not independent).
 The last line, the mean points by hill, shows what the place is worth: 2 each for 3 colonies if it is worth nothing.
 
 ```
@@ -271,7 +271,7 @@ result as the command that reproduces it (a test checks identical outcomes for e
 * **League** (`cli/league.ts`) of all the project's brains, one per colony: "this map" plays the map shown (the CLI needs it as
   `--world`, so there is a "Copy map text" button), "a new world per seed" is the CLI's default (mirrored for two brains, fair worlds
   for n; none for 13, 17, 19, 23 and 26 colonies). Rotation cancels the value of a place on any map. Scoring is the n-colony ranking
-  *proposal* above, not the contest's. The `+-` is the CLI's (z = 1.96 over the worlds: too narrow for few worlds).
+  *proposal* above, not the contest's. The `+-` is the CLI's: Student's t over the worlds (one world has no spread: +-0.00; 20 worlds: 2.09 standard errors, not 1.96).
 * **Sweep** (`cli/sweep.ts`): one slider of a generated brain (`src/sweep.ts`; sociability only for a trail-layer, raider or keeper,
   settling only for a keeper, never for text edited by hand) at every level, each against a reference brain on the same worlds, both
   colours, as one `cli/tourney.ts` batch. The table has `+`/`-` where the interval excludes 50% and `*` for the level the brain has

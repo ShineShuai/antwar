@@ -6,6 +6,7 @@ import { parseMap } from './core/map.ts';
 import { playColonies, worldFor } from './core/match.ts';
 import { colonyResult } from './core/ranking.ts';
 import { RULESETS } from './core/rules.ts';
+import { tCritical95 } from './stats.ts';
 import type { RulesId } from './core/rules.ts';
 import type { Program, WorldMap } from './core/types.ts';
 import { loadAnyBrain } from './lang/index.ts';
@@ -96,7 +97,7 @@ export function leagueEngine(texts: readonly string[], o: { rules: RulesId; roun
 }
 
 export interface LeagueStat extends LeagueRow {
-  /** Mean points per game, the 95% half-width over the worlds (z = 1.96 of the standard error: approximate for few worlds), mean rank. */
+  /** Mean points per game, the 95% half-width over the worlds (Student's t of the standard error: the worlds are the sample), mean rank. */
   mean: number; ci: number; rank: number;
 }
 export interface LeagueSummary { stats: LeagueStat[]; /** Mean points by hill: n - 1 each when the place does not matter. */ hillMean: number[] }
@@ -107,7 +108,7 @@ export function leagueSummary(n: number, games: readonly LeagueGame[], seeds: re
   const stats = table.map((r) => {
     const per = seeds.map((s) => (r.byWorld.get(s) ?? 0) / n), mean = r.points / r.games;
     const sd = nSeeds > 1 ? Math.sqrt(per.reduce((a, x) => a + (x - mean) ** 2, 0) / (nSeeds - 1)) : 0;
-    return { ...r, mean, ci: (1.96 * sd) / Math.sqrt(nSeeds), rank: r.rankSum / r.games };
+    return { ...r, mean, ci: nSeeds > 1 ? (tCritical95(nSeeds - 1) * sd) / Math.sqrt(nSeeds) : 0, rank: r.rankSum / r.games };
   });
   return { stats, hillMean: Array.from({ length: n }, (_, h) => table.reduce((a, r) => a + r.byHill[h], 0) / (nSeeds * n)) };
 }
